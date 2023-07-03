@@ -6,8 +6,6 @@ Note: in Go '\n' = ';'
     SOURCEFILE := PACKAGE ";" { (DECLARATION | FUNCTION) ";" }
     PACKAGE := 'package' IDENTIFIER
 
-    EPSILON := 
-
 ### Identifier
 
     IDENTIFIER := LETTER {LETTER | DIGIT}
@@ -108,6 +106,8 @@ Some identifiers already occupied. Knows as keywords("for","else" etc)
 
 <img width="600" alt="image" src="png/img.png">    
 
+    EPSILON :=
+
     EXPR_STMT := E9
     
     E9 := E8 E9_PRIME
@@ -138,3 +138,9 @@ Some identifiers already occupied. Knows as keywords("for","else" etc)
     
     E0 := "(" E9 ")" | NUM |  IDENTIFIER | "/ I think I will add func call here /"
     
+
+
+Main sources:
+https://go.dev/ref/spec
+https://courses.fit.cvut.cz/BI-PJP/@B222/tutorials/expressions.html
+https://gitlab.fit.cvut.cz/NI-GEN/ni-gen-23/-/blob/main/LANGUAGE.md
