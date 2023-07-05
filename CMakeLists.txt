@@ -14,8 +14,12 @@ set(
         SOURCE_FILES
 
         ${HEADERS}/lexer.h
+        ${HEADERS}/AST.h
+        ${HEADERS}/parser.h
 
         ${SOURCES}/lexer.cpp
+        ${SOURCES}/AST.cpp
+        ${SOURCES}/parser.cpp
 
         main.cpp)
 add_executable(compiler ${SOURCE_FILES})

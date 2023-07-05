@@ -97,14 +97,15 @@ public:
 
     void InitInput(char *name);
 
+    char inputSymbol();
 
     InputCharType type_of_char();
-
-    Token readSymbol();
 
     Token readString();
 
     Token readNumber();
+
+    Token readSymbol();
 
     void skipOptional_();
 

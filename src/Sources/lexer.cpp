@@ -39,7 +39,7 @@ void Lexer::InitInput(char *name) {
     cur_symb = readSymbol();
 }
 
-int Lexer::readSymbol() {
+char Lexer::inputSymbol() {
     char c;
     if (!file.eof()) {
         if (open) {
