@@ -267,25 +267,37 @@ Token Lexer::readNumber() {
 
         return tok_num_float;
     }
-
-
     return tok_num_int;
 
+}
+
+bool Lexer::haveBNL() {
+    return newLine;
+}
+
+void Lexer::decrease() {
+    if (newLine > 0)
+        newLine -= 1;
 }
 
 Token Lexer::gettok() {
     switch (type_of_char()) {
         case LETTER:
+            decrease();
             return readString();
         case NUMBER:
+            decrease();
             return readNumber();
-        case WHITE_SPACE:
         case NEW_LINE:
+            newLine = 2;
+        case WHITE_SPACE:
             cur_symb = inputSymbol();
             return gettok();
         case END:
+            decrease();
             return tok_eof;
         case SPE_SYMB:
+            decrease();
             return readSymbol();
         default:
             throw "ERROR. Unknown token";

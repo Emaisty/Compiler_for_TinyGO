@@ -32,8 +32,8 @@ bool Parser::parse() {
                 auto tmp = parseFunction();
                 program.addFunction(tmp);
                 break;
-                // declaration
             }
+                // declaration
             case tok_const:
             case tok_type:
             case tok_var: {
@@ -51,13 +51,84 @@ bool Parser::parse() {
 
 }
 
+std::vector<std::string> Parser::parseIdentifierList() {
+    std::vector<std::string> res;
+
+    do {
+        match(tok_identifier);
+        res.push_back(lexer.identifierStr());
+        cur_tok = lexer.gettok();
+    } while (cur_tok == tok_comma && (cur_tok = lexer.gettok()));
+    return res;
+}
+
+std::unique_ptr<AST::ASTTypeStruct> Parser::parseStruct() {
+    matchAndGoNext(tok_struct);
+
+    matchAndGoNext(tok_opfigbr);
+
+    auto res = std::unique_ptr<AST::ASTTypeStruct>();
+
+    while (cur_tok != tok_clfigbr) {
+        auto names = parseIdentifierList();
+
+        auto type = parseType();
+
+        for (auto &name: names)
+            res->addField(name, type);
+
+        if (cur_tok == tok_semicolon)
+            cur_tok = lexer.gettok();
+        else if (!lexer.haveBNL())
+            throw "ERROR. NO SEPARATOR";
+    }
+
+    matchAndGoNext(tok_clfigbr);
+
+    return res;
+}
+
 
 std::unique_ptr<AST::ASTExpression> Parser::parseExpression() {
 
 }
 
 std::unique_ptr<AST::ASTType> Parser::parseType() {
+    switch (cur_tok) {
+        case tok_int:
+        case tok_int32:
+            cur_tok = lexer.gettok();
+            return std::make_unique<AST::ASTTypeInt>();
+        case tok_int8:
+            cur_tok = lexer.gettok();
+            return std::make_unique<AST::ASTTypeInt>(8);
+        case tok_int64:
+            cur_tok = lexer.gettok();
+            return std::make_unique<AST::ASTTypeInt>(64);
+        case tok_float:
+            cur_tok = lexer.gettok();
+            return std::make_unique<AST::ASTTypeDouble>();
+        case tok_struct:
+            return parseStruct();
+        case tok_opbr: {
+            cur_tok = lexer.gettok();
+            auto tmp = parseType();
+            matchAndGoNext(tok_clbr);
+            return tmp;
+        }
+        case tok_asterisk:
+            matchAndGoNext(tok_asterisk);
+            return std::make_unique<AST::ASTTypePointer>(parseType());
 
+        case tok_identifier: {
+            auto name = lexer.identifierStr();
+            cur_tok = lexer.gettok();
+            // TODO check if this type exist
+            return std::make_unique<AST::ASTTypeNamed>(name);
+        }
+        default:
+            throw "ERROR. UNPARSABLE TYPE";
+    }
 }
 
 std::unique_ptr<AST::Function> Parser::parseFunction() {
@@ -75,13 +146,27 @@ std::vector<std::unique_ptr<AST::ASTDeclaration>> Parser::parseConstDeclaration(
     if (cur_tok == tok_opbr) {
 
     } else {
-        std::vector<AST::ASTConstDeclaration *> temp_vector;
+        std::vector<std::unique_ptr<AST::ASTConstDeclaration >> temp_vector;
         do {
             match(tok_identifier);
-            temp_vector.push_back(new AST::ASTConstDeclaration);
+            temp_vector.push_back(std::make_unique<AST::ASTConstDeclaration>());
             temp_vector[temp_vector.size() - 1]->setName(lexer.identifierStr());
             cur_tok = lexer.gettok();
         } while (cur_tok == tok_comma && (cur_tok = lexer.gettok()));
+
+        // if there is type before assign sign
+        if (cur_tok != tok_assign) {
+            auto type = parseType();
+            for (auto &i: temp_vector) {
+                i->setType(type);
+            }
+        }
+        matchAndGoNext(tok_assign);
+
+        int i = 0;
+        do {
+
+        }
 
     }
 

@@ -116,10 +116,15 @@ public:
 
     void inputNumber(int base);
 
+    bool haveBNL();
+
+    void decrease();
 
 private:
     std::ifstream file;
-    bool open = false;
+    char open = 0;
+
+    bool newLine = false;
 
     int cur_symb = -1;
 

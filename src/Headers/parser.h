@@ -15,6 +15,10 @@ public:
 
 private:
 
+    std::vector<std::string> parseIdentifierList();
+
+    std::unique_ptr<AST::ASTTypeStruct> parseStruct();
+
     std::unique_ptr<AST::ASTExpression> parseExpression();
 
     std::unique_ptr<AST::ASTType> parseType();
