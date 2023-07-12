@@ -71,7 +71,10 @@ enum Token {
     tok_opbr,
     tok_clbr,
     tok_opsqrbr,
-    tok_clsqrbr        //47
+    tok_clsqrbr,        //47
+
+    tok_comma,
+    tok_dot,
 };
 
 // type of input chars

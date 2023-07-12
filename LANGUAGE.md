@@ -3,13 +3,15 @@
 Note: in Go '\n' = ';'
 
 ### Program
+
     SOURCEFILE := PACKAGE ";" { (DECLARATION | FUNCTION) ";" }
     PACKAGE := 'package' IDENTIFIER
 
 ### Identifier
 
     IDENTIFIER := LETTER {LETTER | DIGIT}
-Some identifiers already occupied. Knows as keywords("for","else" etc) 
+
+Some identifiers already occupied. Knows as keywords("for","else" etc)
 
 ### Number
 
@@ -27,7 +29,6 @@ Some identifiers already occupied. Knows as keywords("for","else" etc)
     BIN_DIGS := ("0" | "1") {["_"] ("0" | "1")}
 
     DEC_FLOAT_NUM := DEC_DIGS "." [DEC_DIGS] 
-
 
 ### TYPES
 
@@ -49,13 +50,13 @@ Some identifiers already occupied. Knows as keywords("for","else" etc)
     NUM_LIST := NUM {"," NUM}
 
     BLOCK:= "{" STATEMENT_LIST "}"
-    
-    
+
 ### Declaration
+
     DECLARATION := CONSTDECL | TYPEDECL | VARDECL
 
     CONSTDECL := "const" (CONSTPRIME | "("  {CONSTPRIME ";"} ")" )
-    CONSTPRIME := IDENTIFIER_LIST [[TYPE] "=" EXPR_LIST]
+    CONSTPRIME := IDENTIFIER_LIST [TYPE] "=" EXPR_LIST
 
     TYPEDECL := "type" (TYPEPRIME | "(" {TYPEPRIME ";"} ")")
     TYPEPRIME := IDENTIFIER ["="] Type
@@ -75,12 +76,10 @@ Some identifiers already occupied. Knows as keywords("for","else" etc)
     PARAMDECL := [ IDENTIFIER_LIST ] ["..."] TYPE
     RESULT := PARAMETERS | TYPE
 
-
 ### Statement
 
     STATEMENT := DECLARATION | IF_STMT | SWITCH_STMT | FOR_STMT | "break" | "contunie" | RETURN_STMT | SIMPLE_STMT
     SIMPLE_STMT := SHORT_DECL | EXPR_STMT | EMPTY
-
 
 ### If statement
 
@@ -137,8 +136,6 @@ Some identifiers already occupied. Knows as keywords("for","else" etc)
     E1_PRIME := "++" E1_PRIME | "--" E1_PRIME | "[" E9 "]" E1_PRIME | EPSILON
     
     E0 := "(" E9 ")" | NUM |  IDENTIFIER | "/ I think I will add func call here /"
-    
-
 
 Main sources:
 https://go.dev/ref/spec

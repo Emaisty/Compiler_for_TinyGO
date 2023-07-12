@@ -36,7 +36,7 @@ void Lexer::InitInput(char *name) {
         else
             std::cout << "input from console is activated" << std::endl;
     }
-    cur_symb = readSymbol();
+    cur_symb = inputSymbol();
 }
 
 char Lexer::inputSymbol() {
@@ -72,8 +72,12 @@ InputCharType Lexer::type_of_char() {
 
 Token Lexer::readSymbol() {
     char pr_symb = cur_symb;
-    cur_symb = readSymbol();
+    cur_symb = inputSymbol();
     switch (pr_symb) {
+        case '.':
+            return tok_dot;
+        case ',':
+            return tok_comma;
         case '+':
             return tok_plus;
         case '-':
@@ -98,31 +102,31 @@ Token Lexer::readSymbol() {
             return tok_opfigbr;
         case '=':
             if (cur_symb == '=') {
-                cur_symb = readSymbol();
+                cur_symb = inputSymbol();
                 return tok_eq;
             }
             return tok_assign;
         case '>':
             if (cur_symb == '=') {
-                cur_symb = readSymbol();
+                cur_symb = inputSymbol();
                 return tok_ge;
             }
             return tok_gt;
         case '<':
             if (cur_symb == '=') {
-                cur_symb = readSymbol();
+                cur_symb = inputSymbol();
                 return tok_le;
             }
             return tok_lt;
         case '!':
             if (cur_symb == '=') {
-                cur_symb = readSymbol();
+                cur_symb = inputSymbol();
                 return tok_ne;
             }
             throw "ERROR. Unknown symbol '!'";
         case ':':
             if (cur_symb == '=') {
-                cur_symb = readSymbol();
+                cur_symb = inputSymbol();
                 return tok_fastassign;
             }
             return tok_colon;
@@ -137,7 +141,7 @@ Token Lexer::readString() {
     std::string str;
     while (type_of_char() == LETTER || type_of_char() == NUMBER || (type_of_char() == SPE_SYMB && cur_symb == '_')) {
         str += (char) cur_symb;
-        cur_symb = readSymbol();
+        cur_symb = inputSymbol();
     }
 
     for (auto &i: keyWordTable) {
@@ -152,7 +156,7 @@ Token Lexer::readString() {
 
 void Lexer::skipOptional_() {
     if (cur_symb == '_')
-        cur_symb = readSymbol();
+        cur_symb = inputSymbol();
 }
 
 bool Lexer::checkIfCanBe(int cur_symb, int base) {
@@ -188,7 +192,7 @@ bool Lexer::checkIfCanBe(int cur_symb, int base) {
 
 
 void Lexer::inputNumber(int base) {
-    cur_symb = readSymbol();
+    cur_symb = inputSymbol();
     skipOptional_();
     m_NumVal *= base;
     if (checkIfCanBe(cur_symb, base)) {
@@ -200,7 +204,7 @@ void Lexer::inputNumber(int base) {
             m_NumVal += cur_symb - 97;
     } else
         throw "ERROR. Wrong format of number in " + std::to_string(cur_symb) + " base";
-    cur_symb = readSymbol();
+    cur_symb = inputSymbol();
     while (cur_symb == '_' || checkIfCanBe(cur_symb, base)) {
         skipOptional_();
         m_NumVal *= base;
@@ -210,7 +214,7 @@ void Lexer::inputNumber(int base) {
             m_NumVal += cur_symb - 65;
         if (cur_symb >= 'a' && cur_symb <= 'f')
             m_NumVal = cur_symb - 97;
-        cur_symb = readSymbol();
+        cur_symb = inputSymbol();
     }
 
 }
@@ -219,7 +223,7 @@ Token Lexer::readNumber() {
     m_NumVal = 0;
     m_DouVal = 0;
     if (cur_symb == '0') {
-        cur_symb = readSymbol();
+        cur_symb = inputSymbol();
         //float
         if (cur_symb == '.') {
             inputNumber(10);
@@ -277,7 +281,7 @@ Token Lexer::gettok() {
             return readNumber();
         case WHITE_SPACE:
         case NEW_LINE:
-            cur_symb = readSymbol();
+            cur_symb = inputSymbol();
             return gettok();
         case END:
             return tok_eof;
@@ -295,7 +299,7 @@ Token Lexer::gettokWhithOutIgnoreNewLine() {
         case NUMBER:
             return readNumber();
         case WHITE_SPACE:
-            cur_symb = readSymbol();
+            cur_symb = inputSymbol();
             return gettok();
         case NEW_LINE:
             return tok_newline;

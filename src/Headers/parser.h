@@ -3,20 +3,31 @@
 
 #include "AST.h"
 #include "lexer.h"
+#include <vector>
 
 class Parser {
 public:
     Parser(char *str = "");
 
-    ~Parser();
+    ~Parser() = default;
 
     bool parse();
 
 private:
 
-    Function *parseFunction();
+    std::unique_ptr<AST::ASTExpression> parseExpression();
 
-    Declaration *parseDeclaration();
+    std::unique_ptr<AST::ASTType> parseType();
+
+    std::unique_ptr<AST::Function> parseFunction();
+
+    std::vector<std::unique_ptr<AST::ASTDeclaration> > parseConstDeclaration();
+
+    std::vector<std::unique_ptr<AST::ASTDeclaration> > parseTypeDeclaration();
+
+    std::vector<std::unique_ptr<AST::ASTDeclaration> > parseVarDeclaration();
+
+    std::vector<std::unique_ptr<AST::ASTDeclaration> > parseDeclaration();
 
     void match(Token);
 
@@ -24,7 +35,7 @@ private:
 
     Token cur_tok;
 
-    Program program;
+    AST::Program program;
 
     Lexer lexer;
 

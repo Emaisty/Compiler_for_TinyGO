@@ -5,62 +5,114 @@
 #include <string>
 
 
-class ASTType {
-public:
-private:
-    bool constt = false;
-};
+namespace AST {
 
-class Int : public ASTType {
-public:
-private:
-    int bits;
-};
+    class ASTType {
+    public:
+    private:
+    };
 
-class Double : public ASTType {
+    class ASTTypeInt : public ASTType {
+    public:
+    private:
+        int bits;
+    };
 
-};
+    class ASTTypeDouble : public ASTType {
+    public:
+    private:
+    };
 
-class Pointer : public ASTType {
-public:
+    class ASTTypePointer : public ASTType {
+    public:
+    private:
+        std::unique_ptr<ASTType> type;
+    };
 
-};
+    class ASTTypeStruct : public ASTType {
+    public:
+    private:
+        std::vector<std::pair<std::string, std::unique_ptr<ASTType >>> filed;
+    };
 
-class Statement {
-};
+    class ASTTypeNamed : public ASTType {
+    public:
+    private:
+        std::string name;
+        std::unique_ptr<ASTType> type;
+    };
 
-class Function {
-public:
-private:
-    std::string name;
-    std::vector<Statement *> body;
-};
+    class Statement {
 
-class Declaration : public Statement {
-public:
+    };
 
-private:
-};
+    class ASTExpression : public Statement {
+
+    };
+
+    class ASTBinaryOperator : public ASTExpression {
+
+    };
+
+    class ASTDeclaration : public Statement {
+    public:
+
+        void setName(std::string new_name);
+
+        void setType(std::unique_ptr<ASTType> new_type);
+
+    private:
+        std::string name;
+        std::unique_ptr<ASTType> type;
 
 
-class Program {
-public:
+    };
 
-    Program() = default;
+    class ASTTypeDeclaration : public ASTDeclaration {
+    public:
+    private:
+    };
 
-    ~Program();
+    class ASTVarDeclaration : public ASTDeclaration {
+    public:
+    private:
 
-    void setName(std::string new_name);
 
-    void addDecl(Declaration* new_decl);
+    };
 
-    void addFunction(Function* new_func);
+    class ASTConstDeclaration : public ASTDeclaration {
+    public:
+    private:
+    };
 
-private:
-    std::string name;
-    std::vector<Declaration *> declarations;
-    std::vector<Function *> functions;
-};
 
+    class Function {
+    public:
+    private:
+        std::string name;
+        std::vector<std::unique_ptr<Statement>> body;
+    };
+
+
+    class Program {
+    public:
+
+        Program() = default;
+
+        ~Program() = default;
+
+        void setName(std::string new_name);
+
+        void addDecl(std::unique_ptr<ASTDeclaration>& new_decl);
+
+        void addFunction(std::unique_ptr<Function>& new_func);
+
+    private:
+        std::string name;
+        std::vector<std::unique_ptr<ASTDeclaration>> declarations;
+        std::vector<std::unique_ptr<Function>> functions;
+    };
+
+}
 
 #endif //COMPILER_AST_H
