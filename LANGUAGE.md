@@ -45,9 +45,8 @@ Some identifiers already occupied. Knows as keywords("for","else" etc)
 ### Lists
 
     IDENTIFIER_LIST := IDENTIFIER {"," IDENTIFIER}
-    EXPR_LIST := EXPR {"," EXPR}
+    EXPR_LIST := EXPR_STMT {"," EXPR_STMT}
     STATEMENT_LIST := {STATEMENT ";"}
-    NUM_LIST := NUM {"," NUM}
 
     BLOCK:= "{" STATEMENT_LIST "}"
 
@@ -64,7 +63,7 @@ Some identifiers already occupied. Knows as keywords("for","else" etc)
     VARDECL := "var" (VARPRIME | "(" {VARPRIME ";"} ")")
     VARPRIME := IDENTIFIER_LIST ( (TYPE [ "=" EXPR_LIST]) | "=" EXPR_LIST )
 
-    SHORT_DECL := IDENTIFIER_LIST ":=" NUM_LIST
+    SHORT_DECL := IDENTIFIER_LIST ":=" EXPR_LIST
 
 ### Function declaration
 
@@ -79,7 +78,7 @@ Some identifiers already occupied. Knows as keywords("for","else" etc)
 ### Statement
 
     STATEMENT := DECLARATION | IF_STMT | SWITCH_STMT | FOR_STMT | "break" | "contunie" | RETURN_STMT | SIMPLE_STMT
-    SIMPLE_STMT := SHORT_DECL | EXPR_STMT | EMPTY
+    SIMPLE_STMT := SHORT_DECL | EXPR_STMT | EMPTY | ASSIGMENT
 
 ### If statement
 
@@ -101,43 +100,51 @@ Some identifiers already occupied. Knows as keywords("for","else" etc)
 
     RETURN_STMT := "return" EXPR_STMT
 
+### Assigment
+
+    ASSIGMENT := IDENTIFIER_LIST OP EXPR_LIST
+    OP := ['+' | '-' | '*' | '/' | '%'] =
+
 ### Expressions
 
 <img width="600" alt="image" src="png/img.png">    
 
     EPSILON :=
 
-    EXPR_STMT := E9
+    EXPR_STMT := E11
     
+    E11 := E10 E11_PRIME
+    E11_PRIME := "||" E10 E11_PRIME | EPSILON
+
+    E10 := E11 E10_PRIME
+    E10_PRIME := "&&" E11 E10_PRIME | EPSILON
+
     E9 := E8 E9_PRIME
-    E9_PRIME := "=" E9 | "+=" E9 | "-=" E9 | "*=" E9 | "/=" E9 | "=%" E9 | EPSILON
-    
+    E9_PRIME := "|" E8 E9_PRIME | EPSILON
+
     E8 := E7 E8_PRIME
-    E8_PRIME := "||" E7 E8_PRIME | EPSILON
+    E8_PRIME := "&" E7 E8_PRIME | EPSILON
 
     E7 := E6 E7_PRIME
-    E7_PRIME := "&&" E6 E7_PRIME | EPSILON
+    E7_PRIME := "==" E6 E7_PRIME | "!=" E6 E7_PRIME | EPSILON
 
-    E6 := E5 E7_PRIME
-    E6_PRIME := "==" E5 E6_PRIME | "!=" E5 E6_PRIME | EPSILON
+    E6 := E5 E6_PRIME
+    E6_PRIME := "<" E5 E6_PRIME | ">" E5 E6_PRIME | "=>" E5 E6_PRIME | "<=" E5 E6_PRIME | EPSILON
 
     E5 := E4 E5_PRIME
-    E5_PRIME := "<" E4 E5_PRIME | ">" E4 E5_PRIME | "=>" E4 E5_PRIME | "<=" E4 E5_PRIME | EPSILON
+    E5_PRIME := "+" E4 E5_PRIME | "-" E4 E5_PRIME | EPSILON
 
     E4 := E3 E4_PRIME
-    E4_PRIME := "+" E3 E4_PRIME | "-" E3 E4_PRIME | EPSILON
-
-    E3 := E2 E3_PRIME
-    E3_PRIME := "*" E2 E3_PRIME | "/" E2 E3_PRIME | "%" E2 E3_PRIME | EPSILON
+    E4_PRIME := "*" E3 E4_PRIME | "/" E3 E4_PRIME | "%" E3 E4_PRIME | EPSILON
 
     E2 := "+" E2 | "-" E2 | "++" E2 | "--" E2 | "!" E2 | E1
 
     E1 := E0 E1_PRIME
-    E1_PRIME := "++" E1_PRIME | "--" E1_PRIME | "[" E9 "]" E1_PRIME | EPSILON
+    E1_PRIME := "++" E1_PRIME | "--" E1_PRIME | "(" EXPR_LIST ")" E1_PRIME | "." E1_PRIME | EPSILON
     
-    E0 := "(" E9 ")" | NUM |  IDENTIFIER | "/ I think I will add func call here /"
+    E0 := "(" E11 ")" | NUM |  IDENTIFIER 
 
 Main sources:
 https://go.dev/ref/spec
-https://courses.fit.cvut.cz/BI-PJP/@B222/tutorials/expressions.html
+https://courses.fit.cvut.cz/BI-PJP/@B222/materials/expressions.html
 https://gitlab.fit.cvut.cz/NI-GEN/ni-gen-23/-/blob/main/LANGUAGE.md

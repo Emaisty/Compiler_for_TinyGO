@@ -4,6 +4,7 @@
 #include "AST.h"
 #include "lexer.h"
 #include <vector>
+#include <map>
 
 class Parser {
 public:
@@ -19,7 +20,54 @@ private:
 
     std::unique_ptr<AST::ASTTypeStruct> parseStruct();
 
+    std::unique_ptr<AST::ASTExpression> E11();
+
+    std::unique_ptr<AST::ASTExpression> E11_PRIME(std::unique_ptr<AST::ASTExpression> &left);
+
+    std::unique_ptr<AST::ASTExpression> E10();
+
+    std::unique_ptr<AST::ASTExpression> E10_PRIME(std::unique_ptr<AST::ASTExpression> &left);
+
+    std::unique_ptr<AST::ASTExpression> E9();
+
+    std::unique_ptr<AST::ASTExpression> E9_PRIME(std::unique_ptr<AST::ASTExpression> &left);
+
+    std::unique_ptr<AST::ASTExpression> E8();
+
+    std::unique_ptr<AST::ASTExpression> E8_PRIME(std::unique_ptr<AST::ASTExpression> &left);
+
+    std::unique_ptr<AST::ASTExpression> E7();
+
+    std::unique_ptr<AST::ASTExpression> E7_PRIME(std::unique_ptr<AST::ASTExpression> &left);
+
+    std::unique_ptr<AST::ASTExpression> E6();
+
+    std::unique_ptr<AST::ASTExpression> E6_PRIME(std::unique_ptr<AST::ASTExpression> &left);
+
+    std::unique_ptr<AST::ASTExpression> E5();
+
+    std::unique_ptr<AST::ASTExpression> E5_PRIME(std::unique_ptr<AST::ASTExpression> &left);
+
+    std::unique_ptr<AST::ASTExpression> E4();
+
+    std::unique_ptr<AST::ASTExpression> E4_PRIME(std::unique_ptr<AST::ASTExpression> &left);
+
+    std::unique_ptr<AST::ASTExpression> E3();
+
+    std::unique_ptr<AST::ASTExpression> E3_PRIME(std::unique_ptr<AST::ASTExpression> &left);
+
+    std::unique_ptr<AST::ASTExpression> E2();
+
+    std::unique_ptr<AST::ASTExpression> E1();
+
+    std::unique_ptr<AST::ASTExpression> E1_PRIME(std::unique_ptr<AST::ASTExpression> &left);
+
+    std::unique_ptr<AST::ASTExpression> E0();
+
+
     std::unique_ptr<AST::ASTExpression> parseExpression();
+
+    std::vector<std::unique_ptr<AST::ASTExpression>> parseExpressionList();
 
     std::unique_ptr<AST::ASTType> parseType();
 

@@ -24,9 +24,7 @@ namespace AST {
 
         ASTTypeInt(int new_bits = 32);
 
-        std::unique_ptr<ASTType> clone() const override;
-
-        std::unique_ptr<AST::ASTTypeInt> kek();
+        [[nodiscard]] std::unique_ptr<ASTType> clone() const override;
 
     private:
         int bits;
@@ -65,28 +63,85 @@ namespace AST {
         std::vector<std::pair<std::string, std::unique_ptr<ASTType >>> fileds;
     };
 
-    class ASTTypeNamed : public ASTType {
+    class Statement {
     public:
 
-        ASTTypeNamed(std::string new_name);
+        Statement() = default;
 
-
-        [[nodiscard]] std::unique_ptr<ASTType> clone() const override;
+        virtual ~Statement() = default;
 
     private:
-        std::string name;
-    };
-
-    class Statement {
-
     };
 
     class ASTExpression : public Statement {
+    public:
+        virtual std::unique_ptr<ASTExpression> clone() const = 0;
 
+    private:
     };
 
     class ASTBinaryOperator : public ASTExpression {
+    public:
 
+        enum Operator {
+            OR, AND, BINOR, BINAND, PLUS, MINUS, MUL, DIV, MOD, EQ, NE, GT, GE, LT, LE
+        };
+
+        ASTBinaryOperator(const ASTBinaryOperator &old_expr);
+
+        [[nodiscard]] std::unique_ptr<ASTExpression> clone() const override;
+
+        ASTBinaryOperator(std::unique_ptr<ASTExpression> &new_left, std::unique_ptr<ASTExpression> &new_right,
+                          Operator new_op = PLUS);
+
+    private:
+        std::unique_ptr<ASTExpression> left, right;
+        Operator op;
+    };
+
+    class ASTUnaryOperator : public ASTExpression {
+    public:
+        enum Operator {
+            NOT, PREINCR, PREDECR, POSTINCR, POSTDECR, PLUS, MINUS
+        };
+
+        ASTUnaryOperator(const ASTUnaryOperator &old_expr);
+
+        [[nodiscard]] std::unique_ptr<ASTExpression> clone() const override;
+
+        ASTUnaryOperator(std::unique_ptr<ASTExpression> &new_value, Operator new_op = PLUS);
+
+    private:
+        Operator op;
+        std::unique_ptr<ASTExpression> value;
+    };
+
+    class ASTFunctionCall : public ASTExpression {
+    public:
+
+        ASTFunctionCall(const ASTFunctionCall &old_func);
+
+        [[nodiscard]] std::unique_ptr<ASTExpression> clone() const override;
+
+        ASTFunctionCall(const std::unique_ptr<ASTExpression> &new_name,
+                        const std::vector<std::unique_ptr<ASTExpression>> &new_args);
+
+    private:
+        std::unique_ptr<ASTExpression> name;
+        std::vector<std::unique_ptr<ASTExpression>> arg;
+    };
+
+    class ASTMemberAccess : public ASTExpression {
+    public:
+        ASTMemberAccess(const ASTMemberAccess &old_access);
+
+        [[nodiscard]] std::unique_ptr<ASTExpression> clone() const override;
+
+        ASTMemberAccess(const std::unique_ptr<ASTExpression> &new_name,
+                        const std::unique_ptr<ASTExpression> &new_member);
+
+    private:
+        std::unique_ptr<ASTExpression> name, member;
     };
 
     class ASTDeclaration : public Statement {
@@ -102,6 +157,7 @@ namespace AST {
 
 
     };
+
 
     class ASTTypeDeclaration : public ASTDeclaration {
     public:

@@ -56,25 +56,36 @@ enum Token {
 
     tok_and,
     tok_or,
+    tok_binand,
+    tok_binor,
 
     tok_assign,
+    tok_plusassign,
+    tok_minassign,
+    tok_mulassign,
+    tok_divassign,    //40
+    tok_modassign,
     tok_fastassign,
     tok_colon,
     tok_plus,
     tok_minus,
     tok_div,
-    tok_asterisk,     //40
+    tok_asterisk,     //47
     tok_mod,
+    tok_incr,
+    tok_decr,
 
     tok_opfigbr,
     tok_clfigbr,
     tok_opbr,
     tok_clbr,
     tok_opsqrbr,
-    tok_clsqrbr,        //47
+    tok_clsqrbr,        //56
 
     tok_comma,
     tok_dot,
+
+    tok_excl
 };
 
 // type of input chars

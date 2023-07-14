@@ -79,15 +79,55 @@ Token Lexer::readSymbol() {
         case ',':
             return tok_comma;
         case '+':
+            if (cur_symb == '=') {
+                cur_symb = inputSymbol();
+                return tok_plusassign;
+            }
+            if (cur_symb == '+') {
+                cur_symb = inputSymbol();
+                return tok_incr;
+            }
             return tok_plus;
         case '-':
+            if (cur_symb == '=') {
+                cur_symb = inputSymbol();
+                return tok_minassign;
+            }
+            if (cur_symb == '-') {
+                cur_symb = inputSymbol();
+                return tok_decr;
+            }
             return tok_minus;
         case '*':
+            if (cur_symb == '=') {
+                cur_symb = inputSymbol();
+                return tok_mulassign;
+            }
             return tok_asterisk;
         case '/':
+            if (cur_symb == '=') {
+                cur_symb = inputSymbol();
+                return tok_divassign;
+            }
             return tok_div;
         case '%':
+            if (cur_symb == '=') {
+                cur_symb = inputSymbol();
+                return tok_modassign;
+            }
             return tok_mod;
+        case '&':
+            if (cur_symb == '&') {
+                cur_symb = inputSymbol();
+                return tok_and;
+            }
+            return tok_binand;
+        case '|':
+            if (cur_symb == '|') {
+                cur_symb = inputSymbol();
+                return tok_or;
+            }
+            return tok_binor;
         case '(':
             return tok_opbr;
         case ')':
@@ -99,7 +139,7 @@ Token Lexer::readSymbol() {
         case '{':
             return tok_opfigbr;
         case '}':
-            return tok_opfigbr;
+            return tok_clfigbr;
         case '=':
             if (cur_symb == '=') {
                 cur_symb = inputSymbol();
@@ -123,7 +163,7 @@ Token Lexer::readSymbol() {
                 cur_symb = inputSymbol();
                 return tok_ne;
             }
-            throw "ERROR. Unknown symbol '!'";
+            throw tok_excl;
         case ':':
             if (cur_symb == '=') {
                 cur_symb = inputSymbol();

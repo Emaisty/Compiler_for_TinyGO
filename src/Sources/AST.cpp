@@ -42,15 +42,64 @@ void AST::ASTTypeStruct::addField(std::string name, std::unique_ptr<AST::ASTType
 }
 
 
-AST::ASTTypeNamed::ASTTypeNamed(std::string new_name) {
-    name = new_name;
+AST::ASTBinaryOperator::ASTBinaryOperator(const ASTBinaryOperator &old_expr) {
+    op = old_expr.op;
+    left = old_expr.left->clone();
+    right = old_expr.right->clone();
+
 }
 
-std::unique_ptr<AST::ASTType> AST::ASTTypeNamed::clone() const {
-
-    return std::make_unique<ASTTypeNamed>(*this);
+std::unique_ptr<AST::ASTExpression> AST::ASTBinaryOperator::clone() const {
+    return std::make_unique<ASTBinaryOperator>(*this);
 }
 
+AST::ASTBinaryOperator::ASTBinaryOperator(std::unique_ptr<AST::ASTExpression> &new_left,
+                                          std::unique_ptr<AST::ASTExpression> &new_right, Operator new_op) {
+    op = new_op;
+    left = new_left->clone();
+    right = new_right->clone();
+}
+
+std::unique_ptr<AST::ASTExpression> AST::ASTUnaryOperator::clone() const {
+    return std::make_unique<ASTUnaryOperator>(*this);
+}
+
+AST::ASTUnaryOperator::ASTUnaryOperator(std::unique_ptr<AST::ASTExpression> &new_value, Operator new_op) {
+    op = new_op;
+    value = new_value->clone();
+}
+
+AST::ASTFunctionCall::ASTFunctionCall(const AST::ASTFunctionCall &old_func) {
+    name = old_func.name->clone();
+    for (auto &i: old_func.arg)
+        arg.push_back(i->clone());
+}
+
+std::unique_ptr<AST::ASTExpression> AST::ASTFunctionCall::clone() const {
+    return std::make_unique<ASTFunctionCall>(*this);
+}
+
+AST::ASTFunctionCall::ASTFunctionCall(const std::unique_ptr<AST::ASTExpression> &new_name,
+                                      const std::vector<std::unique_ptr<AST::ASTExpression>> &new_args) {
+    name = new_name->clone();
+    for (auto &i: new_args)
+        arg.push_back(i->clone());
+}
+
+AST::ASTMemberAccess::ASTMemberAccess(const AST::ASTMemberAccess &old_access) {
+    name = old_access.name->clone();
+    member = old_access.member->clone();
+}
+
+std::unique_ptr<AST::ASTExpression> AST::ASTMemberAccess::clone() const {
+    return std::make_unique<AST::ASTMemberAccess>(*this);
+}
+
+AST::ASTMemberAccess::ASTMemberAccess(const std::unique_ptr<AST::ASTExpression> &new_name,
+                                      const std::unique_ptr<AST::ASTExpression> &new_member) {
+    name = new_name->clone();
+    member = new_member->clone();
+}
 
 void AST::ASTDeclaration::setName(std::string new_name) {
     name = new_name;
