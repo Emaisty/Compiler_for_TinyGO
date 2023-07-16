@@ -363,11 +363,10 @@ std::unique_ptr<AST::ASTExpression> Parser::E1_PRIME(std::unique_ptr<AST::ASTExp
             return E1_PRIME(tmp);
         }
         case tok_dot: {
-            //TODO in future
-            /*cur_tok = lexer.gettok();
-            auto arg = ;
-            auto tmp = std::make_unique<AST::ASTFunctionCall>(left, arg)->clone();
-            return E1_PRIME(tmp);*/
+            cur_tok = lexer.gettok();
+            auto member = E0();
+            auto tmp = std::make_unique<AST::ASTMemberAccess>(left, member)->clone();
+            return E1_PRIME(tmp);
         }
         default:
             return left->clone();
@@ -375,6 +374,30 @@ std::unique_ptr<AST::ASTExpression> Parser::E1_PRIME(std::unique_ptr<AST::ASTExp
 }
 
 std::unique_ptr<AST::ASTExpression> Parser::E0() {
+    switch (cur_tok) {
+        case tok_opbr: {
+            matchAndGoNext(tok_opbr);
+            auto res = parseExpression()->clone();
+            matchAndGoNext(tok_clbr);
+            return res;
+        }
+        case tok_num_int: {
+            auto res = std::make_unique<AST::ASTIntNumber>(lexer.numVal())->clone();
+            cur_tok = lexer.gettok();
+            return res;
+        }
+        case tok_num_float: {
+            auto res = std::make_unique<AST::ASTFloatNumber>(lexer.douVal())->clone();
+            cur_tok = lexer.gettok();
+            return res;
+        }
+        default: {
+            match(tok_identifier);
+            auto res = std::make_unique<AST::ASTVar>(lexer.identifierStr())->clone();
+            cur_tok = lexer.gettok();
+            return res;
+        }
+    }
 
 }
 

@@ -144,6 +144,38 @@ namespace AST {
         std::unique_ptr<ASTExpression> name, member;
     };
 
+    class ASTIntNumber : public ASTExpression {
+    public:
+        [[nodiscard]] std::unique_ptr<ASTExpression> clone() const override;
+
+        ASTIntNumber(const int new_value = 0);
+
+    private:
+        long long int value = 0;
+    };
+
+    class ASTFloatNumber : public ASTExpression {
+    public:
+        [[nodiscard]] std::unique_ptr<ASTExpression> clone() const override;
+
+        ASTFloatNumber(const double new_value = 0);
+
+    private:
+        double value = 0;
+    };
+
+    class ASTVar : public ASTExpression {
+    public:
+
+        [[nodiscard]] std::unique_ptr<ASTExpression> clone() const override;
+
+        ASTVar(const std::string new_name);
+
+    private:
+        std::string name;
+    };
+
+
     class ASTDeclaration : public Statement {
     public:
 

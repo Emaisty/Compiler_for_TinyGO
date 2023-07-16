@@ -117,7 +117,7 @@ Some identifiers already occupied. Knows as keywords("for","else" etc)
     E11_PRIME := "||" E10 E11_PRIME | EPSILON
 
     E10 := E11 E10_PRIME
-    E10_PRIME := "&&" E11 E10_PRIME | EPSILON
+    E10_PRIME := "&&" E9 E10_PRIME | EPSILON
 
     E9 := E8 E9_PRIME
     E9_PRIME := "|" E8 E9_PRIME | EPSILON
@@ -140,7 +140,7 @@ Some identifiers already occupied. Knows as keywords("for","else" etc)
     E2 := "+" E2 | "-" E2 | "++" E2 | "--" E2 | "!" E2 | E1
 
     E1 := E0 E1_PRIME
-    E1_PRIME := "++" E1_PRIME | "--" E1_PRIME | "(" EXPR_LIST ")" E1_PRIME | "." E1_PRIME | EPSILON
+    E1_PRIME := "++" E1_PRIME | "--" E1_PRIME | "(" EXPR_LIST ")" E1_PRIME | "." E0 E1_PRIME | EPSILON
     
     E0 := "(" E11 ")" | NUM |  IDENTIFIER 
 

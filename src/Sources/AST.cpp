@@ -101,6 +101,31 @@ AST::ASTMemberAccess::ASTMemberAccess(const std::unique_ptr<AST::ASTExpression> 
     member = new_member->clone();
 }
 
+std::unique_ptr<AST::ASTExpression> AST::ASTIntNumber::clone() const {
+    return std::make_unique<AST::ASTIntNumber>(*this);
+}
+
+AST::ASTIntNumber::ASTIntNumber(const int new_value) {
+    value = new_value;
+}
+
+std::unique_ptr<AST::ASTExpression> AST::ASTFloatNumber::clone() const {
+    return std::make_unique<AST::ASTFloatNumber>(*this);
+}
+
+AST::ASTFloatNumber::ASTFloatNumber(const double new_value) {
+    value = new_value;
+}
+
+std::unique_ptr<AST::ASTExpression> AST::ASTVar::clone() const {
+    return std::make_unique<AST::ASTVar>(*this);
+}
+
+AST::ASTVar::ASTVar(const std::string new_name) {
+    name = new_name;
+}
+
+
 void AST::ASTDeclaration::setName(std::string new_name) {
     name = new_name;
 }
