@@ -231,19 +231,21 @@ bool Lexer::checkIfCanBe(int cur_symb, int base) {
 }
 
 
-void Lexer::inputNumber(int base) {
-    cur_symb = inputSymbol();
-    skipOptional_();
-    m_NumVal *= base;
-    if (checkIfCanBe(cur_symb, base)) {
-        if (cur_symb >= '0' && cur_symb <= '9')
-            m_NumVal += cur_symb - 48;
-        if (cur_symb >= 'A' && cur_symb <= 'F')
-            m_NumVal += cur_symb - 65;
-        if (cur_symb >= 'a' && cur_symb <= 'f')
-            m_NumVal += cur_symb - 97;
-    } else
-        throw "ERROR. Wrong format of number in " + std::to_string(cur_symb) + " base";
+void Lexer::inputNumber(int base, bool mandatoryToBe) {
+    if (mandatoryToBe) {
+        cur_symb = inputSymbol();
+        skipOptional_();
+        m_NumVal *= base;
+        if (checkIfCanBe(cur_symb, base)) {
+            if (cur_symb >= '0' && cur_symb <= '9')
+                m_NumVal += cur_symb - 48;
+            if (cur_symb >= 'A' && cur_symb <= 'F')
+                m_NumVal += cur_symb - 65;
+            if (cur_symb >= 'a' && cur_symb <= 'f')
+                m_NumVal += cur_symb - 97;
+        } else
+            throw "ERROR. Wrong format of number in " + std::to_string(cur_symb) + " base";
+    }
     cur_symb = inputSymbol();
     while (cur_symb == '_' || checkIfCanBe(cur_symb, base)) {
         skipOptional_();
@@ -291,7 +293,7 @@ Token Lexer::readNumber() {
     }
 
     m_NumVal = cur_symb - 48;
-    inputNumber(10);
+    inputNumber(10, false);
     if (cur_symb == '.') {
         int int_part = m_NumVal;
         m_NumVal = 0;

@@ -5,6 +5,7 @@
 #include "lexer.h"
 #include <vector>
 #include <map>
+#include <memory>
 
 class Parser {
 public:
@@ -52,9 +53,9 @@ private:
 
     std::unique_ptr<AST::ASTExpression> E4_PRIME(std::unique_ptr<AST::ASTExpression> &left);
 
-    std::unique_ptr<AST::ASTExpression> E3();
+    //std::unique_ptr<AST::ASTExpression> E3();
 
-    std::unique_ptr<AST::ASTExpression> E3_PRIME(std::unique_ptr<AST::ASTExpression> &left);
+    //std::unique_ptr<AST::ASTExpression> E3_PRIME(std::unique_ptr<AST::ASTExpression> &left);
 
     std::unique_ptr<AST::ASTExpression> E2();
 

@@ -267,7 +267,7 @@ std::unique_ptr<AST::ASTExpression> Parser::E5_PRIME(std::unique_ptr<AST::ASTExp
 }
 
 std::unique_ptr<AST::ASTExpression> Parser::E4() {
-    auto tmp = E3();
+    auto tmp = E2();
     return E4_PRIME(tmp);
 }
 
@@ -276,7 +276,7 @@ std::unique_ptr<AST::ASTExpression> Parser::E4_PRIME(std::unique_ptr<AST::ASTExp
         case tok_asterisk: {
             cur_tok = lexer.gettok();
 
-            auto right = E3();
+            auto right = E2();
             auto tmp = std::make_unique<AST::ASTBinaryOperator>(left, right, AST::ASTBinaryOperator::MUL)->clone();
 
             return E4_PRIME(tmp);
@@ -284,7 +284,7 @@ std::unique_ptr<AST::ASTExpression> Parser::E4_PRIME(std::unique_ptr<AST::ASTExp
         case tok_div: {
             cur_tok = lexer.gettok();
 
-            auto right = E3();
+            auto right = E2();
             auto tmp = std::make_unique<AST::ASTBinaryOperator>(left, right, AST::ASTBinaryOperator::DIV)->clone();
 
             return E4_PRIME(tmp);
@@ -292,7 +292,7 @@ std::unique_ptr<AST::ASTExpression> Parser::E4_PRIME(std::unique_ptr<AST::ASTExp
         case tok_mod: {
             cur_tok = lexer.gettok();
 
-            auto right = E3();
+            auto right = E2();
             auto tmp = std::make_unique<AST::ASTBinaryOperator>(left, right, AST::ASTBinaryOperator::MOD)->clone();
 
             return E4_PRIME(tmp);
@@ -411,7 +411,6 @@ std::vector<std::unique_ptr<AST::ASTExpression>> Parser::parseExpressionList() {
 
     do {
         res.push_back(parseExpression());
-        cur_tok = lexer.gettok();
     } while (cur_tok == tok_comma && (cur_tok = lexer.gettok()));
     return res;
 }
@@ -483,9 +482,8 @@ std::vector<std::unique_ptr<AST::ASTDeclaration>> Parser::parseConstDeclaration(
         matchAndGoNext(tok_assign);
 
         int i = 0;
-        do {
+        auto values = parseExpressionList();
 
-        }
 
     }
 

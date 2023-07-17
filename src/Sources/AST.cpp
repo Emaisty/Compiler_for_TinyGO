@@ -60,6 +60,12 @@ AST::ASTBinaryOperator::ASTBinaryOperator(std::unique_ptr<AST::ASTExpression> &n
     right = new_right->clone();
 }
 
+
+AST::ASTUnaryOperator::ASTUnaryOperator(const AST::ASTUnaryOperator &old_expr) {
+    op = old_expr.op;
+    value = old_expr.value->clone();
+}
+
 std::unique_ptr<AST::ASTExpression> AST::ASTUnaryOperator::clone() const {
     return std::make_unique<ASTUnaryOperator>(*this);
 }

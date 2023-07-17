@@ -125,7 +125,7 @@ public:
 
     bool checkIfCanBe(int cur_symb, int base);
 
-    void inputNumber(int base);
+    void inputNumber(int base, bool mandatoryToBe = true);
 
     bool haveBNL();
 
