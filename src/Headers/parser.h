@@ -74,6 +74,8 @@ private:
 
     std::unique_ptr<AST::Function> parseFunction();
 
+    std::vector<std::unique_ptr<AST::ASTDeclaration> > parseConstDeclarationLine();
+
     std::vector<std::unique_ptr<AST::ASTDeclaration> > parseConstDeclaration();
 
     std::vector<std::unique_ptr<AST::ASTDeclaration> > parseTypeDeclaration();

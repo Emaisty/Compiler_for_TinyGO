@@ -71,12 +71,17 @@ namespace AST {
 
         virtual ~Statement() = default;
 
+        virtual std::unique_ptr<Statement> clone() const = 0;
+
     private:
     };
 
     class ASTExpression : public Statement {
     public:
-        virtual std::unique_ptr<ASTExpression> clone() const = 0;
+
+        [[nodiscard]] std::unique_ptr<Statement> clone() const override;
+
+        virtual std::unique_ptr<ASTExpression> clone_expr() const = 0;
 
     private:
     };
@@ -90,7 +95,7 @@ namespace AST {
 
         ASTBinaryOperator(const ASTBinaryOperator &old_expr);
 
-        [[nodiscard]] std::unique_ptr<ASTExpression> clone() const override;
+        [[nodiscard]] std::unique_ptr<ASTExpression> clone_expr() const override;
 
         ASTBinaryOperator(std::unique_ptr<ASTExpression> &new_left, std::unique_ptr<ASTExpression> &new_right,
                           Operator new_op = PLUS);
@@ -108,7 +113,7 @@ namespace AST {
 
         ASTUnaryOperator(const ASTUnaryOperator &old_expr);
 
-        [[nodiscard]] std::unique_ptr<ASTExpression> clone() const override;
+        [[nodiscard]] std::unique_ptr<ASTExpression> clone_expr() const override;
 
         ASTUnaryOperator(std::unique_ptr<ASTExpression> &new_value, Operator new_op = PLUS);
 
@@ -122,7 +127,7 @@ namespace AST {
 
         ASTFunctionCall(const ASTFunctionCall &old_func);
 
-        [[nodiscard]] std::unique_ptr<ASTExpression> clone() const override;
+        [[nodiscard]] std::unique_ptr<ASTExpression> clone_expr() const override;
 
         ASTFunctionCall(const std::unique_ptr<ASTExpression> &new_name,
                         const std::vector<std::unique_ptr<ASTExpression>> &new_args);
@@ -136,7 +141,7 @@ namespace AST {
     public:
         ASTMemberAccess(const ASTMemberAccess &old_access);
 
-        [[nodiscard]] std::unique_ptr<ASTExpression> clone() const override;
+        [[nodiscard]] std::unique_ptr<ASTExpression> clone_expr() const override;
 
         ASTMemberAccess(const std::unique_ptr<ASTExpression> &new_name,
                         const std::unique_ptr<ASTExpression> &new_member);
@@ -147,7 +152,7 @@ namespace AST {
 
     class ASTIntNumber : public ASTExpression {
     public:
-        [[nodiscard]] std::unique_ptr<ASTExpression> clone() const override;
+        [[nodiscard]] std::unique_ptr<ASTExpression> clone_expr() const override;
 
         ASTIntNumber(const int new_value = 0);
 
@@ -157,7 +162,7 @@ namespace AST {
 
     class ASTFloatNumber : public ASTExpression {
     public:
-        [[nodiscard]] std::unique_ptr<ASTExpression> clone() const override;
+        [[nodiscard]] std::unique_ptr<ASTExpression> clone_expr() const override;
 
         ASTFloatNumber(const double new_value = 0);
 
@@ -168,7 +173,7 @@ namespace AST {
     class ASTVar : public ASTExpression {
     public:
 
-        [[nodiscard]] std::unique_ptr<ASTExpression> clone() const override;
+        [[nodiscard]] std::unique_ptr<ASTExpression> clone_expr() const override;
 
         ASTVar(const std::string new_name);
 
@@ -180,13 +185,19 @@ namespace AST {
     class ASTDeclaration : public Statement {
     public:
 
+        ASTDeclaration(const ASTDeclaration &pr_decl);
+
+        [[nodiscard]] std::unique_ptr<Statement> clone() const override;
+
+        ASTDeclaration(std::string new_name, std::unique_ptr<ASTExpression> &new_value);
+
         void setName(std::string new_name);
 
-        void setType(std::unique_ptr<ASTType> &new_type);
+        void setValue(std::unique_ptr<ASTExpression> &new_value);
 
     private:
         std::string name;
-        std::unique_ptr<ASTType> type;
+        std::unique_ptr<ASTExpression> value;
 
 
     };
