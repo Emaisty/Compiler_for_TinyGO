@@ -466,7 +466,7 @@ std::unique_ptr<AST::Function> Parser::parseFunction() {
 
 }
 
-std::vector<std::unique_ptr<AST::ASTDeclaration>> Parser::parseConstDeclarationLine() {
+std::vector<std::unique_ptr<AST::ASTConstDeclaration>> Parser::parseConstDeclarationLine() {
     std::vector<std::unique_ptr<AST::ASTConstDeclaration>> res;
 
     auto names = parseIdentifierList();
@@ -478,7 +478,6 @@ std::vector<std::unique_ptr<AST::ASTDeclaration>> Parser::parseConstDeclarationL
     }
     matchAndGoNext(tok_assign);
 
-    int i = 0;
     auto values = parseExpressionList();
 
     // Checks
@@ -502,20 +501,33 @@ std::vector<std::unique_ptr<AST::ASTDeclaration>> Parser::parseConstDeclaration(
         matchAndGoNext(tok_opbr);
         while (cur_tok != tok_clbr) {
             auto decl_line = parseConstDeclarationLine();
-
             for (auto &i: decl_line)
+                result.push_back(i->clone_decl());
+
+            //TODO if multiple simicolons
+            if (cur_tok == tok_semicolon)
+                cur_tok = lexer.gettok();
+            else if (!lexer.haveBNL()) {
+                match(tok_clbr);
+                break;
+            }
 
         }
-
     } else {
+        auto decl_line = parseConstDeclarationLine();
 
-
+        for (auto &i: decl_line)
+            result.push_back(i->clone_decl());
     }
 
     return result;
 }
 
 std::vector<std::unique_ptr<AST::ASTDeclaration >> Parser::parseTypeDeclaration() {
+
+}
+
+std::vector<std::unique_ptr<AST::ASTConstDeclaration> > Parser::parseVarDeclarationLine() {
 
 }
 

@@ -142,12 +142,12 @@ AST::ASTDeclaration::ASTDeclaration(const ASTDeclaration &pr_decl) {
 }
 
 std::unique_ptr<AST::Statement> AST::ASTDeclaration::clone() const {
-    return std::make_unique<ASTDeclaration>(*this);
+    return this->clone_decl();
 }
 
 AST::ASTDeclaration::ASTDeclaration(std::string new_name, std::unique_ptr<AST::ASTExpression> &new_value) {
     name = new_name;
-    value = value->clone_expr();
+    value = new_value->clone_expr();
 }
 
 void AST::ASTDeclaration::setName(std::string new_name) {
@@ -160,6 +160,19 @@ void AST::ASTDeclaration::setValue(std::unique_ptr<AST::ASTExpression> &new_type
 
 void AST::Program::setName(std::string new_name) {
     name = new_name;
+}
+
+
+std::unique_ptr<AST::ASTDeclaration> AST::ASTTypeDeclaration::clone_decl() const {
+    return std::make_unique<AST::ASTTypeDeclaration>(*this);
+}
+
+std::unique_ptr<AST::ASTDeclaration> AST::ASTVarDeclaration::clone_decl() const {
+    return std::make_unique<AST::ASTVarDeclaration>(*this);
+}
+
+std::unique_ptr<AST::ASTDeclaration> AST::ASTConstDeclaration::clone_decl() const {
+    return std::make_unique<AST::ASTConstDeclaration>(*this);
 }
 
 void AST::Program::addDecl(std::unique_ptr<ASTDeclaration> &new_decl) {

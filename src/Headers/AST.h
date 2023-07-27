@@ -191,6 +191,8 @@ namespace AST {
 
         ASTDeclaration(std::string new_name, std::unique_ptr<ASTExpression> &new_value);
 
+        virtual std::unique_ptr<ASTDeclaration> clone_decl() const = 0;
+
         void setName(std::string new_name);
 
         void setValue(std::unique_ptr<ASTExpression> &new_value);
@@ -205,11 +207,17 @@ namespace AST {
 
     class ASTTypeDeclaration : public ASTDeclaration {
     public:
+        [[nodiscard]] std::unique_ptr<ASTDeclaration> clone_decl() const override;
+
+        using ASTDeclaration::ASTDeclaration;
     private:
     };
 
     class ASTVarDeclaration : public ASTDeclaration {
     public:
+        [[nodiscard]] std::unique_ptr<ASTDeclaration> clone_decl() const override;
+
+        using ASTDeclaration::ASTDeclaration;
     private:
 
 
@@ -217,6 +225,9 @@ namespace AST {
 
     class ASTConstDeclaration : public ASTDeclaration {
     public:
+        [[nodiscard]] std::unique_ptr<ASTDeclaration> clone_decl() const override;
+
+        using ASTDeclaration::ASTDeclaration;
     private:
     };
 

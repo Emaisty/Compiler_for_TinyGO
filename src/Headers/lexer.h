@@ -135,7 +135,7 @@ private:
     std::ifstream file;
     char open = 0;
 
-    bool newLine = false;
+    int newLine = 0;
 
     int cur_symb = -1;
 
