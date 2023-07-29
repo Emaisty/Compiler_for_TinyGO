@@ -51,6 +51,21 @@ bool Parser::parse() {
 
 }
 
+bool Parser::checkForSeparator() {
+    if (cur_tok == tok_semicolon) {
+        cur_tok = lexer.gettok();
+        return true;
+    } else if (lexer.haveBNL()) {
+        return true;
+    }
+    return false;
+}
+
+bool
+Parser::matchTypes(const std::unique_ptr<AST::ASTType> &type, const std::unique_ptr<AST::ASTType> &reference_type) {
+    //TODO
+}
+
 std::vector<std::string> Parser::parseIdentifierList() {
     std::vector<std::string> res;
 
@@ -77,9 +92,7 @@ std::unique_ptr<AST::ASTTypeStruct> Parser::parseStruct() {
         for (auto &name: names)
             res->addField(name, type);
 
-        if (cur_tok == tok_semicolon)
-            cur_tok = lexer.gettok();
-        else if (!lexer.haveBNL()) {
+        if (!checkForSeparator()) {
             match(tok_clfigbr);
             break;
         }
@@ -504,15 +517,13 @@ std::vector<std::unique_ptr<AST::ASTDeclaration>> Parser::parseConstDeclaration(
             for (auto &i: decl_line)
                 result.push_back(i->clone_decl());
 
-            //TODO if multiple simicolons
-            if (cur_tok == tok_semicolon)
-                cur_tok = lexer.gettok();
-            else if (!lexer.haveBNL()) {
+            if (!checkForSeparator()) {
                 match(tok_clbr);
                 break;
             }
 
         }
+        matchAndGoNext(tok_clbr);
     } else {
         auto decl_line = parseConstDeclarationLine();
 
@@ -528,20 +539,75 @@ std::vector<std::unique_ptr<AST::ASTDeclaration >> Parser::parseTypeDeclaration(
 }
 
 std::vector<std::unique_ptr<AST::ASTConstDeclaration> > Parser::parseVarDeclarationLine() {
+    std::vector<std::unique_ptr<AST::ASTConstDeclaration>> res;
 
+    auto names = parseIdentifierList();
+
+
+    // if there is type before assign sign
+    if (cur_tok != tok_assign) {
+        std::unique_ptr<AST::ASTType> type = nullptr;
+        type = parseType();
+        if (cur_tok == tok_assign) {
+            matchAndGoNext(tok_assign);
+
+            auto values = parseExpressionList();
+
+            //TODO check if types matches
+
+        } else {
+            //set default values for this types
+        }
+
+
+    } else {
+
+    }
+
+    return res;
 }
 
 std::vector<std::unique_ptr<AST::ASTDeclaration>> Parser::parseVarDeclaration() {
+    std::vector<std::unique_ptr<AST::ASTDeclaration>> result;
 
+    matchAndGoNext(tok_var);
+    if (cur_tok == tok_opbr) {
+        matchAndGoNext(tok_opbr);
+        while (cur_tok != tok_clbr) {
+            auto decl_line = parseVarDeclarationLine();
+            for (auto &i: decl_line)
+                result.push_back(i->clone_decl());
+            if (!checkForSeparator()) {
+                match(tok_clbr);
+                break;
+            }
+
+        }
+        matchAndGoNext(tok_clbr);
+    } else {
+        auto decl_line = parseVarDeclarationLine();
+
+        for (auto &i: decl_line)
+            result.push_back(i->clone_decl());
+    }
+
+    return result;
 }
 
 std::vector<std::unique_ptr<AST::ASTDeclaration>> Parser::parseDeclaration() {
+    std::vector<std::unique_ptr<AST::ASTDeclaration>> res;
     switch (cur_tok) {
         case tok_const:
-            return parseConstDeclaration();
+            res = parseConstDeclaration();
+            break;
         case tok_var:
-            return parseVarDeclaration();
+            res = parseVarDeclaration();
+            break;
         default:
-            return parseTypeDeclaration();
+            res = parseTypeDeclaration();
+            break;
     }
+    if (!checkForSeparator())
+        throw "ERROR. No separator after declaration";
+    return res;
 }

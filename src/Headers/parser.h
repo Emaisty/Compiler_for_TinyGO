@@ -17,6 +17,10 @@ public:
 
 private:
 
+    bool checkForSeparator();
+
+    bool matchTypes(const std::unique_ptr<AST::ASTType> &type, const std::unique_ptr<AST::ASTType> &reference_type);
+
     std::vector<std::string> parseIdentifierList();
 
     std::unique_ptr<AST::ASTTypeStruct> parseStruct();
