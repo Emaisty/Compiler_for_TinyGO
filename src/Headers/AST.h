@@ -39,6 +39,14 @@ namespace AST {
     private:
     };
 
+    class ASTTypeBool : public ASTType {
+    public:
+
+        [[nodiscard]] std::unique_ptr<ASTType> clone() const override;
+
+    private:
+    };
+
     class ASTTypePointer : public ASTType {
     public:
 
@@ -113,7 +121,7 @@ namespace AST {
     class ASTUnaryOperator : public ASTExpression {
     public:
         enum Operator {
-            NOT, PREINCR, PREDECR, POSTINCR, POSTDECR, PLUS, MINUS
+            NOT, PLUS, MINUS
         };
 
         ASTUnaryOperator(const ASTUnaryOperator &old_expr);
@@ -179,10 +187,22 @@ namespace AST {
 
         [[nodiscard]] std::unique_ptr<ASTType> getType() const override;
 
-        ASTFloatNumber(const double new_value = 0);
+        ASTFloatNumber(double new_value = 0);
 
     private:
         double value = 0;
+    };
+
+    class ASTBoolNumber : public ASTExpression {
+    public:
+        [[nodiscard]] std::unique_ptr<ASTExpression> cloneExpr() const override;
+
+        [[nodiscard]] std::unique_ptr<ASTType> getType() const override;
+
+        ASTBoolNumber(const bool new_value = false);
+
+    private:
+        bool value = false;
     };
 
     class ASTVar : public ASTExpression {

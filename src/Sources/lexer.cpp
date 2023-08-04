@@ -25,7 +25,9 @@ const struct {
         {"int32",    tok_int32},
         {"int64",    tok_int64},
         {"float",    tok_float},
-
+        {"bool",     tok_bool},
+        {"true",     tok_true},
+        {"false",    tok_false},
 };
 
 void Lexer::InitInput(char *name) {
@@ -83,19 +85,11 @@ Token Lexer::readSymbol() {
                 cur_symb = inputSymbol();
                 return tok_plusassign;
             }
-            if (cur_symb == '+') {
-                cur_symb = inputSymbol();
-                return tok_incr;
-            }
             return tok_plus;
         case '-':
             if (cur_symb == '=') {
                 cur_symb = inputSymbol();
                 return tok_minassign;
-            }
-            if (cur_symb == '-') {
-                cur_symb = inputSymbol();
-                return tok_decr;
             }
             return tok_minus;
         case '*':
@@ -173,7 +167,7 @@ Token Lexer::readSymbol() {
         case ';':
             return tok_semicolon;
         default:
-            throw "ERROR. Unknown symbol " + (char) pr_symb;
+            throw std::invalid_argument(&"ERROR. Unknown symbol "[(char) pr_symb]);
     }
 }
 
@@ -244,7 +238,7 @@ void Lexer::inputNumber(int base, bool mandatoryToBe) {
             if (cur_symb >= 'a' && cur_symb <= 'f')
                 m_NumVal += cur_symb - 97;
         } else
-            throw "ERROR. Wrong format of number in " + std::to_string(cur_symb) + " base";
+            throw std::invalid_argument("ERROR. Wrong format of number in " + std::to_string(cur_symb) + " base");
     }
     cur_symb = inputSymbol();
     while (cur_symb == '_' || checkIfCanBe(cur_symb, base)) {
@@ -342,7 +336,7 @@ Token Lexer::gettok() {
             decrease();
             return readSymbol();
         default:
-            throw "ERROR. Unknown token";
+            throw std::invalid_argument("ERROR. Unknown token");
     }
 }
 
@@ -362,6 +356,6 @@ Token Lexer::gettokWhithOutIgnoreNewLine() {
         case SPE_SYMB:
             return readSymbol();
         default:
-            throw "ERROR. Unknown token";
+            throw std::invalid_argument("ERROR. Unknown token");
     }
 }

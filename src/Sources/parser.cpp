@@ -330,16 +330,6 @@ std::unique_ptr<AST::ASTExpression> Parser::E2() {
             auto arg = E2();
             return std::make_unique<AST::ASTUnaryOperator>(arg, AST::ASTUnaryOperator::Operator::PLUS);
         }
-        case tok_incr: {
-            cur_tok = lexer.gettok();
-            auto arg = E2();
-            return std::make_unique<AST::ASTUnaryOperator>(arg, AST::ASTUnaryOperator::Operator::PREINCR);
-        }
-        case tok_decr: {
-            cur_tok = lexer.gettok();
-            auto arg = E2();
-            return std::make_unique<AST::ASTUnaryOperator>(arg, AST::ASTUnaryOperator::Operator::PREDECR);
-        }
         case tok_excl: {
             cur_tok = lexer.gettok();
             auto arg = E2();
@@ -359,18 +349,6 @@ std::unique_ptr<AST::ASTExpression> Parser::E1() {
 
 std::unique_ptr<AST::ASTExpression> Parser::E1_PRIME(std::unique_ptr<AST::ASTExpression> &left) {
     switch (cur_tok) {
-        case tok_incr: {
-            cur_tok = lexer.gettok();
-            auto tmp = std::make_unique<AST::ASTUnaryOperator>(left,
-                                                               AST::ASTUnaryOperator::Operator::POSTINCR)->cloneExpr();
-            return E1_PRIME(tmp);
-        }
-        case tok_decr: {
-            cur_tok = lexer.gettok();
-            auto tmp = std::make_unique<AST::ASTUnaryOperator>(left,
-                                                               AST::ASTUnaryOperator::Operator::POSTDECR)->cloneExpr();
-            return E1_PRIME(tmp);
-        }
         case tok_opbr: {
             cur_tok = lexer.gettok();
             auto arg = parseExpressionList();
@@ -399,6 +377,12 @@ std::unique_ptr<AST::ASTExpression> Parser::E0() {
         }
         case tok_num_int: {
             auto res = std::make_unique<AST::ASTIntNumber>(lexer.numVal())->cloneExpr();
+            cur_tok = lexer.gettok();
+            return res;
+        }
+        case tok_false:
+        case tok_true: {
+            auto res = std::make_unique<AST::ASTBoolNumber>(cur_tok == tok_true)->cloneExpr();
             cur_tok = lexer.gettok();
             return res;
         }
@@ -446,6 +430,9 @@ std::unique_ptr<AST::ASTType> Parser::parseType() {
         case tok_float:
             cur_tok = lexer.gettok();
             return std::make_unique<AST::ASTTypeFloat>();
+        case tok_bool:
+            cur_tok = lexer.gettok();
+            return std::make_unique<AST::ASTTypeBool>();
         case tok_struct:
             return parseStruct();
         case tok_opbr: {

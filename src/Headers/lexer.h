@@ -38,10 +38,11 @@ enum Token {
     tok_int,
     tok_int64,   // 20
     tok_float,
+    tok_bool,
 
     //
     tok_num_int,
-    tok_num_float, //23
+    tok_num_float, //24
 
     //
     tok_semicolon,
@@ -51,7 +52,7 @@ enum Token {
     tok_gt,
     tok_le,
     tok_lt,
-    tok_eq,  //30
+    tok_eq,  //31
     tok_ne,
 
     tok_and,
@@ -63,29 +64,31 @@ enum Token {
     tok_plusassign,
     tok_minassign,
     tok_mulassign,
-    tok_divassign,    //40
+    tok_divassign,    //41
     tok_modassign,
     tok_fastassign,
     tok_colon,
     tok_plus,
     tok_minus,
     tok_div,
-    tok_asterisk,     //47
+    tok_asterisk,     //48
     tok_mod,
-    tok_incr,
-    tok_decr,
 
     tok_opfigbr,
     tok_clfigbr,
     tok_opbr,
     tok_clbr,
     tok_opsqrbr,
-    tok_clsqrbr,        //56
+    tok_clsqrbr,        //55
 
     tok_comma,
     tok_dot,
 
-    tok_excl
+    tok_excl,
+
+
+    tok_true,
+    tok_false,
 };
 
 // type of input chars
