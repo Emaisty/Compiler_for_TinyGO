@@ -467,8 +467,8 @@ std::unique_ptr<AST::Function> Parser::parseFunction() {
 
 }
 
-std::vector<std::unique_ptr<AST::ASTConstDeclaration>> Parser::parseConstDeclarationLine() {
-    std::vector<std::unique_ptr<AST::ASTConstDeclaration>> res;
+std::vector<std::unique_ptr<AST::ASTDeclaration>> Parser::parseConstDeclarationLine() {
+    std::vector<std::unique_ptr<AST::ASTDeclaration>> res;
 
     auto names = parseIdentifierList();
 
@@ -501,40 +501,23 @@ std::vector<std::unique_ptr<AST::ASTConstDeclaration>> Parser::parseConstDeclara
     return res;
 }
 
-std::vector<std::unique_ptr<AST::ASTDeclaration>> Parser::parseConstDeclaration() {
-    std::vector<std::unique_ptr<AST::ASTDeclaration>> result;
 
-    matchAndGoNext(tok_const);
-    if (cur_tok == tok_opbr) {
-        matchAndGoNext(tok_opbr);
-        while (cur_tok != tok_clbr) {
-            auto decl_line = parseConstDeclarationLine();
-            for (auto &i: decl_line)
-                result.push_back(i->cloneDecl());
+std::vector<std::unique_ptr<AST::ASTDeclaration>> Parser::parseTypeDeclarationLine() {
+    std::vector<std::unique_ptr<AST::ASTDeclaration>> res;
+    match(tok_identifier);
+    std::string name = lexer.identifierStr();
+    cur_tok = lexer.gettok();
+    if (cur_tok == tok_assign)
+        cur_tok = lexer.gettok();
 
-            if (!checkForSeparator()) {
-                match(tok_clbr);
-                break;
-            }
+    auto type = parseType();
+    res.push_back(std::make_unique<AST::ASTConstDeclaration>(name, type));
 
-        }
-        matchAndGoNext(tok_clbr);
-    } else {
-        auto decl_line = parseConstDeclarationLine();
-
-        for (auto &i: decl_line)
-            result.push_back(i->cloneDecl());
-    }
-
-    return result;
+    return res;
 }
 
-std::vector<std::unique_ptr<AST::ASTDeclaration >> Parser::parseTypeDeclaration() {
-
-}
-
-std::vector<std::unique_ptr<AST::ASTConstDeclaration> > Parser::parseVarDeclarationLine() {
-    std::vector<std::unique_ptr<AST::ASTConstDeclaration>> res;
+std::vector<std::unique_ptr<AST::ASTDeclaration> > Parser::parseVarDeclarationLine() {
+    std::vector<std::unique_ptr<AST::ASTDeclaration>> res;
 
     auto names = parseIdentifierList();
 
@@ -585,14 +568,16 @@ std::vector<std::unique_ptr<AST::ASTConstDeclaration> > Parser::parseVarDeclarat
     return res;
 }
 
-std::vector<std::unique_ptr<AST::ASTDeclaration>> Parser::parseVarDeclaration() {
+
+std::vector<std::unique_ptr<AST::ASTDeclaration> >
+Parser::parseDeclarationBlock(const std::function<std::vector<std::unique_ptr<AST::ASTDeclaration>>()> &type_of_line) {
     std::vector<std::unique_ptr<AST::ASTDeclaration>> result;
 
-    matchAndGoNext(tok_var);
     if (cur_tok == tok_opbr) {
+        //multiple
         matchAndGoNext(tok_opbr);
         while (cur_tok != tok_clbr) {
-            auto decl_line = parseVarDeclarationLine();
+            auto decl_line = type_of_line();
             for (auto &i: decl_line)
                 result.push_back(i->cloneDecl());
             if (!checkForSeparator()) {
@@ -603,7 +588,8 @@ std::vector<std::unique_ptr<AST::ASTDeclaration>> Parser::parseVarDeclaration() 
         }
         matchAndGoNext(tok_clbr);
     } else {
-        auto decl_line = parseVarDeclarationLine();
+        //single
+        auto decl_line = type_of_line();
 
         for (auto &i: decl_line)
             result.push_back(i->cloneDecl());
@@ -616,13 +602,16 @@ std::vector<std::unique_ptr<AST::ASTDeclaration>> Parser::parseDeclaration() {
     std::vector<std::unique_ptr<AST::ASTDeclaration>> res;
     switch (cur_tok) {
         case tok_const:
-            res = parseConstDeclaration();
+            matchAndGoNext(tok_const);
+            res = parseDeclarationBlock(std::bind(&Parser::parseConstDeclarationLine, this));
             break;
         case tok_var:
-            res = parseVarDeclaration();
+            matchAndGoNext(tok_var);
+            res = parseDeclarationBlock(std::bind(&Parser::parseVarDeclarationLine, this));
             break;
         default:
-            res = parseTypeDeclaration();
+            matchAndGoNext(tok_type);
+            res = parseDeclarationBlock(std::bind(&Parser::parseTypeDeclarationLine, this));
             break;
     }
     if (!checkForSeparator())
