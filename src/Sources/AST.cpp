@@ -174,7 +174,7 @@ std::unique_ptr<AST::ASTExpression> AST::ASTVar::cloneExpr() const {
 }
 
 std::unique_ptr<AST::ASTType> AST::ASTVar::getType() const {
-
+//TODO
 }
 
 AST::ASTVar::ASTVar(const std::string new_name) {
@@ -222,6 +222,60 @@ std::unique_ptr<AST::ASTDeclaration> AST::ASTVarDeclaration::cloneDecl() const {
 
 std::unique_ptr<AST::ASTDeclaration> AST::ASTConstDeclaration::cloneDecl() const {
     return std::make_unique<AST::ASTConstDeclaration>(*this);
+}
+
+
+void AST::ASTBlock::addStatement(std::unique_ptr<AST::Statement> &stat) {
+    statements.emplace_back(stat->clone());
+}
+
+void AST::ASTIf::addExpr(std::unique_ptr<AST::ASTExpression> &new_expr) {
+    expr = new_expr->cloneExpr();
+}
+
+void AST::ASTIf::addIfClause(std::unique_ptr<AST::ASTBlock> &new_if_clause) {
+    if_clause = new_if_clause->clone();
+}
+
+void AST::ASTIf::addElseClause(std::unique_ptr<AST::ASTBlock> &new_else_clause) {
+    else_clause = new_else_clause->clone();
+}
+
+AST::ASTAssign::ASTAssign(std::string new_name, std::unique_ptr<AST::ASTExpression> &new_value, Type new_type) {
+    name = new_name;
+    value = value->cloneExpr();
+    type = new_type;
+}
+
+std::unique_ptr<AST::Statement> AST::ASTAssign::clone() const {
+    return std::make_unique<ASTAssign>(*this);
+}
+
+AST::ASTAssign::ASTAssign(const ASTAssign &old_assign) {
+    name = old_assign.name;
+    value = old_assign.value->cloneExpr();
+    type = old_assign.type;
+}
+
+void AST::Function::setName(std::string new_name) {
+    name = new_name;
+}
+
+void AST::Function::setParams(std::vector<std::pair<std::string, std::unique_ptr<AST::ASTType>>> new_params) {
+    for (auto &i: new_params)
+        params.emplace_back(i.first, i.second->clone());
+}
+
+void AST::Function::addParam(std::string new_name, std::unique_ptr<AST::ASTType> &type) {
+    params.emplace_back(new_name, type->clone());
+}
+
+void AST::Function::addReturn(std::unique_ptr<AST::ASTType> &new_return) {
+    return_type.emplace_back(new_return->clone());
+}
+
+void AST::Function::setBody(std::unique_ptr<AST::ASTBlock> &new_body) {
+    body = std::move(new_body);
 }
 
 void AST::Program::addDecl(std::unique_ptr<ASTDeclaration> &new_decl) {

@@ -72,13 +72,13 @@ Some identifiers already occupied. Knows as keywords("for","else" etc)
     SIGNATURE := PARAMETERS [RESULT]
     PARAMETERS := "(" [ PARAMETER_LIST ] ")"
     PARAMETER_LIST := PARAMDECL {"," PARAMDECL}
-    PARAMDECL := [ IDENTIFIER_LIST ] ["..."] TYPE
+    PARAMDECL := IDENTIFIER_LIST TYPE
     RESULT := PARAMETERS | TYPE
 
 ### Statement
 
     STATEMENT := DECLARATION | IF_STMT | SWITCH_STMT | FOR_STMT | "break" | "contunie" | RETURN_STMT | SIMPLE_STMT
-    SIMPLE_STMT := SHORT_DECL | EXPR_STMT | EMPTY | ASSIGMENT
+    SIMPLE_STMT := SHORT_DECL | EMPTY | ASSIGMENT
 
 ### If statement
 
@@ -92,7 +92,8 @@ Some identifiers already occupied. Knows as keywords("for","else" etc)
 
 ### For statement
 
-    FOR_STMT := "for" [CONDITION | FOR_CLAUSE] BLOCK
+    FOR_STMT := "for" FOR_CLAUSE BLOCK
+    // FOR_STMT := "for" [CONDITION | FOR_CLAUSE] BLOCK ???
     CONDITION := EXPR_STMT
     FOR_CLAUSE := [SIMPLE_STMT] ";" [EXPR_STMT] ";" [SIMPLE_STMT]
 
@@ -116,7 +117,7 @@ Some identifiers already occupied. Knows as keywords("for","else" etc)
     E11 := E10 E11_PRIME
     E11_PRIME := "||" E10 E11_PRIME | EPSILON
 
-    E10 := E11 E10_PRIME
+    E10 := E9 E10_PRIME
     E10_PRIME := "&&" E9 E10_PRIME | EPSILON
 
     E9 := E8 E9_PRIME

@@ -82,8 +82,7 @@ std::unique_ptr<AST::ASTTypeStruct> Parser::parseStruct() {
     matchAndGoNext(tok_struct);
 
     matchAndGoNext(tok_opfigbr);
-
-    auto res = std::unique_ptr<AST::ASTTypeStruct>();
+    auto res = std::make_unique<AST::ASTTypeStruct>();
 
     while (cur_tok != tok_clfigbr) {
         auto names = parseIdentifierList();
@@ -415,6 +414,134 @@ std::vector<std::unique_ptr<AST::ASTExpression>> Parser::parseExpressionList() {
     return res;
 }
 
+std::vector<std::unique_ptr<AST::Statement>> Parser::parseSimpleStat() {
+    std::vector<std::unique_ptr<AST::Statement>> res;
+
+    // if not -- we count it as empty statement
+    if (cur_tok == tok_identifier) {
+        auto names = parseIdentifierList();
+        if (cur_tok == tok_plusassign || cur_tok == tok_minassign || cur_tok == tok_mulassign ||
+            cur_tok == tok_divassign || cur_tok == tok_modassign || cur_tok == tok_assign) {
+            AST::ASTAssign::Type type;
+            switch (cur_tok) {
+                case tok_plusassign:
+                    type = AST::ASTAssign::Type::PLUSASSIGN;
+                case tok_minassign:
+                    type = AST::ASTAssign::Type::MINUSASSIGN;
+                case tok_mulassign:
+                    type = AST::ASTAssign::Type::MULTASSIGN;
+                case tok_divassign:
+                    type = AST::ASTAssign::Type::DIVASSIGN;
+                case tok_modassign:
+                    type = AST::ASTAssign::Type::MODASSIGN;
+                case tok_assign:
+                    type = AST::ASTAssign::Type::ASSIGN;
+            }
+            cur_tok = lexer.gettok();
+
+            auto values = parseExpressionList();
+            if (names.size() != values.size())
+                throw std::invalid_argument("ERROR. Diff size of declared var and expressions");
+
+            for (unsigned long long i = 0; i < names.size(); ++i)
+                res.emplace_back(AST::ASTAssign(names[i], values[i], type).clone());
+
+        } else {
+            matchAndGoNext(tok_fastassign);
+            auto values = parseExpressionList();
+            if (names.size() != values.size())
+                throw std::invalid_argument("ERROR. Diff size of declared var and expressions");
+
+            for (unsigned long long i = 0; i < names.size(); ++i)
+                res.emplace_back(AST::ASTVarDeclaration(names[i], values[i], values[i]->getType()).clone());
+        }
+
+
+    }
+
+
+    return res;
+}
+
+std::unique_ptr<AST::Statement> Parser::parseIfStat() {
+    //TODO declare
+    std::unique_ptr<AST::ASTIf> res;
+    matchAndGoNext(tok_if);
+
+    auto expr = parseExpression();
+    res->addExpr(expr);
+
+    auto if_cl = parseBlock();
+    res->addIfClause(if_cl);
+
+    if (cur_tok == tok_else) {
+        matchAndGoNext(tok_else);
+
+        auto else_cl = parseBlock();
+        res->addElseClause(else_cl);
+    }
+    return res;
+}
+
+std::unique_ptr<AST::Statement> Parser::parseForLoop() {
+
+
+    matchAndGoNext(tok_for);
+
+    auto init_clause = parseSimpleStat();
+    matchAndGoNext(tok_semicolon);
+    auto expr = parseExpression();
+    matchAndGoNext(tok_semicolon);
+    auto iterate_clause = parseSimpleStat();
+
+
+
+
+}
+
+std::unique_ptr<AST::Statement> Parser::parseSwitch() {
+
+}
+
+std::vector<std::unique_ptr<AST::Statement>> Parser::parseStatement() {
+    std::vector<std::unique_ptr<AST::Statement>> res;
+    switch (cur_tok) {
+        case tok_var:
+        case tok_const:
+        case tok_type:
+            for (auto &i: parseDeclaration())
+                res.emplace_back(i->clone());
+            break;
+        case tok_if:
+            res.emplace_back(parseIfStat());
+            break;
+        case tok_switch:
+            res.emplace_back(parseSwitch());
+            break;
+        case tok_for:
+            res.emplace_back(parseForLoop());
+            break;
+        case tok_break:
+            break;
+        case tok_continue:
+            break;
+        case tok_return:
+            break;
+        default:
+            for (auto &i: parseSimpleStat())
+                res.emplace_back(i->clone());
+            break;
+
+    }
+    return res;
+}
+
+std::vector<std::unique_ptr<AST::Statement>> Parser::parseStatementList() {
+    std::vector<std::unique_ptr<AST::Statement>> res;
+
+
+}
+
 std::unique_ptr<AST::ASTType> Parser::parseType() {
     switch (cur_tok) {
         case tok_int:
@@ -459,11 +586,83 @@ std::unique_ptr<AST::ASTType> Parser::parseType() {
     }
 }
 
+std::unique_ptr<AST::ASTBlock> Parser::parseBlock() {
+    matchAndGoNext(tok_opfigbr);
+
+    std::unique_ptr<AST::ASTBlock> res;
+    auto stat_list = parseStatementList();
+    for (auto &i: stat_list)
+        res->addStatement(i);
+
+    matchAndGoNext(tok_clfigbr);
+
+    return res;
+}
+
+void Parser::parseFuncSignature(std::unique_ptr<AST::Function> &function) {
+
+    //parameters
+    matchAndGoNext(tok_opbr);
+
+    //if param not empty list
+    if (cur_tok != tok_clbr) {
+
+        do {
+            auto names = parseIdentifierList();
+            auto type = parseType();
+            for (auto &name: names)
+                function->addParam(name, type);
+
+        } while (cur_tok == tok_comma && (cur_tok = lexer.gettok()));
+
+    }
+
+    matchAndGoNext(tok_clbr);
+
+
+    // return type
+
+
+    //if func return something
+    if (cur_tok != tok_opfigbr) {
+
+        if (cur_tok == tok_opbr) {
+            //maybe multiple of them
+            matchAndGoNext(tok_opbr);
+            do {
+                auto type = parseType();
+                function->addReturn(type);
+            } while (cur_tok == tok_comma && (cur_tok = lexer.gettok()));
+            matchAndGoNext(tok_clbr);
+
+        } else {
+            // just a single type
+            auto type = parseType();
+            function->addReturn(type);
+        }
+    }
+
+}
+
 std::unique_ptr<AST::Function> Parser::parseFunction() {
     matchAndGoNext(tok_func);
-    std::unique_ptr<AST::Function> lol(new AST::Function);
 
-    return lol;
+    auto res = std::make_unique<AST::Function>();
+
+    // name of func
+    match(tok_identifier);
+    auto name = lexer.identifierStr();
+    res->setName(name);
+    cur_tok = lexer.gettok();
+
+    //parameters and return types
+    parseFuncSignature(res);
+
+    //body of a function
+    auto body = parseBlock();
+    res->setBody(body);
+
+    return res;
 
 }
 

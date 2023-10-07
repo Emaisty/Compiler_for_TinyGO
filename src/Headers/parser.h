@@ -69,12 +69,31 @@ private:
 
     std::unique_ptr<AST::ASTExpression> E0();
 
-
     std::unique_ptr<AST::ASTExpression> parseExpression();
 
     std::vector<std::unique_ptr<AST::ASTExpression>> parseExpressionList();
 
+    std::vector<std::unique_ptr<AST::Statement>> parseSimpleStat();
+
+
+    std::unique_ptr<AST::Statement> parseIfStat();
+
+    std::unique_ptr<AST::Statement> parseForLoop();
+
+    std::unique_ptr<AST::Statement> parseSwitch();
+
+
+    std::vector<std::unique_ptr<AST::Statement>> parseStatement();
+
+    std::vector<std::unique_ptr<AST::Statement>> parseStatementList();
+
+
     std::unique_ptr<AST::ASTType> parseType();
+
+    std::unique_ptr<AST::ASTBlock> parseBlock();
+
+
+    void parseFuncSignature(std::unique_ptr<AST::Function> &function);
 
     std::unique_ptr<AST::Function> parseFunction();
 

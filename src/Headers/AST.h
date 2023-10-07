@@ -63,6 +63,8 @@ namespace AST {
     class ASTTypeStruct : public ASTType {
     public:
 
+        ASTTypeStruct() = default;
+
         ASTTypeStruct(const ASTTypeStruct &old_struct);
 
         [[nodiscard]] std::unique_ptr<ASTType> clone() const override;
@@ -268,12 +270,87 @@ namespace AST {
     private:
     };
 
+    class ASTBlock : public Statement {
+    public:
+
+        void addStatement(std::unique_ptr<AST::Statement> &stat);
+
+    private:
+        std::vector<std::unique_ptr<AST::Statement>> statements;
+    };
+
+
+    class ASTIf : public Statement {
+    public:
+
+        void addExpr(std::unique_ptr<AST::ASTExpression> &new_expr);
+
+        void addIfClause(std::unique_ptr<AST::ASTBlock> &new_if_clause);
+
+        void addElseClause(std::unique_ptr<AST::ASTBlock> &new_else_clause);
+
+    private:
+        std::unique_ptr<AST::ASTExpression> expr;
+
+        std::unique_ptr<AST::Statement> if_clause, else_clause;
+    };
+
+    class ASTFor : public Statement {
+    public:
+
+    private:
+        std::unique_ptr<AST::Statement> init_clause, iterate_clause;
+
+        std::unique_ptr<AST::ASTExpression> if_clause;
+
+        std::unique_ptr<AST::ASTBlock> repeat_clause;
+    };
+
+    class ASTAssign : public Statement {
+    public:
+        enum Type {
+            ASSIGN, PLUSASSIGN, MINUSASSIGN, MULTASSIGN, DIVASSIGN, MODASSIGN
+        };
+
+        ASTAssign(std::string new_name, std::unique_ptr<AST::ASTExpression> &new_value, Type new_type);
+
+        std::unique_ptr<Statement> clone() const override;
+
+        ASTAssign(const ASTAssign& old_assign);
+
+    private:
+
+        std::string name;
+
+        std::unique_ptr<AST::ASTExpression> value;
+
+        Type type;
+
+    };
+
 
     class Function {
     public:
+
+
+        void setName(std::string new_name);
+
+        void setParams(std::vector<std::pair<std::string, std::unique_ptr<AST::ASTType>>> new_params);
+
+        void addParam(std::string new_name, std::unique_ptr<AST::ASTType> &type);
+
+        void addReturn(std::unique_ptr<AST::ASTType> &new_return);
+
+        void setBody(std::unique_ptr<AST::ASTBlock> &new_body);
+
     private:
         std::string name;
-        std::vector<std::unique_ptr<Statement>> body;
+
+        std::vector<std::pair<std::string, std::unique_ptr<AST::ASTType>>> params;
+
+        std::vector<std::unique_ptr<AST::ASTType>> return_type;
+
+        std::unique_ptr<AST::ASTBlock> body;
     };
 
 

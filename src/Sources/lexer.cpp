@@ -60,7 +60,7 @@ InputCharType Lexer::type_of_char() {
         return LETTER;
     else if (cur_symb >= '0' && cur_symb <= '9')
         return NUMBER;
-    else if (cur_symb == EOF)
+    else if (cur_symb == EOF || cur_symb == 0)
         return END;
     else if (cur_symb == '\n')
         return NEW_LINE;
