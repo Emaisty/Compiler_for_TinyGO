@@ -464,8 +464,7 @@ std::vector<std::unique_ptr<AST::Statement>> Parser::parseSimpleStat() {
 }
 
 std::unique_ptr<AST::Statement> Parser::parseIfStat() {
-    //TODO declare
-    std::unique_ptr<AST::ASTIf> res;
+    auto res = std::make_unique<AST::ASTIf>();
     matchAndGoNext(tok_if);
 
     auto expr = parseExpression();
@@ -485,6 +484,7 @@ std::unique_ptr<AST::Statement> Parser::parseIfStat() {
 
 std::unique_ptr<AST::Statement> Parser::parseForLoop() {
 
+    auto res = std::make_unique<AST::ASTFor>();
 
     matchAndGoNext(tok_for);
 
@@ -494,9 +494,15 @@ std::unique_ptr<AST::Statement> Parser::parseForLoop() {
     matchAndGoNext(tok_semicolon);
     auto iterate_clause = parseSimpleStat();
 
+    res->addInitClause(init_clause);
+    res->addCondClause(expr);
+    res->addIterClause(iterate_clause);
 
+    auto body = parseBlock()->clone();
 
+    res->addBody(body);
 
+    return res;
 }
 
 std::unique_ptr<AST::Statement> Parser::parseSwitch() {
@@ -537,9 +543,15 @@ std::vector<std::unique_ptr<AST::Statement>> Parser::parseStatement() {
 }
 
 std::vector<std::unique_ptr<AST::Statement>> Parser::parseStatementList() {
-    std::vector<std::unique_ptr<AST::Statement>> res;
+    std::vector<std::unique_ptr<AST::Statement>> res, stat;
 
+    do {
+        stat = parseStatement();
+        for (auto &i: stat)
+            res.emplace_back(i->clone());
+    } while (!stat.empty() && checkForSeparator());
 
+    return res;
 }
 
 std::unique_ptr<AST::ASTType> Parser::parseType() {
@@ -589,7 +601,7 @@ std::unique_ptr<AST::ASTType> Parser::parseType() {
 std::unique_ptr<AST::ASTBlock> Parser::parseBlock() {
     matchAndGoNext(tok_opfigbr);
 
-    std::unique_ptr<AST::ASTBlock> res;
+    auto res = std::make_unique<AST::ASTBlock>();
     auto stat_list = parseStatementList();
     for (auto &i: stat_list)
         res->addStatement(i);
@@ -659,7 +671,7 @@ std::unique_ptr<AST::Function> Parser::parseFunction() {
     parseFuncSignature(res);
 
     //body of a function
-    auto body = parseBlock();
+    auto body = parseBlock()->clone();
     res->setBody(body);
 
     return res;
