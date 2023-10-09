@@ -237,6 +237,28 @@ void AST::ASTBlock::addStatement(std::unique_ptr<AST::Statement> &stat) {
     statements.emplace_back(stat->clone());
 }
 
+std::unique_ptr<AST::Statement> AST::ASTSwitch::clone() const {
+    return std::make_unique<AST::ASTSwitch>(*this);
+}
+
+AST::ASTSwitch::ASTSwitch(const ASTSwitch &old_switch) {
+    expr = old_switch.expr->cloneExpr();
+    for (auto &i: old_switch.cases) cases.emplace_back(std::make_pair(i.first->cloneExpr(), i.second->clone()));
+}
+
+void AST::ASTSwitch::addExpr(std::unique_ptr<AST::ASTExpression> &new_expr) {
+    expr = new_expr->cloneExpr();
+}
+
+void AST::ASTSwitch::addCase(std::unique_ptr<AST::ASTExpression> &new_expr, std::unique_ptr<AST::Statement> &block) {
+    if (expr == nullptr)
+        for (auto &i: cases)
+            if (i.first == nullptr)
+                throw std::invalid_argument("ERROR. TWO DEFAULT CASES");
+
+    cases.emplace_back(std::make_pair(new_expr->cloneExpr(), block->clone()));
+}
+
 std::unique_ptr<AST::Statement> AST::ASTIf::clone() const {
     return std::make_unique<AST::ASTIf>(*this);
 }

@@ -79,6 +79,7 @@ Some identifiers already occupied. Knows as keywords("for","else" etc)
 
     STATEMENT := DECLARATION | IF_STMT | SWITCH_STMT | FOR_STMT | "break" | "contunie" | RETURN_STMT | SIMPLE_STMT
     SIMPLE_STMT := SHORT_DECL | EMPTY | ASSIGMENT
+    //SIMPLE_STMT := SHORT_DECL | EMPTY | ASSIGMENT | EXPR ????!!!!
 
 ### If statement
 
@@ -86,7 +87,8 @@ Some identifiers already occupied. Knows as keywords("for","else" etc)
 
 ### Switch statement
 
-    SWITCH_STMT := "switch" [ SIMPLE_STMT ] "{" { CASE_CLAUSE } "}"
+    SWITCH_STMT := "switch" [ EXPR ] "{" { CASE_CLAUSE } "}"
+    //SWITCH_STMT := "switch" [ SIMPLE_STMT ] "{" { CASE_CLAUSE } "}"  
     CASE_CLAUSE := SWITCH_CASE ":" STATEMENT_LIST
     SWITCH_CASE := "case" EXPR_STMT | "default"
 

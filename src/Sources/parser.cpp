@@ -506,7 +506,41 @@ std::unique_ptr<AST::Statement> Parser::parseForLoop() {
 }
 
 std::unique_ptr<AST::Statement> Parser::parseSwitch() {
+    auto res = std::make_unique<AST::ASTSwitch>();
 
+    matchAndGoNext(tok_switch);
+
+    auto expr = parseExpression();
+    res->addExpr(expr);
+
+    matchAndGoNext(tok_opfigbr);
+
+    bool was_default = false;
+    while (cur_tok == tok_case || cur_tok == tok_default) {
+        std::unique_ptr<AST::ASTExpression> case_expr = nullptr;
+        if (cur_tok == tok_case) {
+            matchAndGoNext(tok_case);
+            case_expr = parseExpression();
+        } else {
+            if (was_default)
+                throw std::invalid_argument("ERROR. Double default cases");
+            was_default = true;
+        }
+
+        matchAndGoNext(tok_colon);
+
+        auto block = std::make_unique<AST::ASTBlock>();
+        for (auto &i: parseStatementList())
+            block->addStatement(i);
+        auto stat = block->clone();
+
+        res->addCase(case_expr, stat);
+
+    }
+
+    matchAndGoNext(tok_clfigbr);
+
+    return res;
 }
 
 std::vector<std::unique_ptr<AST::Statement>> Parser::parseStatement() {

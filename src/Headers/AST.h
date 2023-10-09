@@ -286,6 +286,26 @@ namespace AST {
     };
 
 
+    class ASTSwitch : public Statement {
+    public:
+
+        ASTSwitch() = default;
+
+        std::unique_ptr<Statement> clone() const override;
+
+        ASTSwitch(const ASTSwitch &old_switch);
+
+        void addExpr(std::unique_ptr<ASTExpression> &new_expr);
+
+        void addCase(std::unique_ptr<ASTExpression> &new_expr, std::unique_ptr<AST::Statement> &block);
+
+    private:
+        std::unique_ptr<ASTExpression> expr;
+
+        std::vector<std::pair<std::unique_ptr<AST::ASTExpression>, std::unique_ptr<AST::Statement>>> cases;
+    };
+
+
     class ASTIf : public Statement {
     public:
 
