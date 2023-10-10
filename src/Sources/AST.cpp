@@ -237,6 +237,26 @@ void AST::ASTBlock::addStatement(std::unique_ptr<AST::Statement> &stat) {
     statements.emplace_back(stat->clone());
 }
 
+std::unique_ptr<AST::Statement> AST::ASTBreak::clone() const {
+    return std::make_unique<AST::ASTBreak>(*this);
+}
+
+std::unique_ptr<AST::Statement> AST::ASTContinue::clone() const {
+    return std::make_unique<AST::ASTContinue>(*this);
+}
+
+std::unique_ptr<AST::Statement> AST::ASTReturn::clone() const {
+    return std::make_unique<AST::ASTReturn>(*this);
+}
+
+AST::ASTReturn::ASTReturn(const ASTReturn &old_return) {
+    return_value = old_return.return_value->cloneExpr();
+}
+
+void AST::ASTReturn::addReturnValue(std::unique_ptr<ASTExpression> &new_value) {
+    return_value = new_value->cloneExpr();
+}
+
 std::unique_ptr<AST::Statement> AST::ASTSwitch::clone() const {
     return std::make_unique<AST::ASTSwitch>(*this);
 }

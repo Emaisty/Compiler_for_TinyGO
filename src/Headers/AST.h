@@ -285,6 +285,42 @@ namespace AST {
         std::vector<std::unique_ptr<AST::Statement>> statements;
     };
 
+    class ASTBreak : public Statement {
+    public:
+
+        ASTBreak() = default;
+
+        std::unique_ptr<Statement> clone() const override;
+
+    private:
+
+    };
+
+    class ASTContinue : public Statement {
+    public:
+
+        ASTContinue() = default;
+
+        std::unique_ptr<Statement> clone() const override;
+
+    private:
+
+    };
+
+    class ASTReturn : public Statement {
+    public:
+
+        ASTReturn() = default;
+
+        std::unique_ptr<Statement> clone() const override;
+
+        ASTReturn(const ASTReturn &old_return);
+
+        void addReturnValue(std::unique_ptr<ASTExpression> &new_value);
+
+    private:
+        std::unique_ptr<AST::ASTExpression> return_value;
+    };
 
     class ASTSwitch : public Statement {
     public:

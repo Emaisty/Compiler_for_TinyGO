@@ -76,6 +76,8 @@ private:
     std::vector<std::unique_ptr<AST::Statement>> parseSimpleStat();
 
 
+    std::unique_ptr<AST::Statement> parseReturn();
+
     std::unique_ptr<AST::Statement> parseIfStat();
 
     std::unique_ptr<AST::Statement> parseForLoop();

@@ -463,6 +463,17 @@ std::vector<std::unique_ptr<AST::Statement>> Parser::parseSimpleStat() {
     return res;
 }
 
+std::unique_ptr<AST::Statement> Parser::parseReturn() {
+    auto res = std::make_unique<AST::ASTReturn>();
+
+    matchAndGoNext(tok_return);
+
+    auto expr = parseExpression();
+    res->addReturnValue(expr);
+
+    return res;
+}
+
 std::unique_ptr<AST::Statement> Parser::parseIfStat() {
     auto res = std::make_unique<AST::ASTIf>();
     matchAndGoNext(tok_if);
@@ -562,10 +573,13 @@ std::vector<std::unique_ptr<AST::Statement>> Parser::parseStatement() {
             res.emplace_back(parseForLoop());
             break;
         case tok_break:
+            res.emplace_back(std::make_unique<AST::ASTBreak>());
             break;
         case tok_continue:
+            res.emplace_back(std::make_unique<AST::ASTContinue>());
             break;
         case tok_return:
+            res.emplace_back(parseReturn());
             break;
         default:
             for (auto &i: parseSimpleStat())
