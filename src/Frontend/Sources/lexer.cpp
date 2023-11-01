@@ -85,11 +85,19 @@ Token Lexer::readSymbol() {
                 cur_symb = inputSymbol();
                 return tok_plusassign;
             }
+            if (cur_symb == '+') {
+                cur_symb = inputSymbol();
+                return tok_inc;
+            }
             return tok_plus;
         case '-':
             if (cur_symb == '=') {
                 cur_symb = inputSymbol();
                 return tok_minassign;
+            }
+            if (cur_symb == '-') {
+                cur_symb = inputSymbol();
+                return tok_dec;
             }
             return tok_minus;
         case '*':

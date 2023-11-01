@@ -17,7 +17,16 @@ namespace AST {
 
         virtual std::unique_ptr<ASTType> clone() const = 0;
 
+        virtual bool operator==(const std::unique_ptr<ASTType> &) const = 0;
+
     private:
+    };
+
+    class ASTTypeNull : public ASTType {
+    public:
+        [[nodiscard]] std::unique_ptr<ASTType> clone() const override;
+
+        bool operator==(const std::unique_ptr<ASTType> &type) const override;
     };
 
     class ASTTypeInt : public ASTType {
@@ -26,6 +35,8 @@ namespace AST {
         ASTTypeInt(int new_bits = 32);
 
         [[nodiscard]] std::unique_ptr<ASTType> clone() const override;
+
+        bool operator==(const std::unique_ptr<ASTType> &type) const override;
 
     private:
         int bits;
@@ -36,6 +47,8 @@ namespace AST {
 
         [[nodiscard]] std::unique_ptr<ASTType> clone() const override;
 
+        bool operator==(const std::unique_ptr<ASTType> &type) const override;
+
     private:
     };
 
@@ -43,6 +56,8 @@ namespace AST {
     public:
 
         [[nodiscard]] std::unique_ptr<ASTType> clone() const override;
+
+        bool operator==(const std::unique_ptr<ASTType> &type) const override;
 
     private:
     };
@@ -55,6 +70,8 @@ namespace AST {
         ASTTypePointer(const ASTTypePointer &old_pointer);
 
         [[nodiscard]] std::unique_ptr<ASTType> clone() const override;
+
+        bool operator==(const std::unique_ptr<ASTType> &type) const override;
 
     private:
         std::unique_ptr<ASTType> type;
@@ -70,6 +87,8 @@ namespace AST {
         [[nodiscard]] std::unique_ptr<ASTType> clone() const override;
 
         void addField(std::string name, std::unique_ptr<ASTType> &type);
+
+        bool operator==(const std::unique_ptr<ASTType> &type) const override;
 
     private:
         std::vector<std::pair<std::string, std::unique_ptr<ASTType >>> fileds;
@@ -99,6 +118,13 @@ namespace AST {
     private:
     };
 
+    class ASTNullExpr : public ASTExpression {
+    public:
+        [[nodiscard]] std::unique_ptr<ASTExpression> cloneExpr() const override;
+
+        [[nodiscard]] std::unique_ptr<ASTType> getType() const override;
+    };
+
     class ASTBinaryOperator : public ASTExpression {
     public:
 
@@ -123,7 +149,7 @@ namespace AST {
     class ASTUnaryOperator : public ASTExpression {
     public:
         enum Operator {
-            NOT, PLUS, MINUS
+            NOT, PLUS, MINUS, PREINC, PREDEC, POSTINC, POSTDEC
         };
 
         ASTUnaryOperator(const ASTUnaryOperator &old_expr);

@@ -17,6 +17,9 @@ public:
 
 private:
 
+    std::map<std::string, std::unique_ptr<AST::ASTType>> named_type;
+
+
     bool checkForSeparator();
 
     bool matchTypes(const std::unique_ptr<AST::ASTType> &type, const std::unique_ptr<AST::ASTType> &reference_type);

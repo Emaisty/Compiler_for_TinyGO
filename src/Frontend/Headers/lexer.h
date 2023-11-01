@@ -73,13 +73,15 @@ enum Token {
     tok_div,
     tok_asterisk,     //48
     tok_mod,
+    tok_inc,
+    tok_dec,
 
     tok_opfigbr,
     tok_clfigbr,
     tok_opbr,
     tok_clbr,
     tok_opsqrbr,
-    tok_clsqrbr,        //55
+    tok_clsqrbr,        //57
 
     tok_comma,
     tok_dot,

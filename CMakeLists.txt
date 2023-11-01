@@ -3,23 +3,22 @@ project(compiler)
 
 set(CMAKE_CXX_STANDARD 20)
 
-set(HEADERS src/Headers)
-set(SOURCES src/Sources)
+set(FRONDEND_HEADERS src/Frontend/Headers)
+set(FRONDEND_SOURCES src/Frontend/Sources)
 
-include_directories(${HEADERS})
-include_directories(${SOURCES})
+set(MIDDLEEND_HEADERS src/MiddleEnd/Headers)
+set(MIDDLEEND_SOURCES src/MiddleEnd/Sources)
 
+include_directories(${FRONDEND_HEADERS})
+include_directories(${MIDDLEEND_HEADERS})
 
 set(
         SOURCE_FILES
 
-        ${HEADERS}/lexer.h
-        ${HEADERS}/AST.h
-        ${HEADERS}/parser.h
-
-        ${SOURCES}/lexer.cpp
-        ${SOURCES}/AST.cpp
-        ${SOURCES}/parser.cpp
+        ${FRONDEND_SOURCES}/lexer.cpp
+        ${FRONDEND_SOURCES}/AST_parser.cpp
+        ${FRONDEND_SOURCES}/AST_IR.cpp
+        ${FRONDEND_SOURCES}/parser.cpp
 
         main.cpp)
 add_executable(compiler ${SOURCE_FILES})

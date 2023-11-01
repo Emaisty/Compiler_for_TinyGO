@@ -1,5 +1,15 @@
 #include "AST.h"
 
+std::unique_ptr<AST::ASTType> AST::ASTTypeNull::clone() const {
+    return std::make_unique<AST::ASTTypeNull>(*this);
+}
+
+bool AST::ASTTypeNull::operator==(const std::unique_ptr<ASTType> &type) const {
+    if (dynamic_cast<AST::ASTTypeNull *>(type.get()))
+        return true;
+    return false;
+}
+
 AST::ASTTypeInt::ASTTypeInt(int new_bits) : bits(new_bits) {}
 
 std::unique_ptr<AST::ASTType> AST::ASTTypeInt::clone() const {
@@ -7,9 +17,23 @@ std::unique_ptr<AST::ASTType> AST::ASTTypeInt::clone() const {
     return std::make_unique<ASTTypeInt>(*this);
 }
 
+bool AST::ASTTypeInt::operator==(const std::unique_ptr<ASTType> &type) const {
+    if (dynamic_cast<AST::ASTTypeInt *>(type.get()) || dynamic_cast<AST::ASTTypeFloat *>(type.get()) ||
+        dynamic_cast<AST::ASTTypeBool *>(type.get()))
+        return true;
+    return false;
+}
+
 
 std::unique_ptr<AST::ASTType> AST::ASTTypeFloat::clone() const {
     return std::make_unique<ASTTypeFloat>(*this);
+}
+
+bool AST::ASTTypeFloat::operator==(const std::unique_ptr<ASTType> &type) const {
+    if (dynamic_cast<AST::ASTTypeInt *>(type.get()) || dynamic_cast<AST::ASTTypeFloat *>(type.get()) ||
+        dynamic_cast<AST::ASTTypeBool *>(type.get()))
+        return true;
+    return false;
 }
 
 
@@ -17,6 +41,12 @@ std::unique_ptr<AST::ASTType> AST::ASTTypeBool::clone() const {
     return std::make_unique<ASTTypeBool>(*this);
 }
 
+bool AST::ASTTypeBool::operator==(const std::unique_ptr<ASTType> &type) const {
+    if (dynamic_cast<AST::ASTTypeInt *>(type.get()) || dynamic_cast<AST::ASTTypeFloat *>(type.get()) ||
+        dynamic_cast<AST::ASTTypeBool *>(type.get()))
+        return true;
+    return false;
+}
 
 AST::ASTTypePointer::ASTTypePointer(std::unique_ptr<ASTType> new_type) {
     type = new_type->clone();
@@ -31,6 +61,13 @@ std::unique_ptr<AST::ASTType> AST::ASTTypePointer::clone() const {
     return std::make_unique<ASTTypePointer>(*this);
 }
 
+bool AST::ASTTypePointer::operator==(const std::unique_ptr<ASTType> &type) const {
+    auto pointer = dynamic_cast<AST::ASTTypePointer *>(type.get());
+    if (pointer)
+        return this->type == pointer->type;
+    return false;
+}
+
 
 AST::ASTTypeStruct::ASTTypeStruct(const AST::ASTTypeStruct &old_pointer) {
     for (auto &i: old_pointer.fileds)
@@ -42,12 +79,43 @@ std::unique_ptr<AST::ASTType> AST::ASTTypeStruct::clone() const {
 }
 
 void AST::ASTTypeStruct::addField(std::string name, std::unique_ptr<AST::ASTType> &type) {
+    for (auto &i: fileds)
+        if (name == i.first)
+            throw std::invalid_argument("ERROR. 2 or more fields in structure with the same names");
     fileds.emplace_back(name, type->clone());
+}
+
+bool AST::ASTTypeStruct::operator==(const std::unique_ptr<ASTType> &type) const {
+    auto struc = dynamic_cast<AST::ASTTypeStruct *>(type.get());
+    if (struc) {
+        if (this->fileds.size() != struc->fileds.size())
+            return false;
+        for (auto &i: this->fileds) {
+            bool flag = true;
+            for (auto &j: struc->fileds)
+                if (i.first == j.first) {
+                    flag = false;
+                    break;
+                }
+            if (flag)
+                return false;
+            return true;
+        }
+    }
+    return false;
 }
 
 
 std::unique_ptr<AST::Statement> AST::ASTExpression::clone() const {
     return this->cloneExpr();
+}
+
+std::unique_ptr<AST::ASTExpression> AST::ASTNullExpr::cloneExpr() const {
+    return std::make_unique<ASTNullExpr>(*this);
+}
+
+std::unique_ptr<AST::ASTType> AST::ASTNullExpr::getType() const {
+    return std::make_unique<AST::ASTTypeNull>();
 }
 
 AST::ASTBinaryOperator::ASTBinaryOperator(const ASTBinaryOperator &old_expr) {
@@ -62,7 +130,12 @@ std::unique_ptr<AST::ASTExpression> AST::ASTBinaryOperator::cloneExpr() const {
 }
 
 std::unique_ptr<AST::ASTType> AST::ASTBinaryOperator::getType() const {
-    //TODO
+    // operations on numbers (and bool)
+
+
+    // operations on struct
+
+    //operations on pointers
 }
 
 AST::ASTBinaryOperator::ASTBinaryOperator(std::unique_ptr<AST::ASTExpression> &new_left,

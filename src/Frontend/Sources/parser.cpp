@@ -1,6 +1,5 @@
 #include "parser.h"
 
-std::map<std::string, std::unique_ptr<AST::ASTType>> named_type;
 
 void Parser::match(Token tok) {
     if (cur_tok != tok)
@@ -63,8 +62,7 @@ bool Parser::checkForSeparator() {
 
 bool
 Parser::matchTypes(const std::unique_ptr<AST::ASTType> &type, const std::unique_ptr<AST::ASTType> &reference_type) {
-    //TODO
-    return true;
+    return type == reference_type;
 }
 
 std::vector<std::string> Parser::parseIdentifierList() {
@@ -329,6 +327,16 @@ std::unique_ptr<AST::ASTExpression> Parser::E2() {
             auto arg = E2();
             return std::make_unique<AST::ASTUnaryOperator>(arg, AST::ASTUnaryOperator::Operator::PLUS);
         }
+        case tok_inc: {
+            cur_tok = lexer.gettok();
+            auto arg = E2();
+            return std::make_unique<AST::ASTUnaryOperator>(arg, AST::ASTUnaryOperator::Operator::PREINC);
+        }
+        case tok_dec: {
+            cur_tok = lexer.gettok();
+            auto arg = E2();
+            return std::make_unique<AST::ASTUnaryOperator>(arg, AST::ASTUnaryOperator::Operator::PREDEC);
+        }
         case tok_excl: {
             cur_tok = lexer.gettok();
             auto arg = E2();
@@ -361,6 +369,18 @@ std::unique_ptr<AST::ASTExpression> Parser::E1_PRIME(std::unique_ptr<AST::ASTExp
             auto tmp = std::make_unique<AST::ASTMemberAccess>(left, member)->cloneExpr();
             return E1_PRIME(tmp);
         }
+        case tok_inc: {
+            cur_tok = lexer.gettok();
+            auto tmp = std::make_unique<AST::ASTUnaryOperator>(left,
+                                                               AST::ASTUnaryOperator::Operator::POSTINC)->cloneExpr();
+            return E1_PRIME(tmp);
+        }
+        case tok_dec: {
+            cur_tok = lexer.gettok();
+            auto tmp = std::make_unique<AST::ASTUnaryOperator>(left,
+                                                               AST::ASTUnaryOperator::Operator::POSTDEC)->cloneExpr();
+            return E1_PRIME(tmp);
+        }
         default:
             return left->cloneExpr();
     }
@@ -390,14 +410,16 @@ std::unique_ptr<AST::ASTExpression> Parser::E0() {
             cur_tok = lexer.gettok();
             return res;
         }
-        default: {
+        case tok_identifier: {
+            //TODO check if var exists
             match(tok_identifier);
             auto res = std::make_unique<AST::ASTVar>(lexer.identifierStr())->cloneExpr();
             cur_tok = lexer.gettok();
             return res;
         }
+        default:
+            return std::make_unique<AST::ASTNullExpr>();
     }
-
 }
 
 
@@ -416,10 +438,23 @@ std::vector<std::unique_ptr<AST::ASTExpression>> Parser::parseExpressionList() {
 
 std::vector<std::unique_ptr<AST::Statement>> Parser::parseSimpleStat() {
     std::vector<std::unique_ptr<AST::Statement>> res;
+    std::string name = "";
+    if (cur_tok == tok_identifier)
+        name = lexer.identifierStr();
 
-    // if not -- we count it as empty statement
-    if (cur_tok == tok_identifier) {
-        auto names = parseIdentifierList();
+    auto expr = parseExpression();
+
+    auto tmp_var = dynamic_cast<AST::ASTVar *>(expr.get());
+
+    if (tmp_var) {
+        std::vector<std::string> names(1, name);
+        // if more names - parse them
+        if (cur_tok == tok_comma) {
+            cur_tok = lexer.gettok();
+            for (auto &i: parseIdentifierList())
+                names.push_back(i);
+        }
+
         if (cur_tok == tok_plusassign || cur_tok == tok_minassign || cur_tok == tok_mulassign ||
             cur_tok == tok_divassign || cur_tok == tok_modassign || cur_tok == tok_assign) {
             AST::ASTAssign::Type type;
@@ -446,7 +481,8 @@ std::vector<std::unique_ptr<AST::Statement>> Parser::parseSimpleStat() {
             for (unsigned long long i = 0; i < names.size(); ++i)
                 res.emplace_back(AST::ASTAssign(names[i], values[i], type).clone());
 
-        } else {
+            return res;
+        } else if (cur_tok == tok_fastassign) {
             matchAndGoNext(tok_fastassign);
             auto values = parseExpressionList();
             if (names.size() != values.size())
@@ -454,11 +490,17 @@ std::vector<std::unique_ptr<AST::Statement>> Parser::parseSimpleStat() {
 
             for (unsigned long long i = 0; i < names.size(); ++i)
                 res.emplace_back(AST::ASTVarDeclaration(names[i], values[i], values[i]->getType()).clone());
+            return res;
         }
-
 
     }
 
+    auto tmp_null = dynamic_cast<AST::ASTNullExpr *>(expr.get());
+
+    if (tmp_null)
+        return res;
+
+    res.emplace_back(expr->clone());
 
     return res;
 }
@@ -770,8 +812,9 @@ std::vector<std::unique_ptr<AST::ASTDeclaration>> Parser::parseTypeDeclarationLi
         cur_tok = lexer.gettok();
 
     auto type = parseType();
-    res.push_back(std::make_unique<AST::ASTConstDeclaration>(name, type));
+    res.push_back(std::make_unique<AST::ASTTypeDeclaration>(name, type));
 
+    this->named_type[name] = type->clone();
     return res;
 }
 
@@ -801,13 +844,13 @@ std::vector<std::unique_ptr<AST::ASTDeclaration> > Parser::parseVarDeclarationLi
 
 
             for (unsigned long int i = 0; i < names.size(); ++i)
-                res.push_back(std::make_unique<AST::ASTConstDeclaration>(names[i], values[i], type));
+                res.push_back(std::make_unique<AST::ASTVarDeclaration>(names[i], values[i], type));
 
 
         } else
             // type without value
             for (auto &name: names)
-                res.push_back(std::make_unique<AST::ASTConstDeclaration>(name, type));
+                res.push_back(std::make_unique<AST::ASTVarDeclaration>(name, type));
 
     } else {
         //without type
@@ -820,7 +863,7 @@ std::vector<std::unique_ptr<AST::ASTDeclaration> > Parser::parseVarDeclarationLi
             throw std::invalid_argument("ERROR. Diff size of declared var and expressions");
 
         for (unsigned long int i = 0; i < names.size(); ++i)
-            res.push_back(std::make_unique<AST::ASTConstDeclaration>(names[i], values[i], values[i]->getType()));
+            res.push_back(std::make_unique<AST::ASTVarDeclaration>(names[i], values[i], values[i]->getType()));
 
     }
 
