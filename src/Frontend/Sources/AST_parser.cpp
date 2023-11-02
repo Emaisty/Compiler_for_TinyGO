@@ -404,8 +404,9 @@ void AST::ASTFor::addBody(std::unique_ptr<AST::Statement> &new_body) {
     body = new_body->clone();
 }
 
-AST::ASTAssign::ASTAssign(std::string new_name, std::unique_ptr<AST::ASTExpression> &new_value, Type new_type) {
-    name = new_name;
+AST::ASTAssign::ASTAssign(std::unique_ptr<AST::ASTExpression> &new_variable,
+                          std::unique_ptr<AST::ASTExpression> &new_value, Type new_type) {
+    variable = new_variable->cloneExpr();
     value = new_value->cloneExpr();
     type = new_type;
 }
@@ -415,7 +416,7 @@ std::unique_ptr<AST::Statement> AST::ASTAssign::clone() const {
 }
 
 AST::ASTAssign::ASTAssign(const ASTAssign &old_assign) {
-    name = old_assign.name;
+    variable = old_assign.variable->cloneExpr();
     value = old_assign.value->cloneExpr();
     type = old_assign.type;
 }

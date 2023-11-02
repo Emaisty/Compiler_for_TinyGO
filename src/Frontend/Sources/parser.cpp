@@ -418,8 +418,41 @@ std::unique_ptr<AST::ASTExpression> Parser::E0() {
             return res;
         }
         default:
-            return std::make_unique<AST::ASTNullExpr>();
+            throw std::invalid_argument("ERROR. Cannot parse expression.");
     }
+}
+
+
+std::unique_ptr<AST::ASTExpression> Parser::parseExpressionOrNone() {
+    switch (cur_tok) {
+        case tok_opbr:
+        case tok_num_int:
+        case tok_num_float:
+        case tok_false:
+        case tok_true:
+        case tok_identifier:
+        case tok_plus:
+        case tok_minus:
+        case tok_inc:
+        case tok_dec:
+        case tok_excl:
+            return E11();
+        default:
+            return nullptr;
+    }
+}
+
+std::vector<std::unique_ptr<AST::ASTExpression>> Parser::parseExpressionListOrNone() {
+    std::vector<std::unique_ptr<AST::ASTExpression>> res;
+    auto expr = parseExpressionOrNone();
+    if (!expr)
+        return res;
+    res.push_back(expr->cloneExpr());
+
+    while (cur_tok == tok_comma && (cur_tok = lexer.gettok())) {
+        res.push_back(parseExpression());
+    }
+    return res;
 }
 
 
@@ -438,69 +471,61 @@ std::vector<std::unique_ptr<AST::ASTExpression>> Parser::parseExpressionList() {
 
 std::vector<std::unique_ptr<AST::Statement>> Parser::parseSimpleStat() {
     std::vector<std::unique_ptr<AST::Statement>> res;
-    std::string name = "";
-    if (cur_tok == tok_identifier)
-        name = lexer.identifierStr();
 
-    auto expr = parseExpression();
+    auto exprs = parseExpressionListOrNone();
 
-    auto tmp_var = dynamic_cast<AST::ASTVar *>(expr.get());
-
-    if (tmp_var) {
-        std::vector<std::string> names(1, name);
-        // if more names - parse them
-        if (cur_tok == tok_comma) {
-            cur_tok = lexer.gettok();
-            for (auto &i: parseIdentifierList())
-                names.push_back(i);
-        }
-
-        if (cur_tok == tok_plusassign || cur_tok == tok_minassign || cur_tok == tok_mulassign ||
-            cur_tok == tok_divassign || cur_tok == tok_modassign || cur_tok == tok_assign) {
-            AST::ASTAssign::Type type;
-            switch (cur_tok) {
-                case tok_plusassign:
-                    type = AST::ASTAssign::Type::PLUSASSIGN;
-                case tok_minassign:
-                    type = AST::ASTAssign::Type::MINUSASSIGN;
-                case tok_mulassign:
-                    type = AST::ASTAssign::Type::MULTASSIGN;
-                case tok_divassign:
-                    type = AST::ASTAssign::Type::DIVASSIGN;
-                case tok_modassign:
-                    type = AST::ASTAssign::Type::MODASSIGN;
-                case tok_assign:
-                    type = AST::ASTAssign::Type::ASSIGN;
-            }
-            cur_tok = lexer.gettok();
-
-            auto values = parseExpressionList();
-            if (names.size() != values.size())
-                throw std::invalid_argument("ERROR. Diff size of declared var and expressions");
-
-            for (unsigned long long i = 0; i < names.size(); ++i)
-                res.emplace_back(AST::ASTAssign(names[i], values[i], type).clone());
-
-            return res;
-        } else if (cur_tok == tok_fastassign) {
-            matchAndGoNext(tok_fastassign);
-            auto values = parseExpressionList();
-            if (names.size() != values.size())
-                throw std::invalid_argument("ERROR. Diff size of declared var and expressions");
-
-            for (unsigned long long i = 0; i < names.size(); ++i)
-                res.emplace_back(AST::ASTVarDeclaration(names[i], values[i], values[i]->getType()).clone());
-            return res;
-        }
-
-    }
-
-    auto tmp_null = dynamic_cast<AST::ASTNullExpr *>(expr.get());
-
-    if (tmp_null)
+    // empty statement
+    if (exprs.empty())
         return res;
 
-    res.emplace_back(expr->clone());
+
+    if (cur_tok == tok_plusassign || cur_tok == tok_minassign || cur_tok == tok_mulassign ||
+        cur_tok == tok_divassign || cur_tok == tok_modassign || cur_tok == tok_assign) {
+        AST::ASTAssign::Type type;
+        switch (cur_tok) {
+            case tok_plusassign:
+                type = AST::ASTAssign::Type::PLUSASSIGN;
+                break;
+            case tok_minassign:
+                type = AST::ASTAssign::Type::MINUSASSIGN;
+                break;
+            case tok_mulassign:
+                type = AST::ASTAssign::Type::MULTASSIGN;
+                break;
+            case tok_divassign:
+                type = AST::ASTAssign::Type::DIVASSIGN;
+                break;
+            case tok_modassign:
+                type = AST::ASTAssign::Type::MODASSIGN;
+                break;
+            case tok_assign:
+                type = AST::ASTAssign::Type::ASSIGN;
+                break;
+        }
+        cur_tok = lexer.gettok();
+
+        auto values = parseExpressionList();
+        if (exprs.size() != values.size())
+            throw std::invalid_argument("ERROR. Diff size of declared var and expressions");
+
+        for (unsigned long long i = 0; i < exprs.size(); ++i)
+            res.emplace_back(AST::ASTAssign(exprs[i], values[i], type).clone());
+
+        return res;
+    } else if (cur_tok == tok_fastassign) {
+        matchAndGoNext(tok_fastassign);
+        auto values = parseExpressionList();
+        if (exprs.size() != values.size())
+            throw std::invalid_argument("ERROR. Diff size of declared var and expressions");
+        // re TODO idk how (?????)
+//        for (unsigned long long i = 0; i < exprs.size(); ++i)
+//            res.emplace_back(AST::ASTVarDeclaration(exprs[i], values[i], values[i]->getType()).clone());
+        return res;
+    }
+
+
+    for (auto &i: exprs)
+        res.emplace_back(i->clone());
 
     return res;
 }
@@ -510,8 +535,8 @@ std::unique_ptr<AST::Statement> Parser::parseReturn() {
 
     matchAndGoNext(tok_return);
 
-    auto expr = parseExpression();
-    res->addReturnValue(expr);
+    for (auto &i: parseExpressionListOrNone())
+        res->addReturnValue(i);
 
     return res;
 }

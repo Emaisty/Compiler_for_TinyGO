@@ -72,6 +72,11 @@ private:
 
     std::unique_ptr<AST::ASTExpression> E0();
 
+
+    std::unique_ptr<AST::ASTExpression> parseExpressionOrNone();
+
+    std::vector<std::unique_ptr<AST::ASTExpression>> parseExpressionListOrNone();
+
     std::unique_ptr<AST::ASTExpression> parseExpression();
 
     std::vector<std::unique_ptr<AST::ASTExpression>> parseExpressionList();

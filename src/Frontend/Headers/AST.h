@@ -422,7 +422,7 @@ namespace AST {
 
         ASTAssign() = default;
 
-        ASTAssign(std::string new_name, std::unique_ptr<AST::ASTExpression> &new_value, Type new_type);
+        ASTAssign(std::unique_ptr<AST::ASTExpression> &new_variable, std::unique_ptr<AST::ASTExpression> &new_value, Type new_type);
 
         std::unique_ptr<Statement> clone() const override;
 
@@ -430,9 +430,8 @@ namespace AST {
 
     private:
 
-        std::string name;
 
-        std::unique_ptr<AST::ASTExpression> value;
+        std::unique_ptr<AST::ASTExpression> variable, value;
 
         Type type;
 
