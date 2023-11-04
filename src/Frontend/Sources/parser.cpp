@@ -61,12 +61,12 @@ bool Parser::checkForSeparator() {
 }
 
 bool
-Parser::matchTypes(const std::unique_ptr <AST::ASTType> &type, const std::unique_ptr <AST::ASTType> &reference_type) {
+Parser::matchTypes(const std::unique_ptr<AST::ASTType> &type, const std::unique_ptr<AST::ASTType> &reference_type) {
     return type == reference_type;
 }
 
-std::vector <std::string> Parser::parseIdentifierList() {
-    std::vector <std::string> res;
+std::vector<std::string> Parser::parseIdentifierList() {
+    std::vector<std::string> res;
 
     do {
         match(tok_identifier);
@@ -76,7 +76,7 @@ std::vector <std::string> Parser::parseIdentifierList() {
     return res;
 }
 
-std::unique_ptr <AST::ASTTypeStruct> Parser::parseStruct() {
+std::unique_ptr<AST::ASTTypeStruct> Parser::parseStruct() {
     matchAndGoNext(tok_struct);
 
     matchAndGoNext(tok_opfigbr);
@@ -101,12 +101,12 @@ std::unique_ptr <AST::ASTTypeStruct> Parser::parseStruct() {
     return res;
 }
 
-std::unique_ptr <AST::ASTExpression> Parser::E11() {
+std::unique_ptr<AST::ASTExpression> Parser::E11() {
     auto tmp = E10();
     return E11_PRIME(tmp);
 }
 
-std::unique_ptr <AST::ASTExpression> Parser::E11_PRIME(std::unique_ptr <AST::ASTExpression> &left) {
+std::unique_ptr<AST::ASTExpression> Parser::E11_PRIME(std::unique_ptr<AST::ASTExpression> &left) {
     if (cur_tok == tok_or) {
         matchAndGoNext(tok_or);
 
@@ -120,12 +120,12 @@ std::unique_ptr <AST::ASTExpression> Parser::E11_PRIME(std::unique_ptr <AST::AST
     return left->cloneExpr();
 }
 
-std::unique_ptr <AST::ASTExpression> Parser::E10() {
+std::unique_ptr<AST::ASTExpression> Parser::E10() {
     auto tmp = E9();
     return E10_PRIME(tmp);
 }
 
-std::unique_ptr <AST::ASTExpression> Parser::E10_PRIME(std::unique_ptr <AST::ASTExpression> &left) {
+std::unique_ptr<AST::ASTExpression> Parser::E10_PRIME(std::unique_ptr<AST::ASTExpression> &left) {
     if (cur_tok == tok_and) {
         cur_tok = lexer.gettok();
 
@@ -139,12 +139,12 @@ std::unique_ptr <AST::ASTExpression> Parser::E10_PRIME(std::unique_ptr <AST::AST
     return left->cloneExpr();
 }
 
-std::unique_ptr <AST::ASTExpression> Parser::E9() {
+std::unique_ptr<AST::ASTExpression> Parser::E9() {
     auto tmp = E8();
     return E9_PRIME(tmp);
 }
 
-std::unique_ptr <AST::ASTExpression> Parser::E9_PRIME(std::unique_ptr <AST::ASTExpression> &left) {
+std::unique_ptr<AST::ASTExpression> Parser::E9_PRIME(std::unique_ptr<AST::ASTExpression> &left) {
     if (cur_tok == tok_binor) {
         cur_tok = lexer.gettok();
 
@@ -158,12 +158,12 @@ std::unique_ptr <AST::ASTExpression> Parser::E9_PRIME(std::unique_ptr <AST::ASTE
     return left->cloneExpr();
 }
 
-std::unique_ptr <AST::ASTExpression> Parser::E8() {
+std::unique_ptr<AST::ASTExpression> Parser::E8() {
     auto tmp = E7();
     return E8_PRIME(tmp);
 }
 
-std::unique_ptr <AST::ASTExpression> Parser::E8_PRIME(std::unique_ptr <AST::ASTExpression> &left) {
+std::unique_ptr<AST::ASTExpression> Parser::E8_PRIME(std::unique_ptr<AST::ASTExpression> &left) {
     if (cur_tok == tok_binand) {
         cur_tok = lexer.gettok();
 
@@ -177,12 +177,12 @@ std::unique_ptr <AST::ASTExpression> Parser::E8_PRIME(std::unique_ptr <AST::ASTE
     return left->cloneExpr();
 }
 
-std::unique_ptr <AST::ASTExpression> Parser::E7() {
+std::unique_ptr<AST::ASTExpression> Parser::E7() {
     auto tmp = E6();
     return E7_PRIME(tmp);
 }
 
-std::unique_ptr <AST::ASTExpression> Parser::E7_PRIME(std::unique_ptr <AST::ASTExpression> &left) {
+std::unique_ptr<AST::ASTExpression> Parser::E7_PRIME(std::unique_ptr<AST::ASTExpression> &left) {
     switch (cur_tok) {
         case tok_eq: {
             cur_tok = lexer.gettok();
@@ -205,12 +205,12 @@ std::unique_ptr <AST::ASTExpression> Parser::E7_PRIME(std::unique_ptr <AST::ASTE
     }
 }
 
-std::unique_ptr <AST::ASTExpression> Parser::E6() {
+std::unique_ptr<AST::ASTExpression> Parser::E6() {
     auto tmp = E5();
     return E6_PRIME(tmp);
 }
 
-std::unique_ptr <AST::ASTExpression> Parser::E6_PRIME(std::unique_ptr <AST::ASTExpression> &left) {
+std::unique_ptr<AST::ASTExpression> Parser::E6_PRIME(std::unique_ptr<AST::ASTExpression> &left) {
     switch (cur_tok) {
         case tok_gt: {
             cur_tok = lexer.gettok();
@@ -249,12 +249,12 @@ std::unique_ptr <AST::ASTExpression> Parser::E6_PRIME(std::unique_ptr <AST::ASTE
     }
 }
 
-std::unique_ptr <AST::ASTExpression> Parser::E5() {
+std::unique_ptr<AST::ASTExpression> Parser::E5() {
     auto tmp = E4();
     return E5_PRIME(tmp);
 }
 
-std::unique_ptr <AST::ASTExpression> Parser::E5_PRIME(std::unique_ptr <AST::ASTExpression> &left) {
+std::unique_ptr<AST::ASTExpression> Parser::E5_PRIME(std::unique_ptr<AST::ASTExpression> &left) {
     switch (cur_tok) {
         case tok_plus: {
             cur_tok = lexer.gettok();
@@ -279,12 +279,12 @@ std::unique_ptr <AST::ASTExpression> Parser::E5_PRIME(std::unique_ptr <AST::ASTE
     }
 }
 
-std::unique_ptr <AST::ASTExpression> Parser::E4() {
+std::unique_ptr<AST::ASTExpression> Parser::E4() {
     auto tmp = E2();
     return E4_PRIME(tmp);
 }
 
-std::unique_ptr <AST::ASTExpression> Parser::E4_PRIME(std::unique_ptr <AST::ASTExpression> &left) {
+std::unique_ptr<AST::ASTExpression> Parser::E4_PRIME(std::unique_ptr<AST::ASTExpression> &left) {
     switch (cur_tok) {
         case tok_asterisk: {
             cur_tok = lexer.gettok();
@@ -315,7 +315,7 @@ std::unique_ptr <AST::ASTExpression> Parser::E4_PRIME(std::unique_ptr <AST::ASTE
     }
 }
 
-std::unique_ptr <AST::ASTExpression> Parser::E2() {
+std::unique_ptr<AST::ASTExpression> Parser::E2() {
     switch (cur_tok) {
         case tok_minus: {
             cur_tok = lexer.gettok();
@@ -342,6 +342,16 @@ std::unique_ptr <AST::ASTExpression> Parser::E2() {
             auto arg = E2();
             return std::make_unique<AST::ASTUnaryOperator>(arg, AST::ASTUnaryOperator::Operator::NOT);
         }
+        case tok_asterisk: {
+            cur_tok = lexer.gettok();
+            auto arg = E2();
+            return std::make_unique<AST::ASTGetValue>(arg);
+        }
+        case tok_binand: {
+            cur_tok = lexer.gettok();
+            auto arg = E2();
+            return std::make_unique<AST::ASTGetPointer>(arg);
+        }
         default: {
             return E1();
         }
@@ -349,12 +359,12 @@ std::unique_ptr <AST::ASTExpression> Parser::E2() {
     }
 }
 
-std::unique_ptr <AST::ASTExpression> Parser::E1() {
+std::unique_ptr<AST::ASTExpression> Parser::E1() {
     auto tmp = E0();
     return E1_PRIME(tmp);
 }
 
-std::unique_ptr <AST::ASTExpression> Parser::E1_PRIME(std::unique_ptr <AST::ASTExpression> &left) {
+std::unique_ptr<AST::ASTExpression> Parser::E1_PRIME(std::unique_ptr<AST::ASTExpression> &left) {
     switch (cur_tok) {
         case tok_opbr: {
             cur_tok = lexer.gettok();
@@ -386,7 +396,7 @@ std::unique_ptr <AST::ASTExpression> Parser::E1_PRIME(std::unique_ptr <AST::ASTE
     }
 }
 
-std::unique_ptr <AST::ASTExpression> Parser::E0() {
+std::unique_ptr<AST::ASTExpression> Parser::E0() {
     switch (cur_tok) {
         case tok_opbr: {
             matchAndGoNext(tok_opbr);
@@ -410,20 +420,21 @@ std::unique_ptr <AST::ASTExpression> Parser::E0() {
             cur_tok = lexer.gettok();
             return res;
         }
+
         case tok_identifier: {
-            //TODO check if var exists
             match(tok_identifier);
             auto res = std::make_unique<AST::ASTVar>(lexer.identifierStr())->cloneExpr();
             cur_tok = lexer.gettok();
             return res;
         }
+            // TODO if tok_struct
         default:
             throw std::invalid_argument("ERROR. Cannot parse expression.");
     }
 }
 
 
-std::unique_ptr <AST::ASTExpression> Parser::parseExpressionOrNone() {
+std::unique_ptr<AST::ASTExpression> Parser::parseExpressionOrNone() {
     switch (cur_tok) {
         case tok_opbr:
         case tok_num_int:
@@ -442,8 +453,8 @@ std::unique_ptr <AST::ASTExpression> Parser::parseExpressionOrNone() {
     }
 }
 
-std::vector <std::unique_ptr<AST::ASTExpression>> Parser::parseExpressionListOrNone() {
-    std::vector <std::unique_ptr<AST::ASTExpression>> res;
+std::vector<std::unique_ptr<AST::ASTExpression>> Parser::parseExpressionListOrNone() {
+    std::vector<std::unique_ptr<AST::ASTExpression>> res;
     auto expr = parseExpressionOrNone();
     if (!expr)
         return res;
@@ -456,12 +467,12 @@ std::vector <std::unique_ptr<AST::ASTExpression>> Parser::parseExpressionListOrN
 }
 
 
-std::unique_ptr <AST::ASTExpression> Parser::parseExpression() {
+std::unique_ptr<AST::ASTExpression> Parser::parseExpression() {
     return E11();
 }
 
-std::vector <std::unique_ptr<AST::ASTExpression>> Parser::parseExpressionList() {
-    std::vector <std::unique_ptr<AST::ASTExpression>> res;
+std::vector<std::unique_ptr<AST::ASTExpression>> Parser::parseExpressionList() {
+    std::vector<std::unique_ptr<AST::ASTExpression>> res;
 
     do {
         res.push_back(parseExpression());
@@ -469,11 +480,11 @@ std::vector <std::unique_ptr<AST::ASTExpression>> Parser::parseExpressionList() 
     return res;
 }
 
-std::vector <std::unique_ptr<AST::Statement>> Parser::parseSimpleStat() {
-    std::vector <std::unique_ptr<AST::Statement>> res;
+std::vector<std::unique_ptr<AST::Statement>> Parser::parseSimpleStat() {
+    std::vector<std::unique_ptr<AST::Statement>> res;
 
-    std::vector <std::unique_ptr<AST::ASTExpression>> exprs;
-    std::vector <std::string> names;
+    std::vector<std::unique_ptr<AST::ASTExpression>> exprs;
+    std::vector<std::string> names;
 
     bool can_be_decl = false;
 
@@ -554,18 +565,26 @@ std::vector <std::unique_ptr<AST::Statement>> Parser::parseSimpleStat() {
     return res;
 }
 
-std::unique_ptr <AST::Statement> Parser::parseReturn() {
+std::unique_ptr<AST::Statement> Parser::parseReturn() {
     auto res = std::make_unique<AST::ASTReturn>();
 
     matchAndGoNext(tok_return);
 
-    for (auto &i: parseExpressionListOrNone())
-        res->addReturnValue(i);
+    auto return_values = parseExpressionListOrNone();
+    if (return_values.empty())
+        return res;
+    if (return_values.size() == 1)
+        res->addReturnValue(return_values[0]);
+    else
+
+
+        for (auto &i: parseExpressionListOrNone())
+            res->addReturnValue(i);
 
     return res;
 }
 
-std::unique_ptr <AST::Statement> Parser::parseIfStat() {
+std::unique_ptr<AST::Statement> Parser::parseIfStat() {
     auto res = std::make_unique<AST::ASTIf>();
     matchAndGoNext(tok_if);
 
@@ -584,7 +603,7 @@ std::unique_ptr <AST::Statement> Parser::parseIfStat() {
     return res;
 }
 
-std::unique_ptr <AST::Statement> Parser::parseForLoop() {
+std::unique_ptr<AST::Statement> Parser::parseForLoop() {
 
     auto res = std::make_unique<AST::ASTFor>();
 
@@ -607,7 +626,7 @@ std::unique_ptr <AST::Statement> Parser::parseForLoop() {
     return res;
 }
 
-std::unique_ptr <AST::Statement> Parser::parseSwitch() {
+std::unique_ptr<AST::Statement> Parser::parseSwitch() {
     auto res = std::make_unique<AST::ASTSwitch>();
 
     matchAndGoNext(tok_switch);
@@ -619,7 +638,7 @@ std::unique_ptr <AST::Statement> Parser::parseSwitch() {
 
     bool was_default = false;
     while (cur_tok == tok_case || cur_tok == tok_default) {
-        std::unique_ptr <AST::ASTExpression> case_expr = nullptr;
+        std::unique_ptr<AST::ASTExpression> case_expr = nullptr;
         if (cur_tok == tok_case) {
             matchAndGoNext(tok_case);
             case_expr = parseExpression();
@@ -645,8 +664,8 @@ std::unique_ptr <AST::Statement> Parser::parseSwitch() {
     return res;
 }
 
-std::vector <std::unique_ptr<AST::Statement>> Parser::parseStatement() {
-    std::vector <std::unique_ptr<AST::Statement>> res;
+std::vector<std::unique_ptr<AST::Statement>> Parser::parseStatement() {
+    std::vector<std::unique_ptr<AST::Statement>> res;
     switch (cur_tok) {
         case tok_var:
         case tok_const:
@@ -672,6 +691,10 @@ std::vector <std::unique_ptr<AST::Statement>> Parser::parseStatement() {
         case tok_return:
             res.emplace_back(parseReturn());
             break;
+
+        case tok_opfigbr:
+            res.emplace_back(parseBlock());
+            break;
         default:
             for (auto &i: parseSimpleStat())
                 res.emplace_back(i->clone());
@@ -681,8 +704,8 @@ std::vector <std::unique_ptr<AST::Statement>> Parser::parseStatement() {
     return res;
 }
 
-std::vector <std::unique_ptr<AST::Statement>> Parser::parseStatementList() {
-    std::vector <std::unique_ptr<AST::Statement>> res, stat;
+std::vector<std::unique_ptr<AST::Statement>> Parser::parseStatementList() {
+    std::vector<std::unique_ptr<AST::Statement>> res, stat;
 
     do {
         stat = parseStatement();
@@ -693,7 +716,7 @@ std::vector <std::unique_ptr<AST::Statement>> Parser::parseStatementList() {
     return res;
 }
 
-std::unique_ptr <AST::ASTType> Parser::parseType() {
+std::unique_ptr<AST::ASTType> Parser::parseType() {
     switch (cur_tok) {
         case tok_int:
         case tok_int32:
@@ -727,9 +750,6 @@ std::unique_ptr <AST::ASTType> Parser::parseType() {
             auto name = lexer.identifierStr();
             cur_tok = lexer.gettok();
 
-            if (named_type.find(name) == named_type.end())
-                throw std::invalid_argument("ERROR. UNKNOWN NAME FOR TYPE");
-
             return named_type[name]->clone();
         }
         default:
@@ -737,7 +757,7 @@ std::unique_ptr <AST::ASTType> Parser::parseType() {
     }
 }
 
-std::unique_ptr <AST::ASTBlock> Parser::parseBlock() {
+std::unique_ptr<AST::ASTBlock> Parser::parseBlock() {
     matchAndGoNext(tok_opfigbr);
 
     auto res = std::make_unique<AST::ASTBlock>();
@@ -750,7 +770,7 @@ std::unique_ptr <AST::ASTBlock> Parser::parseBlock() {
     return res;
 }
 
-void Parser::parseFuncSignature(std::unique_ptr <AST::Function> &function) {
+void Parser::parseFuncSignature(std::unique_ptr<AST::Function> &function) {
 
     //parameters
     matchAndGoNext(tok_opbr);
@@ -777,25 +797,35 @@ void Parser::parseFuncSignature(std::unique_ptr <AST::Function> &function) {
     //if func return something
     if (cur_tok != tok_opfigbr) {
 
+        std::vector<std::unique_ptr<AST::ASTType>> return_type;
+
         if (cur_tok == tok_opbr) {
             //maybe multiple of them
             matchAndGoNext(tok_opbr);
             do {
-                auto type = parseType();
-                function->addReturn(type);
+                return_type.emplace_back(parseType()->clone());
             } while (cur_tok == tok_comma && (cur_tok = lexer.gettok()));
             matchAndGoNext(tok_clbr);
 
         } else {
             // just a single type
-            auto type = parseType();
-            function->addReturn(type);
+            return_type.emplace_back(parseType()->clone());
+        }
+
+        if (return_type.size() == 1)
+            function->addReturn(return_type[0]);
+        else {
+            auto tmp = std::make_unique<AST::ASTTypeStruct>();
+            for (auto &i: return_type)
+                tmp->addField("", i);
+            auto tmp1 = tmp->clone();
+            function->addReturn(tmp1);
         }
     }
 
 }
 
-std::unique_ptr <AST::Function> Parser::parseFunction() {
+std::unique_ptr<AST::Function> Parser::parseFunction() {
     matchAndGoNext(tok_func);
 
     auto res = std::make_unique<AST::Function>();
@@ -817,12 +847,12 @@ std::unique_ptr <AST::Function> Parser::parseFunction() {
 
 }
 
-std::vector <std::unique_ptr<AST::ASTDeclaration>> Parser::parseConstDeclarationLine() {
-    std::vector <std::unique_ptr<AST::ASTDeclaration>> res;
+std::vector<std::unique_ptr<AST::ASTDeclaration>> Parser::parseConstDeclarationLine() {
+    std::vector<std::unique_ptr<AST::ASTDeclaration>> res;
 
     auto names = parseIdentifierList();
 
-    std::unique_ptr <AST::ASTType> type = nullptr;
+    std::unique_ptr<AST::ASTType> type = nullptr;
     // if there is type before assign sign
     if (cur_tok != tok_assign) {
         type = parseType();
@@ -852,8 +882,8 @@ std::vector <std::unique_ptr<AST::ASTDeclaration>> Parser::parseConstDeclaration
 }
 
 
-std::vector <std::unique_ptr<AST::ASTDeclaration>> Parser::parseTypeDeclarationLine() {
-    std::vector <std::unique_ptr<AST::ASTDeclaration>> res;
+std::vector<std::unique_ptr<AST::ASTDeclaration>> Parser::parseTypeDeclarationLine() {
+    std::vector<std::unique_ptr<AST::ASTDeclaration>> res;
     match(tok_identifier);
     std::string name = lexer.identifierStr();
     cur_tok = lexer.gettok();
@@ -867,15 +897,15 @@ std::vector <std::unique_ptr<AST::ASTDeclaration>> Parser::parseTypeDeclarationL
     return res;
 }
 
-std::vector <std::unique_ptr<AST::ASTDeclaration>> Parser::parseVarDeclarationLine() {
-    std::vector <std::unique_ptr<AST::ASTDeclaration>> res;
+std::vector<std::unique_ptr<AST::ASTDeclaration>> Parser::parseVarDeclarationLine() {
+    std::vector<std::unique_ptr<AST::ASTDeclaration>> res;
 
     auto names = parseIdentifierList();
 
 
-    // if there is type before assign sign
     if (cur_tok != tok_assign) {
-        std::unique_ptr <AST::ASTType> type = nullptr;
+        // if there is type before assign sign
+        std::unique_ptr<AST::ASTType> type = nullptr;
         type = parseType();
         if (cur_tok == tok_assign) {
             //type and value
@@ -920,60 +950,37 @@ std::vector <std::unique_ptr<AST::ASTDeclaration>> Parser::parseVarDeclarationLi
 }
 
 
-std::vector <std::unique_ptr<AST::ASTDeclaration>>
-Parser::parseDeclarationBlock(const std::function <std::vector<std::unique_ptr < AST::ASTDeclaration>>()
+std::vector<std::unique_ptr<AST::ASTDeclaration>>
+Parser::parseDeclarationBlock(const std::function<std::vector<std::unique_ptr<AST::ASTDeclaration>>()> &type_of_line) {
+    std::vector<std::unique_ptr<AST::ASTDeclaration>> result;
 
-> &type_of_line) {
-std::vector <std::unique_ptr<AST::ASTDeclaration>> result;
+    if (cur_tok == tok_opbr) {
+        //multiple
+        matchAndGoNext(tok_opbr);
+        while (cur_tok != tok_clbr) {
+            auto decl_line = type_of_line();
+            for (auto &i: decl_line)
+                result.push_back(i->cloneDecl());
+            if (!checkForSeparator()) {
+                match(tok_clbr);
+                break;
+            }
 
-if (cur_tok == tok_opbr) {
-//multiple
-matchAndGoNext(tok_opbr);
-while (cur_tok != tok_clbr) {
-auto decl_line = type_of_line();
-for (
-auto &i
-: decl_line)
-result.
-push_back(i
-->
+        }
+        matchAndGoNext(tok_clbr);
+    } else {
+        //single
+        auto decl_line = type_of_line();
 
-cloneDecl()
+        for (auto &i: decl_line)
+            result.push_back(i->cloneDecl());
+    }
 
-);
-if (!
-
-checkForSeparator()
-
-) {
-match(tok_clbr);
-break;
+    return result;
 }
 
-}
-matchAndGoNext(tok_clbr);
-} else {
-//single
-auto decl_line = type_of_line();
-
-for (
-auto &i
-: decl_line)
-result.
-push_back(i
-->
-
-cloneDecl()
-
-);
-}
-
-return
-result;
-}
-
-std::vector <std::unique_ptr<AST::ASTDeclaration>> Parser::parseDeclaration() {
-    std::vector <std::unique_ptr<AST::ASTDeclaration>> res;
+std::vector<std::unique_ptr<AST::ASTDeclaration>> Parser::parseDeclaration() {
+    std::vector<std::unique_ptr<AST::ASTDeclaration>> res;
     switch (cur_tok) {
         case tok_const:
             matchAndGoNext(tok_const);

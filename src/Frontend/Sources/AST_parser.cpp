@@ -1,5 +1,14 @@
 #include "AST.h"
 
+std::unique_ptr<AST::ASTType> AST::ASTType::set_addressability(bool flag) {
+    is_variable = flag;
+    return this->clone();
+}
+
+bool AST::ASTType::addressable() {
+    return is_variable;
+}
+
 std::unique_ptr<AST::ASTType> AST::ASTTypeNull::clone() const {
     return std::make_unique<AST::ASTTypeNull>(*this);
 }
@@ -80,29 +89,23 @@ std::unique_ptr<AST::ASTType> AST::ASTTypeStruct::clone() const {
 
 void AST::ASTTypeStruct::addField(std::string name, std::unique_ptr<AST::ASTType> &type) {
     for (auto &i: fileds)
-        if (name == i.first)
+        if (name == i.first && name != "")
             throw std::invalid_argument("ERROR. 2 or more fields in structure with the same names");
     fileds.emplace_back(name, type->clone());
 }
 
 bool AST::ASTTypeStruct::operator==(const std::unique_ptr<ASTType> &type) const {
     auto struc = dynamic_cast<AST::ASTTypeStruct *>(type.get());
-    if (struc) {
-        if (this->fileds.size() != struc->fileds.size())
+    if (!struc)
+        return false;
+
+    if (this->fileds.size() != struc->fileds.size())
+        return false;
+    for (int i = 0; i < fileds.size(); ++i)
+        if (!(fileds[i].second == struc->fileds[0].second))
             return false;
-        for (auto &i: this->fileds) {
-            bool flag = true;
-            for (auto &j: struc->fileds)
-                if (i.first == j.first) {
-                    flag = false;
-                    break;
-                }
-            if (flag)
-                return false;
-            return true;
-        }
-    }
-    return false;
+
+    return true;
 }
 
 
@@ -205,6 +208,40 @@ AST::ASTMemberAccess::ASTMemberAccess(const std::unique_ptr<AST::ASTExpression> 
     name = new_name->cloneExpr();
     member = new_member->cloneExpr();
 }
+
+AST::ASTGetPointer::ASTGetPointer(const ASTGetPointer &old_address) {
+    var = old_address.var->cloneExpr();
+}
+
+std::unique_ptr<AST::ASTExpression> AST::ASTGetPointer::cloneExpr() const {
+    return std::make_unique<AST::ASTGetPointer>(*this);
+}
+
+std::unique_ptr<AST::ASTType> AST::ASTGetPointer::getType(const std::vector<Variable> &) const {
+    //TODO
+}
+
+
+AST::ASTGetPointer::ASTGetPointer(const std::unique_ptr<ASTExpression> &new_var) {
+    var = new_var->cloneExpr();
+}
+
+AST::ASTGetValue::ASTGetValue(const ASTGetValue &old_pointer) {
+    var = old_pointer.cloneExpr();
+}
+
+std::unique_ptr<AST::ASTExpression> AST::ASTGetValue::cloneExpr() const {
+    return std::make_unique<AST::ASTGetValue>(*this);
+}
+
+std::unique_ptr<AST::ASTType> AST::ASTGetValue::getType(const std::vector<Variable> &) const {
+    //TODO
+}
+
+AST::ASTGetValue::ASTGetValue(const std::unique_ptr<ASTExpression> &new_var) {
+    var = new_var->cloneExpr();
+}
+
 
 std::unique_ptr<AST::ASTExpression> AST::ASTIntNumber::cloneExpr() const {
     return std::make_unique<AST::ASTIntNumber>(*this);
@@ -435,7 +472,7 @@ void AST::Function::addParam(std::string new_name, std::unique_ptr<AST::ASTType>
 }
 
 void AST::Function::addReturn(std::unique_ptr<AST::ASTType> &new_return) {
-    return_type.emplace_back(new_return->clone());
+    return_type = new_return->clone();
 }
 
 void AST::Function::setBody(std::unique_ptr<AST::Statement> &new_body) {

@@ -17,6 +17,7 @@ set(
 
         ${FRONDEND_SOURCES}/lexer.cpp
         ${FRONDEND_SOURCES}/AST_parser.cpp
+        ${FRONDEND_SOURCES}/AST_checker.cpp
         ${FRONDEND_SOURCES}/AST_IR.cpp
         ${FRONDEND_SOURCES}/parser.cpp
 
