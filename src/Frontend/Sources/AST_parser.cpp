@@ -5,8 +5,17 @@ std::unique_ptr<AST::ASTType> AST::ASTType::set_addressability(bool flag) {
     return this->clone();
 }
 
+std::unique_ptr<AST::ASTType> AST::ASTType::set_constability(bool flag) {
+    is_const = flag;
+    return this->clone();
+}
+
 bool AST::ASTType::addressable() {
     return is_variable;
+}
+
+bool AST::ASTType::constable() {
+    return is_const;
 }
 
 std::unique_ptr<AST::ASTType> AST::ASTTypeNull::clone() const {
@@ -77,6 +86,9 @@ bool AST::ASTTypePointer::operator==(const std::unique_ptr<ASTType> &type) const
     return false;
 }
 
+std::unique_ptr<AST::ASTType> AST::ASTTypePointer::getValue() {
+    return type->clone();
+}
 
 AST::ASTTypeStruct::ASTTypeStruct(const AST::ASTTypeStruct &old_pointer) {
     for (auto &i: old_pointer.fileds)
@@ -108,6 +120,15 @@ bool AST::ASTTypeStruct::operator==(const std::unique_ptr<ASTType> &type) const 
     return true;
 }
 
+std::unique_ptr<AST::ASTType> AST::ASTTypeStruct::findField(std::string name) {
+    for (auto &i: fileds)
+        if (i.first == name)
+            return i.second->clone();
+
+    throw std::invalid_argument("ERROR. Field with such name does not exists.");
+    return nullptr;
+}
+
 
 std::unique_ptr<AST::Statement> AST::ASTExpression::clone() const {
     return this->cloneExpr();
@@ -117,9 +138,6 @@ std::unique_ptr<AST::ASTExpression> AST::ASTNullExpr::cloneExpr() const {
     return std::make_unique<ASTNullExpr>(*this);
 }
 
-std::unique_ptr<AST::ASTType> AST::ASTNullExpr::getType() const {
-    return std::make_unique<AST::ASTTypeNull>();
-}
 
 AST::ASTBinaryOperator::ASTBinaryOperator(const ASTBinaryOperator &old_expr) {
     op = old_expr.op;
@@ -132,14 +150,6 @@ std::unique_ptr<AST::ASTExpression> AST::ASTBinaryOperator::cloneExpr() const {
     return std::make_unique<ASTBinaryOperator>(*this);
 }
 
-std::unique_ptr<AST::ASTType> AST::ASTBinaryOperator::getType() const {
-    // operations on numbers (and bool)
-
-
-    // operations on struct
-
-    //operations on pointers
-}
 
 AST::ASTBinaryOperator::ASTBinaryOperator(std::unique_ptr<AST::ASTExpression> &new_left,
                                           std::unique_ptr<AST::ASTExpression> &new_right, Operator new_op) {
@@ -158,11 +168,6 @@ std::unique_ptr<AST::ASTExpression> AST::ASTUnaryOperator::cloneExpr() const {
     return std::make_unique<ASTUnaryOperator>(*this);
 }
 
-std::unique_ptr<AST::ASTType> AST::ASTUnaryOperator::getType() const {
-    if (op == AST::ASTUnaryOperator::NOT)
-        return std::make_unique<AST::ASTTypeBool>();
-    return std::make_unique<AST::ASTTypeInt>();
-}
 
 AST::ASTUnaryOperator::ASTUnaryOperator(std::unique_ptr<AST::ASTExpression> &new_value, Operator new_op) {
     op = new_op;
@@ -179,9 +184,6 @@ std::unique_ptr<AST::ASTExpression> AST::ASTFunctionCall::cloneExpr() const {
     return std::make_unique<ASTFunctionCall>(*this);
 }
 
-std::unique_ptr<AST::ASTType> AST::ASTFunctionCall::getType() const {
-    //TODO
-}
 
 AST::ASTFunctionCall::ASTFunctionCall(const std::unique_ptr<AST::ASTExpression> &new_name,
                                       const std::vector<std::unique_ptr<AST::ASTExpression>> &new_args) {
@@ -199,10 +201,6 @@ std::unique_ptr<AST::ASTExpression> AST::ASTMemberAccess::cloneExpr() const {
     return std::make_unique<AST::ASTMemberAccess>(*this);
 }
 
-std::unique_ptr<AST::ASTType> AST::ASTMemberAccess::getType() const {
-    //TODO
-}
-
 AST::ASTMemberAccess::ASTMemberAccess(const std::unique_ptr<AST::ASTExpression> &new_name,
                                       const std::unique_ptr<AST::ASTExpression> &new_member) {
     name = new_name->cloneExpr();
@@ -217,11 +215,6 @@ std::unique_ptr<AST::ASTExpression> AST::ASTGetPointer::cloneExpr() const {
     return std::make_unique<AST::ASTGetPointer>(*this);
 }
 
-std::unique_ptr<AST::ASTType> AST::ASTGetPointer::getType(const std::vector<Variable> &) const {
-    //TODO
-}
-
-
 AST::ASTGetPointer::ASTGetPointer(const std::unique_ptr<ASTExpression> &new_var) {
     var = new_var->cloneExpr();
 }
@@ -234,9 +227,6 @@ std::unique_ptr<AST::ASTExpression> AST::ASTGetValue::cloneExpr() const {
     return std::make_unique<AST::ASTGetValue>(*this);
 }
 
-std::unique_ptr<AST::ASTType> AST::ASTGetValue::getType(const std::vector<Variable> &) const {
-    //TODO
-}
 
 AST::ASTGetValue::ASTGetValue(const std::unique_ptr<ASTExpression> &new_var) {
     var = new_var->cloneExpr();
@@ -247,20 +237,12 @@ std::unique_ptr<AST::ASTExpression> AST::ASTIntNumber::cloneExpr() const {
     return std::make_unique<AST::ASTIntNumber>(*this);
 }
 
-std::unique_ptr<AST::ASTType> AST::ASTIntNumber::getType() const {
-    return std::make_unique<AST::ASTTypeInt>();
-}
-
 AST::ASTIntNumber::ASTIntNumber(const int new_value) {
     value = new_value;
 }
 
 std::unique_ptr<AST::ASTExpression> AST::ASTFloatNumber::cloneExpr() const {
     return std::make_unique<AST::ASTFloatNumber>(*this);
-}
-
-std::unique_ptr<AST::ASTType> AST::ASTFloatNumber::getType() const {
-    return std::make_unique<AST::ASTTypeFloat>();
 }
 
 AST::ASTFloatNumber::ASTFloatNumber(const double new_value) {
@@ -271,26 +253,38 @@ std::unique_ptr<AST::ASTExpression> AST::ASTBoolNumber::cloneExpr() const {
     return std::make_unique<AST::ASTBoolNumber>(*this);
 }
 
-std::unique_ptr<AST::ASTType> AST::ASTBoolNumber::getType() const {
-    return std::make_unique<AST::ASTTypeBool>();
-}
-
 AST::ASTBoolNumber::ASTBoolNumber(const bool new_value) {
     value = new_value;
+}
+
+std::unique_ptr<AST::ASTExpression> AST::ASTStruct::cloneExpr() const {
+    return std::make_unique<AST::ASTStruct>(*this);
+}
+
+AST::ASTStruct::ASTStruct(std::unique_ptr<ASTTypeStruct> &new_type,
+                          std::vector<std::pair<std::string, std::unique_ptr<ASTExpression>>> &new_values) {
+    type = new_type->clone();
+    for (auto &i: new_values)
+        values.emplace_back(i.first, i.second->cloneExpr());
+}
+
+AST::ASTStruct::ASTStruct(const ASTStruct &old_struct) {
+    type = old_struct.type->clone();
+    for (auto &i: old_struct.values)
+        values.emplace_back(i.first, i.second->cloneExpr());
 }
 
 std::unique_ptr<AST::ASTExpression> AST::ASTVar::cloneExpr() const {
     return std::make_unique<AST::ASTVar>(*this);
 }
 
-std::unique_ptr<AST::ASTType> AST::ASTVar::getType() const {
-//TODO
-}
-
 AST::ASTVar::ASTVar(const std::string new_name) {
     name = new_name;
 }
 
+std::string AST::ASTVar::getName() {
+    return name;
+}
 
 AST::ASTDeclaration::ASTDeclaration(const ASTDeclaration &pr_decl) {
     name = pr_decl.name;
@@ -308,6 +302,13 @@ AST::ASTDeclaration::ASTDeclaration(const std::string new_name, const std::uniqu
     name = new_name;
     value = new_value->cloneExpr();
     type = new_type->clone();
+}
+
+AST::ASTDeclaration::ASTDeclaration(const std::string new_name, const std::unique_ptr<ASTExpression> &new_value) {
+    name = new_name;
+    value = new_value->cloneExpr();
+
+    type = nullptr;
 }
 
 AST::ASTDeclaration::ASTDeclaration(const std::string new_name, const std::unique_ptr<AST::ASTType> &new_type) {

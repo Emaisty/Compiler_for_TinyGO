@@ -427,7 +427,26 @@ std::unique_ptr<AST::ASTExpression> Parser::E0() {
             cur_tok = lexer.gettok();
             return res;
         }
-            // TODO if tok_struct
+        case tok_struct : {
+            auto type = parseStruct();
+            std::vector<std::pair<std::string, std::unique_ptr<AST::ASTExpression>>> values;
+            matchAndGoNext(tok_opfigbr);
+            if (cur_tok == tok_clfigbr) {
+                matchAndGoNext(tok_clfigbr);
+                return std::make_unique<AST::ASTStruct>(type, values);
+            }
+            do {
+                match(tok_identifier);
+                auto name = lexer.identifierStr();
+                matchAndGoNext(tok_identifier);
+                matchAndGoNext(tok_colon);
+                auto type_of_field = parseExpression();
+                values.emplace_back(std::make_pair(name, type_of_field->cloneExpr()));
+            } while (cur_tok == tok_comma && (cur_tok = lexer.gettok()));
+
+            matchAndGoNext(tok_clfigbr);
+            return std::make_unique<AST::ASTStruct>(type, values);
+        }
         default:
             throw std::invalid_argument("ERROR. Cannot parse expression.");
     }
@@ -554,7 +573,7 @@ std::vector<std::unique_ptr<AST::Statement>> Parser::parseSimpleStat() {
         if (names.size() != values.size())
             throw std::invalid_argument("ERROR. Diff size of declared var and expressions");
         for (unsigned long long i = 0; i < names.size(); ++i)
-            res.emplace_back(AST::ASTVarDeclaration(names[i], values[i], values[i]->getType()).clone());
+            res.emplace_back(AST::ASTVarDeclaration(names[i], values[i]).clone());
         return res;
     }
 
@@ -865,17 +884,12 @@ std::vector<std::unique_ptr<AST::ASTDeclaration>> Parser::parseConstDeclarationL
     if (names.size() != values.size())
         throw std::invalid_argument("ERROR. Diff size of declared var and expressions");
 
-    if (type)
-        for (const auto &i: values)
-            if (!matchTypes(i->getType(), type))
-                throw std::invalid_argument("Error. Diff type of declaration and given expr");
-
 
     for (unsigned long int i = 0; i < names.size(); ++i)
         if (type)
             res.push_back(std::make_unique<AST::ASTConstDeclaration>(names[i], values[i], type));
         else
-            res.push_back(std::make_unique<AST::ASTConstDeclaration>(names[i], values[i], values[i]->getType()));
+            res.push_back(std::make_unique<AST::ASTConstDeclaration>(names[i], values[i]));
 
 
     return res;
@@ -917,10 +931,6 @@ std::vector<std::unique_ptr<AST::ASTDeclaration>> Parser::parseVarDeclarationLin
             if (names.size() != values.size())
                 throw std::invalid_argument("ERROR. Diff size of declared var and expressions");
 
-            for (const auto &i: values)
-                if (!matchTypes(i->getType(), type))
-                    throw std::invalid_argument("Error. Diff type of declaration and given expr");
-
 
             for (unsigned long int i = 0; i < names.size(); ++i)
                 res.push_back(std::make_unique<AST::ASTVarDeclaration>(names[i], values[i], type));
@@ -942,7 +952,7 @@ std::vector<std::unique_ptr<AST::ASTDeclaration>> Parser::parseVarDeclarationLin
             throw std::invalid_argument("ERROR. Diff size of declared var and expressions");
 
         for (unsigned long int i = 0; i < names.size(); ++i)
-            res.push_back(std::make_unique<AST::ASTVarDeclaration>(names[i], values[i], values[i]->getType()));
+            res.push_back(std::make_unique<AST::ASTVarDeclaration>(names[i], values[i]));
 
     }
 
