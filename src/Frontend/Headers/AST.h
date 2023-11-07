@@ -6,6 +6,8 @@
 #include <string>
 #include <memory>
 
+#include "IR.h"
+
 
 namespace AST {
 
@@ -19,7 +21,7 @@ namespace AST {
 
         virtual std::unique_ptr<ASTType> clone() const = 0;
 
-        virtual bool operator==(const std::unique_ptr<ASTType> &) const = 0;
+        virtual bool operator==(const std::unique_ptr<ASTType> &&) const = 0;
 
         std::unique_ptr<ASTType> set_addressability(bool flag);
 
@@ -28,6 +30,8 @@ namespace AST {
         bool addressable();
 
         bool constable();
+
+        virtual std::shared_ptr<IR::IRType> generateIR() = 0;
 
     protected:
         bool is_variable = false;
@@ -79,7 +83,9 @@ namespace AST {
     public:
         [[nodiscard]] std::unique_ptr<ASTType> clone() const override;
 
-        bool operator==(const std::unique_ptr<ASTType> &type) const override;
+        bool operator==(const std::unique_ptr<ASTType> &&type) const override;
+
+        std::shared_ptr<IR::IRType> generateIR() override;
     };
 
     class ASTTypeInt : public ASTType {
@@ -89,7 +95,9 @@ namespace AST {
 
         [[nodiscard]] std::unique_ptr<ASTType> clone() const override;
 
-        bool operator==(const std::unique_ptr<ASTType> &type) const override;
+        bool operator==(const std::unique_ptr<ASTType> &&type) const override;
+
+        std::shared_ptr<IR::IRType> generateIR() override;
 
     private:
         int bits;
@@ -100,7 +108,9 @@ namespace AST {
 
         [[nodiscard]] std::unique_ptr<ASTType> clone() const override;
 
-        bool operator==(const std::unique_ptr<ASTType> &type) const override;
+        bool operator==(const std::unique_ptr<ASTType> &&type) const override;
+
+        std::shared_ptr<IR::IRType> generateIR() override;
 
     private:
     };
@@ -110,7 +120,9 @@ namespace AST {
 
         [[nodiscard]] std::unique_ptr<ASTType> clone() const override;
 
-        bool operator==(const std::unique_ptr<ASTType> &type) const override;
+        bool operator==(const std::unique_ptr<ASTType> &&type) const override;
+
+        std::shared_ptr<IR::IRType> generateIR() override;
 
     private:
     };
@@ -118,15 +130,19 @@ namespace AST {
     class ASTTypePointer : public ASTType {
     public:
 
+        ASTTypePointer() = default;
+
         ASTTypePointer(std::unique_ptr<ASTType> new_type);
 
         ASTTypePointer(const ASTTypePointer &old_pointer);
 
         [[nodiscard]] std::unique_ptr<ASTType> clone() const override;
 
-        bool operator==(const std::unique_ptr<ASTType> &type) const override;
+        bool operator==(const std::unique_ptr<ASTType> &&type) const override;
 
         std::unique_ptr<ASTType> getValue();
+
+        std::shared_ptr<IR::IRType> generateIR() override;
 
     private:
         std::unique_ptr<ASTType> type;
@@ -143,9 +159,11 @@ namespace AST {
 
         void addField(std::string name, std::unique_ptr<ASTType> &type);
 
-        bool operator==(const std::unique_ptr<ASTType> &type) const override;
+        bool operator==(const std::unique_ptr<ASTType> &&type) const override;
 
         std::unique_ptr<ASTType> findField(std::string name);
+
+        std::shared_ptr<IR::IRType> generateIR() override;
 
     private:
         std::vector<std::pair<std::string, std::unique_ptr<ASTType >>> fileds;
@@ -395,6 +413,8 @@ namespace AST {
 
         virtual void checkerGlobal(std::vector<Variable> &) = 0;
 
+        virtual std::shared_ptr<IR::IRGlobalDecl> generateIRGlobal() const = 0;
+
 
     protected:
         std::string name;
@@ -415,6 +435,8 @@ namespace AST {
 
         void checker(std::vector<Variable> &, Info &) override;
 
+        std::shared_ptr<IR::IRGlobalDecl> generateIRGlobal() const override;
+
     private:
     };
 
@@ -427,6 +449,8 @@ namespace AST {
         void checkerGlobal(std::vector<Variable> &) override;
 
         void checker(std::vector<Variable> &, Info &) override;
+
+        std::shared_ptr<IR::IRGlobalDecl> generateIRGlobal() const override;
 
     private:
 
@@ -442,6 +466,8 @@ namespace AST {
         void checkerGlobal(std::vector<Variable> &) override;
 
         void checker(std::vector<Variable> &, Info &) override;
+
+        std::shared_ptr<IR::IRGlobalDecl> generateIRGlobal() const override;
 
     private:
     };
@@ -503,7 +529,7 @@ namespace AST {
         void checker(std::vector<Variable> &, Info &) override;
 
     private:
-        std::unique_ptr<AST::ASTExpression> return_value;
+        std::unique_ptr<AST::ASTExpression> return_value = std::make_unique<AST::ASTNullExpr>();
     };
 
     class ASTSwitch : public Statement {
@@ -627,7 +653,7 @@ namespace AST {
 
         std::vector<std::pair<std::string, std::unique_ptr<AST::ASTType>>> params;
 
-        std::unique_ptr<AST::ASTType> return_type;
+        std::unique_ptr<AST::ASTType> return_type = std::make_unique<AST::ASTTypeNull>();
 
         std::unique_ptr<AST::Statement> body;
     };
@@ -647,6 +673,8 @@ namespace AST {
         void addFunction(std::unique_ptr<Function> &new_func);
 
         void checker();
+
+        std::unique_ptr<IR::IRProgram> generateIR();
 
     private:
         std::string name;

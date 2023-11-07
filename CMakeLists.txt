@@ -21,5 +21,7 @@ set(
         ${FRONDEND_SOURCES}/AST_IR.cpp
         ${FRONDEND_SOURCES}/parser.cpp
 
+        ${MIDDLEEND_SOURCES}/IR.cpp
+
         main.cpp)
 add_executable(compiler ${SOURCE_FILES})

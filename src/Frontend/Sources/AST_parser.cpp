@@ -22,7 +22,7 @@ std::unique_ptr<AST::ASTType> AST::ASTTypeNull::clone() const {
     return std::make_unique<AST::ASTTypeNull>(*this);
 }
 
-bool AST::ASTTypeNull::operator==(const std::unique_ptr<ASTType> &type) const {
+bool AST::ASTTypeNull::operator==(const std::unique_ptr<ASTType> &&type) const {
     if (dynamic_cast<AST::ASTTypeNull *>(type.get()))
         return true;
     return false;
@@ -35,9 +35,8 @@ std::unique_ptr<AST::ASTType> AST::ASTTypeInt::clone() const {
     return std::make_unique<ASTTypeInt>(*this);
 }
 
-bool AST::ASTTypeInt::operator==(const std::unique_ptr<ASTType> &type) const {
-    if (dynamic_cast<AST::ASTTypeInt *>(type.get()) || dynamic_cast<AST::ASTTypeFloat *>(type.get()) ||
-        dynamic_cast<AST::ASTTypeBool *>(type.get()))
+bool AST::ASTTypeInt::operator==(const std::unique_ptr<ASTType> &&type) const {
+    if (dynamic_cast<AST::ASTTypeInt *>(type.get()) || dynamic_cast<AST::ASTTypeFloat *>(type.get()))
         return true;
     return false;
 }
@@ -47,9 +46,8 @@ std::unique_ptr<AST::ASTType> AST::ASTTypeFloat::clone() const {
     return std::make_unique<ASTTypeFloat>(*this);
 }
 
-bool AST::ASTTypeFloat::operator==(const std::unique_ptr<ASTType> &type) const {
-    if (dynamic_cast<AST::ASTTypeInt *>(type.get()) || dynamic_cast<AST::ASTTypeFloat *>(type.get()) ||
-        dynamic_cast<AST::ASTTypeBool *>(type.get()))
+bool AST::ASTTypeFloat::operator==(const std::unique_ptr<ASTType> &&type) const {
+    if (dynamic_cast<AST::ASTTypeInt *>(type.get()) || dynamic_cast<AST::ASTTypeFloat *>(type.get()))
         return true;
     return false;
 }
@@ -59,9 +57,8 @@ std::unique_ptr<AST::ASTType> AST::ASTTypeBool::clone() const {
     return std::make_unique<ASTTypeBool>(*this);
 }
 
-bool AST::ASTTypeBool::operator==(const std::unique_ptr<ASTType> &type) const {
-    if (dynamic_cast<AST::ASTTypeInt *>(type.get()) || dynamic_cast<AST::ASTTypeFloat *>(type.get()) ||
-        dynamic_cast<AST::ASTTypeBool *>(type.get()))
+bool AST::ASTTypeBool::operator==(const std::unique_ptr<ASTType> &&type) const {
+    if (dynamic_cast<AST::ASTTypeBool *>(type.get()))
         return true;
     return false;
 }
@@ -79,7 +76,7 @@ std::unique_ptr<AST::ASTType> AST::ASTTypePointer::clone() const {
     return std::make_unique<ASTTypePointer>(*this);
 }
 
-bool AST::ASTTypePointer::operator==(const std::unique_ptr<ASTType> &type) const {
+bool AST::ASTTypePointer::operator==(const std::unique_ptr<ASTType> &&type) const {
     auto pointer = dynamic_cast<AST::ASTTypePointer *>(type.get());
     if (pointer)
         return this->type == pointer->type;
@@ -106,7 +103,7 @@ void AST::ASTTypeStruct::addField(std::string name, std::unique_ptr<AST::ASTType
     fileds.emplace_back(name, type->clone());
 }
 
-bool AST::ASTTypeStruct::operator==(const std::unique_ptr<ASTType> &type) const {
+bool AST::ASTTypeStruct::operator==(const std::unique_ptr<ASTType> &&type) const {
     auto struc = dynamic_cast<AST::ASTTypeStruct *>(type.get());
     if (!struc)
         return false;
@@ -288,7 +285,8 @@ std::string AST::ASTVar::getName() {
 
 AST::ASTDeclaration::ASTDeclaration(const ASTDeclaration &pr_decl) {
     name = pr_decl.name;
-    type = pr_decl.type->clone();
+    if (pr_decl.type)
+        type = pr_decl.type->clone();
     if (pr_decl.value)
         value = pr_decl.value->cloneExpr();
 }

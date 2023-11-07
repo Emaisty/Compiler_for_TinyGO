@@ -5,7 +5,10 @@
 int main() {
 
     Parser p("../main.go");
-    p.parse();
+    if (!p.parse())
+        return 0;
+
+    p.printIR(std::cout);
 
     return 0;
 }

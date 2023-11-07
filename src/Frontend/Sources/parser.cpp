@@ -46,8 +46,13 @@ bool Parser::parse() {
         }
 
     }
+    program.checker();
     return true;
 
+}
+
+void Parser::printIR(std::ostream &os) {
+    os << *program.generateIR();
 }
 
 bool Parser::checkForSeparator() {

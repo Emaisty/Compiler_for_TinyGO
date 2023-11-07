@@ -15,6 +15,8 @@ public:
 
     bool parse();
 
+    void printIR(std::ostream &os);
+
 private:
 
     std::map<std::string, std::unique_ptr<AST::ASTType>> named_type;
