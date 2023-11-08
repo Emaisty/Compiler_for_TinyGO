@@ -180,7 +180,10 @@ namespace AST {
 
         virtual void checker(std::vector<Variable> &, Info &) = 0;
 
+        void addLineNumber(int);
+
     private:
+        int line_number;
     };
 
     class ASTExpression : public Statement {
@@ -648,6 +651,10 @@ namespace AST {
 
         void checkerName(std::vector<Variable> &);
 
+        std::shared_ptr<IR::IRFunc> generateFunc();
+
+        void addLineNumber(int num);
+
     private:
         std::string name;
 
@@ -656,6 +663,8 @@ namespace AST {
         std::unique_ptr<AST::ASTType> return_type = std::make_unique<AST::ASTTypeNull>();
 
         std::unique_ptr<AST::Statement> body;
+
+        int line_number;
     };
 
 

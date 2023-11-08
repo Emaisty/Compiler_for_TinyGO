@@ -126,6 +126,9 @@ std::unique_ptr<AST::ASTType> AST::ASTTypeStruct::findField(std::string name) {
     return nullptr;
 }
 
+void AST::Statement::addLineNumber(int num) {
+    line_number = num;
+}
 
 std::unique_ptr<AST::Statement> AST::ASTExpression::clone() const {
     return this->cloneExpr();
@@ -476,6 +479,11 @@ void AST::Function::addReturn(std::unique_ptr<AST::ASTType> &new_return) {
 
 void AST::Function::setBody(std::unique_ptr<AST::Statement> &new_body) {
     body = new_body->clone();
+}
+
+void AST::Function::addLineNumber(int num) {
+    line_number = num;
+
 }
 
 void AST::Program::addDecl(std::unique_ptr<ASTDeclaration> &new_decl) {

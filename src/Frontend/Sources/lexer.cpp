@@ -62,9 +62,10 @@ InputCharType Lexer::type_of_char() {
         return NUMBER;
     else if (cur_symb == EOF || cur_symb == 0)
         return END;
-    else if (cur_symb == '\n')
+    else if (cur_symb == '\n') {
+        line_number++;
         return NEW_LINE;
-    else if (cur_symb <= ' ')
+    } else if (cur_symb <= ' ')
         return WHITE_SPACE;
     else if ((cur_symb >= '{' && cur_symb <= '}') || cur_symb == '_' || (cur_symb >= '[' && cur_symb <= ']') ||
              (cur_symb >= ':' && cur_symb <= '?') || (cur_symb >= '!' && cur_symb <= '/'))

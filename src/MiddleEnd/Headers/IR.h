@@ -67,6 +67,7 @@ namespace IR {
 
     };
 
+
     class IRType {
     public:
 
@@ -146,24 +147,39 @@ namespace IR {
 
     class IRLine {
     public:
+
+        friend std::ostream &operator<<(std::ostream &os, const IRLine &);
+
+        virtual void print(std::ostream &) const = 0;
+
+        virtual std::shared_ptr<IRValue> getName() = 0;
+
     protected:
+
     };
 
-
-    class IRGlobalDecl {
+    class IRDecl : public IRLine {
     public:
 
         void addName(std::string);
 
         void addType(std::shared_ptr<IR::IRType> &&);
 
-        friend std::ostream &operator<<(std::ostream &os, const IRGlobalDecl &);
-
-        virtual void print(std::ostream &) const = 0;
-
     protected:
         std::string name;
         std::shared_ptr<IRType> type;
+    };
+
+
+    class IRGlobalDecl : public IRDecl {
+    public:
+
+        friend std::ostream &operator<<(std::ostream &os, const IRGlobalDecl &);
+
+        std::shared_ptr<IRValue> getName() override;
+
+    protected:
+
     };
 
     class IRGlobalVarDecl : public IRGlobalDecl {
@@ -181,13 +197,9 @@ namespace IR {
 
     };
 
-    class IRNewType {
+    class IRAlloca : public IRDecl {
     public:
-    private:
-    };
 
-    class IRAlloca : public IRLine {
-    public:
     private:
     };
 
@@ -213,6 +225,25 @@ namespace IR {
     private:
     };
 
+    class IRArithmetics : public IRLine {
+    public:
+        enum OPERATOR {
+            ADD, FADD, SUB, FSUB, MUL, FMUL, UDIV, FDIV, UREM
+        };
+
+    private:
+        std::shared_ptr<IRLine> left, right;
+
+        OPERATOR type;
+    };
+
+    class IRComparison : public IRLine {
+    public:
+    private:
+
+    };
+
+
     class IRReturn : public IRLine {
     public:
     private:
@@ -220,7 +251,26 @@ namespace IR {
 
     class IRFunc {
     public:
+
+        void addName(std::string);
+
+        void addReturn(std::shared_ptr<IRType> &&);
+
+        void addArg(std::shared_ptr<IRType> &&);
+
+        void addStatement(std::shared_ptr<IRLine> &&);
+
+        friend std::ostream &operator<<(std::ostream &os, const IRFunc &);
+
     private:
+        std::string name;
+
+        std::shared_ptr<IRType> return_type;
+
+        std::vector<std::shared_ptr<IRType>> arguments;
+
+        std::vector<std::shared_ptr<IRLine>> body;
+
     };
 
 

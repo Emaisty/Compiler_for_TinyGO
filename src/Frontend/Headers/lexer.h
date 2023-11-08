@@ -114,6 +114,8 @@ public:
 
     double douVal() { return this->m_DouVal; }
 
+    int getLineNumber() { return this->line_number; }
+
     void InitInput(char *name);
 
     char inputSymbol();
@@ -147,6 +149,8 @@ private:
     std::string m_IdentifierStr;
     long long m_NumVal;
     double m_DouVal;
+
+    int line_number = 1;
 };
 
 #endif //COMPILER_LEXER_H

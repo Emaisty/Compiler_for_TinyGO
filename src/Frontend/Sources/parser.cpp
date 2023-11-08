@@ -510,6 +510,8 @@ std::vector<std::unique_ptr<AST::Statement>> Parser::parseSimpleStat() {
     std::vector<std::unique_ptr<AST::ASTExpression>> exprs;
     std::vector<std::string> names;
 
+    int line_number = 0;
+
     bool can_be_decl = false;
 
 
@@ -540,6 +542,7 @@ std::vector<std::unique_ptr<AST::Statement>> Parser::parseSimpleStat() {
     if (cur_tok == tok_plusassign || cur_tok == tok_minassign || cur_tok == tok_mulassign ||
         cur_tok == tok_divassign || cur_tok == tok_modassign || cur_tok == tok_assign) {
         AST::ASTAssign::Type type;
+        line_number = lexer.getLineNumber();
         switch (cur_tok) {
             case tok_plusassign:
                 type = AST::ASTAssign::Type::PLUSASSIGN;
@@ -574,6 +577,7 @@ std::vector<std::unique_ptr<AST::Statement>> Parser::parseSimpleStat() {
 
     if (cur_tok == tok_fastassign && can_be_decl) {
         matchAndGoNext(tok_fastassign);
+        line_number = lexer.getLineNumber();
         auto values = parseExpressionList();
         if (names.size() != values.size())
             throw std::invalid_argument("ERROR. Diff size of declared var and expressions");
@@ -586,13 +590,17 @@ std::vector<std::unique_ptr<AST::Statement>> Parser::parseSimpleStat() {
     for (auto &i: exprs)
         res.emplace_back(i->clone());
 
+    for(auto &i: res)
+        i->addLineNumber(line_number);
+
     return res;
 }
 
 std::unique_ptr<AST::Statement> Parser::parseReturn() {
     auto res = std::make_unique<AST::ASTReturn>();
-
     matchAndGoNext(tok_return);
+
+    res->addLineNumber(lexer.getLineNumber());
 
     auto return_values = parseExpressionListOrNone();
     if (return_values.empty())
@@ -612,6 +620,8 @@ std::unique_ptr<AST::Statement> Parser::parseIfStat() {
     auto res = std::make_unique<AST::ASTIf>();
     matchAndGoNext(tok_if);
 
+    res->addLineNumber(lexer.getLineNumber());
+
     auto expr = parseExpression();
     res->addExpr(expr);
 
@@ -630,8 +640,9 @@ std::unique_ptr<AST::Statement> Parser::parseIfStat() {
 std::unique_ptr<AST::Statement> Parser::parseForLoop() {
 
     auto res = std::make_unique<AST::ASTFor>();
-
     matchAndGoNext(tok_for);
+
+    res->addLineNumber(lexer.getLineNumber());
 
     auto init_clause = parseSimpleStat();
     matchAndGoNext(tok_semicolon);
@@ -652,8 +663,9 @@ std::unique_ptr<AST::Statement> Parser::parseForLoop() {
 
 std::unique_ptr<AST::Statement> Parser::parseSwitch() {
     auto res = std::make_unique<AST::ASTSwitch>();
-
     matchAndGoNext(tok_switch);
+
+    res->addLineNumber(lexer.getLineNumber());
 
     auto expr = parseExpression();
     res->addExpr(expr);
@@ -853,7 +865,7 @@ std::unique_ptr<AST::Function> Parser::parseFunction() {
     matchAndGoNext(tok_func);
 
     auto res = std::make_unique<AST::Function>();
-
+    res->addLineNumber(lexer.getLineNumber());
     // name of func
     match(tok_identifier);
     auto name = lexer.identifierStr();
@@ -874,6 +886,7 @@ std::unique_ptr<AST::Function> Parser::parseFunction() {
 std::vector<std::unique_ptr<AST::ASTDeclaration>> Parser::parseConstDeclarationLine() {
     std::vector<std::unique_ptr<AST::ASTDeclaration>> res;
 
+
     auto names = parseIdentifierList();
 
     std::unique_ptr<AST::ASTType> type = nullptr;
@@ -882,6 +895,7 @@ std::vector<std::unique_ptr<AST::ASTDeclaration>> Parser::parseConstDeclarationL
         type = parseType();
     }
     matchAndGoNext(tok_assign);
+    int line_number = lexer.getLineNumber();
 
     auto values = parseExpressionList();
 
@@ -896,6 +910,8 @@ std::vector<std::unique_ptr<AST::ASTDeclaration>> Parser::parseConstDeclarationL
         else
             res.push_back(std::make_unique<AST::ASTConstDeclaration>(names[i], values[i]));
 
+    for (auto &i: res)
+        i->addLineNumber(line_number);
 
     return res;
 }
@@ -903,6 +919,9 @@ std::vector<std::unique_ptr<AST::ASTDeclaration>> Parser::parseConstDeclarationL
 
 std::vector<std::unique_ptr<AST::ASTDeclaration>> Parser::parseTypeDeclarationLine() {
     std::vector<std::unique_ptr<AST::ASTDeclaration>> res;
+
+    int line_number = lexer.getLineNumber();
+
     match(tok_identifier);
     std::string name = lexer.identifierStr();
     cur_tok = lexer.gettok();
@@ -913,11 +932,17 @@ std::vector<std::unique_ptr<AST::ASTDeclaration>> Parser::parseTypeDeclarationLi
     res.push_back(std::make_unique<AST::ASTTypeDeclaration>(name, type));
 
     this->named_type[name] = type->clone();
+
+    for (auto &i: res)
+        i->addLineNumber(line_number);
+
     return res;
 }
 
 std::vector<std::unique_ptr<AST::ASTDeclaration>> Parser::parseVarDeclarationLine() {
     std::vector<std::unique_ptr<AST::ASTDeclaration>> res;
+
+    int line_number;
 
     auto names = parseIdentifierList();
 
@@ -929,6 +954,7 @@ std::vector<std::unique_ptr<AST::ASTDeclaration>> Parser::parseVarDeclarationLin
         if (cur_tok == tok_assign) {
             //type and value
             matchAndGoNext(tok_assign);
+            line_number = lexer.getLineNumber();
 
             auto values = parseExpressionList();
 
@@ -949,6 +975,7 @@ std::vector<std::unique_ptr<AST::ASTDeclaration>> Parser::parseVarDeclarationLin
     } else {
         //without type
         matchAndGoNext(tok_assign);
+        line_number = lexer.getLineNumber();
 
         auto values = parseExpressionList();
 
@@ -960,6 +987,9 @@ std::vector<std::unique_ptr<AST::ASTDeclaration>> Parser::parseVarDeclarationLin
             res.push_back(std::make_unique<AST::ASTVarDeclaration>(names[i], values[i]));
 
     }
+
+    for (auto &i: res)
+        i->addLineNumber(line_number);
 
     return res;
 }

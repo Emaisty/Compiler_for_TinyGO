@@ -54,14 +54,24 @@ std::shared_ptr<IR::IRGlobalDecl> AST::ASTConstDeclaration::generateIRGlobal() c
     return res;
 }
 
+std::shared_ptr<IR::IRFunc> AST::Function::generateFunc() {
+    auto res = std::make_shared<IR::IRFunc>();
+    res->addName(name);
+    res->addReturn(return_type->generateIR());
+    for (auto &i: params)
+        res->addArg(i.second->generateIR());
+
+    return res;
+}
+
 std::unique_ptr<IR::IRProgram> AST::Program::generateIR() {
     auto res = std::make_unique<IR::IRProgram>();
 
     for (auto &i: declarations)
         res->addDecl(i->generateIRGlobal());
 
-//    for (auto &i : functions)
-//        res->addFunc();
+    for (auto &i: functions)
+        res->addFunc(i->generateFunc());
 
     return std::move(res);
 }
