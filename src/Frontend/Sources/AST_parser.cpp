@@ -130,152 +130,57 @@ void AST::Statement::addLineNumber(int num) {
     line_number = num;
 }
 
-std::unique_ptr<AST::Statement> AST::ASTExpression::clone() const {
-    return this->cloneExpr();
-}
-
-std::unique_ptr<AST::ASTExpression> AST::ASTNullExpr::cloneExpr() const {
-    return std::make_unique<ASTNullExpr>(*this);
-}
-
-
-AST::ASTBinaryOperator::ASTBinaryOperator(const ASTBinaryOperator &old_expr) {
-    op = old_expr.op;
-    left = old_expr.left->cloneExpr();
-    right = old_expr.right->cloneExpr();
-
-}
-
-std::unique_ptr<AST::ASTExpression> AST::ASTBinaryOperator::cloneExpr() const {
-    return std::make_unique<ASTBinaryOperator>(*this);
-}
-
-
 AST::ASTBinaryOperator::ASTBinaryOperator(std::unique_ptr<AST::ASTExpression> &new_left,
                                           std::unique_ptr<AST::ASTExpression> &new_right, Operator new_op) {
     op = new_op;
-    left = new_left->cloneExpr();
-    right = new_right->cloneExpr();
+    left = std::move(new_left);
+    right = std::move(new_right);
 }
 
-
-AST::ASTUnaryOperator::ASTUnaryOperator(const AST::ASTUnaryOperator &old_expr) {
-    op = old_expr.op;
-    value = old_expr.value->cloneExpr();
-}
-
-std::unique_ptr<AST::ASTExpression> AST::ASTUnaryOperator::cloneExpr() const {
-    return std::make_unique<ASTUnaryOperator>(*this);
-}
-
-
-AST::ASTUnaryOperator::ASTUnaryOperator(std::unique_ptr<AST::ASTExpression> &new_value, Operator new_op) {
+AST::ASTUnaryOperator::ASTUnaryOperator(std::unique_ptr<AST::ASTExpression> &&new_value, Operator new_op) {
     op = new_op;
-    value = new_value->cloneExpr();
+    value = std::move(new_value);
 }
 
-AST::ASTFunctionCall::ASTFunctionCall(const AST::ASTFunctionCall &old_func) {
-    name = old_func.name->cloneExpr();
-    for (auto &i: old_func.arg)
-        arg.push_back(i->cloneExpr());
-}
-
-std::unique_ptr<AST::ASTExpression> AST::ASTFunctionCall::cloneExpr() const {
-    return std::make_unique<ASTFunctionCall>(*this);
-}
-
-
-AST::ASTFunctionCall::ASTFunctionCall(const std::unique_ptr<AST::ASTExpression> &new_name,
-                                      const std::vector<std::unique_ptr<AST::ASTExpression>> &new_args) {
-    name = new_name->cloneExpr();
+AST::ASTFunctionCall::ASTFunctionCall(std::unique_ptr<AST::ASTExpression> &new_name,
+                                      std::vector<std::unique_ptr<AST::ASTExpression>> &new_args) {
+    name = std::move(new_name);
     for (auto &i: new_args)
-        arg.push_back(i->cloneExpr());
-}
-
-AST::ASTMemberAccess::ASTMemberAccess(const AST::ASTMemberAccess &old_access) {
-    name = old_access.name->cloneExpr();
-    member = old_access.member->cloneExpr();
-}
-
-std::unique_ptr<AST::ASTExpression> AST::ASTMemberAccess::cloneExpr() const {
-    return std::make_unique<AST::ASTMemberAccess>(*this);
-}
-
-AST::ASTMemberAccess::ASTMemberAccess(const std::unique_ptr<AST::ASTExpression> &new_name,
-                                      const std::unique_ptr<AST::ASTExpression> &new_member) {
-    name = new_name->cloneExpr();
-    member = new_member->cloneExpr();
-}
-
-AST::ASTGetPointer::ASTGetPointer(const ASTGetPointer &old_address) {
-    var = old_address.var->cloneExpr();
-}
-
-std::unique_ptr<AST::ASTExpression> AST::ASTGetPointer::cloneExpr() const {
-    return std::make_unique<AST::ASTGetPointer>(*this);
-}
-
-AST::ASTGetPointer::ASTGetPointer(const std::unique_ptr<ASTExpression> &new_var) {
-    var = new_var->cloneExpr();
-}
-
-AST::ASTGetValue::ASTGetValue(const ASTGetValue &old_pointer) {
-    var = old_pointer.cloneExpr();
-}
-
-std::unique_ptr<AST::ASTExpression> AST::ASTGetValue::cloneExpr() const {
-    return std::make_unique<AST::ASTGetValue>(*this);
+        arg.push_back(std::move(i));
 }
 
 
-AST::ASTGetValue::ASTGetValue(const std::unique_ptr<ASTExpression> &new_var) {
-    var = new_var->cloneExpr();
+AST::ASTMemberAccess::ASTMemberAccess(std::unique_ptr<AST::ASTExpression> &new_name,
+                                      std::unique_ptr<AST::ASTExpression> &new_member) {
+    name = std::move(new_name);
+    member = std::move(new_member);
 }
 
+AST::ASTGetPointer::ASTGetPointer(std::unique_ptr<ASTExpression> &new_var) {
+    var = std::move(new_var);
+}
 
-std::unique_ptr<AST::ASTExpression> AST::ASTIntNumber::cloneExpr() const {
-    return std::make_unique<AST::ASTIntNumber>(*this);
+AST::ASTGetValue::ASTGetValue(std::unique_ptr<ASTExpression> &new_var) {
+    var = std::move(new_var);
 }
 
 AST::ASTIntNumber::ASTIntNumber(const int new_value) {
     value = new_value;
 }
 
-std::unique_ptr<AST::ASTExpression> AST::ASTFloatNumber::cloneExpr() const {
-    return std::make_unique<AST::ASTFloatNumber>(*this);
-}
-
 AST::ASTFloatNumber::ASTFloatNumber(const double new_value) {
     value = new_value;
-}
-
-std::unique_ptr<AST::ASTExpression> AST::ASTBoolNumber::cloneExpr() const {
-    return std::make_unique<AST::ASTBoolNumber>(*this);
 }
 
 AST::ASTBoolNumber::ASTBoolNumber(const bool new_value) {
     value = new_value;
 }
 
-std::unique_ptr<AST::ASTExpression> AST::ASTStruct::cloneExpr() const {
-    return std::make_unique<AST::ASTStruct>(*this);
-}
-
 AST::ASTStruct::ASTStruct(std::unique_ptr<ASTTypeStruct> &new_type,
                           std::vector<std::pair<std::string, std::unique_ptr<ASTExpression>>> &new_values) {
     type = new_type->clone();
     for (auto &i: new_values)
-        values.emplace_back(i.first, i.second->cloneExpr());
-}
-
-AST::ASTStruct::ASTStruct(const ASTStruct &old_struct) {
-    type = old_struct.type->clone();
-    for (auto &i: old_struct.values)
-        values.emplace_back(i.first, i.second->cloneExpr());
-}
-
-std::unique_ptr<AST::ASTExpression> AST::ASTVar::cloneExpr() const {
-    return std::make_unique<AST::ASTVar>(*this);
+        values.emplace_back(i.first, std::move(i.second));
 }
 
 AST::ASTVar::ASTVar(const std::string new_name) {
@@ -286,33 +191,21 @@ std::string AST::ASTVar::getName() {
     return name;
 }
 
-AST::ASTDeclaration::ASTDeclaration(const ASTDeclaration &pr_decl) {
-    name = pr_decl.name;
-    if (pr_decl.type)
-        type = pr_decl.type->clone();
-    if (pr_decl.value)
-        value = pr_decl.value->cloneExpr();
-}
-
-std::unique_ptr<AST::Statement> AST::ASTDeclaration::clone() const {
-    return this->cloneDecl();
-}
-
-AST::ASTDeclaration::ASTDeclaration(const std::string new_name, const std::unique_ptr<AST::ASTExpression> &new_value,
-                                    const std::unique_ptr<AST::ASTType> &new_type) {
+AST::ASTDeclaration::ASTDeclaration(const std::string new_name, std::unique_ptr<AST::ASTExpression> &&new_value,
+                                    std::unique_ptr<AST::ASTType> &&new_type) {
     name = new_name;
-    value = new_value->cloneExpr();
+    value = std::move(new_value);
     type = new_type->clone();
 }
 
-AST::ASTDeclaration::ASTDeclaration(const std::string new_name, const std::unique_ptr<ASTExpression> &new_value) {
+AST::ASTDeclaration::ASTDeclaration(const std::string new_name, std::unique_ptr<ASTExpression> &&new_value) {
     name = new_name;
-    value = new_value->cloneExpr();
+    value = std::move(new_value);
 
     type = nullptr;
 }
 
-AST::ASTDeclaration::ASTDeclaration(const std::string new_name, const std::unique_ptr<AST::ASTType> &new_type) {
+AST::ASTDeclaration::ASTDeclaration(const std::string new_name, std::unique_ptr<AST::ASTType> &&new_type) {
     name = new_name;
     type = new_type->clone();
 
@@ -324,62 +217,17 @@ void AST::Program::setName(std::string new_name) {
 }
 
 
-std::unique_ptr<AST::ASTDeclaration> AST::ASTTypeDeclaration::cloneDecl() const {
-    return std::make_unique<AST::ASTTypeDeclaration>(*this);
+void AST::ASTBlock::addStatement(std::unique_ptr<AST::Statement> &&stat) {
+    statements.emplace_back(std::move(stat));
 }
 
-std::unique_ptr<AST::ASTDeclaration> AST::ASTVarDeclaration::cloneDecl() const {
-    return std::make_unique<AST::ASTVarDeclaration>(*this);
+
+void AST::ASTReturn::addReturnValue(std::unique_ptr<ASTExpression> &&new_value) {
+    return_value = std::move(new_value);
 }
 
-std::unique_ptr<AST::ASTDeclaration> AST::ASTConstDeclaration::cloneDecl() const {
-    return std::make_unique<AST::ASTConstDeclaration>(*this);
-}
-
-std::unique_ptr<AST::Statement> AST::ASTBlock::clone() const {
-    return std::make_unique<AST::ASTBlock>(*this);
-}
-
-AST::ASTBlock::ASTBlock(const ASTBlock &old_block) {
-    for (auto &i: old_block.statements)
-        statements.emplace_back(i->clone());
-}
-
-void AST::ASTBlock::addStatement(std::unique_ptr<AST::Statement> &stat) {
-    statements.emplace_back(stat->clone());
-}
-
-std::unique_ptr<AST::Statement> AST::ASTBreak::clone() const {
-    return std::make_unique<AST::ASTBreak>(*this);
-}
-
-std::unique_ptr<AST::Statement> AST::ASTContinue::clone() const {
-    return std::make_unique<AST::ASTContinue>(*this);
-}
-
-std::unique_ptr<AST::Statement> AST::ASTReturn::clone() const {
-    return std::make_unique<AST::ASTReturn>(*this);
-}
-
-AST::ASTReturn::ASTReturn(const ASTReturn &old_return) {
-    return_value = old_return.return_value->cloneExpr();
-}
-
-void AST::ASTReturn::addReturnValue(std::unique_ptr<ASTExpression> &new_value) {
-    return_value = new_value->cloneExpr();
-}
-
-std::unique_ptr<AST::Statement> AST::ASTSwitch::clone() const {
-    return std::make_unique<AST::ASTSwitch>(*this);
-}
-
-AST::ASTSwitch::ASTSwitch(const ASTSwitch &old_switch) {
-    expr = old_switch.expr->cloneExpr();
-    for (auto &i: old_switch.cases) cases.emplace_back(std::make_pair(i.first->cloneExpr(), i.second->clone()));
-}
-
-void AST::ASTSwitch::addExpr(std::unique_ptr<AST::ASTExpression> &new_expr) {
-    expr = new_expr->cloneExpr();
+void AST::ASTSwitch::addExpr(std::unique_ptr<AST::ASTExpression> &&new_expr) {
+    expr = std::move(new_expr);
 }
 
 void AST::ASTSwitch::addCase(std::unique_ptr<AST::ASTExpression> &new_expr, std::unique_ptr<AST::Statement> &block) {
@@ -388,76 +236,44 @@ void AST::ASTSwitch::addCase(std::unique_ptr<AST::ASTExpression> &new_expr, std:
             if (i.first == nullptr)
                 throw std::invalid_argument("ERROR. TWO DEFAULT CASES");
 
-    cases.emplace_back(std::make_pair(new_expr->cloneExpr(), block->clone()));
-}
-
-std::unique_ptr<AST::Statement> AST::ASTIf::clone() const {
-    return std::make_unique<AST::ASTIf>(*this);
-}
-
-AST::ASTIf::ASTIf(const ASTIf &old_if) {
-    expr = old_if.expr->cloneExpr();
-    if_clause = old_if.if_clause->clone();
-    if (old_if.else_clause != nullptr)
-        else_clause = old_if.else_clause->clone();
+    cases.emplace_back(std::make_pair(std::move(new_expr), std::move(block)));
 }
 
 void AST::ASTIf::addExpr(std::unique_ptr<AST::ASTExpression> &new_expr) {
-    expr = new_expr->cloneExpr();
+    expr = std::move(new_expr);
 }
 
 void AST::ASTIf::addIfClause(std::unique_ptr<AST::ASTBlock> &new_if_clause) {
-    if_clause = new_if_clause->clone();
+    if_clause = std::move(new_if_clause);
 }
 
 void AST::ASTIf::addElseClause(std::unique_ptr<AST::ASTBlock> &new_else_clause) {
-    else_clause = new_else_clause->clone();
-}
-
-std::unique_ptr<AST::Statement> AST::ASTFor::clone() const {
-    return std::make_unique<AST::ASTFor>(*this);
-}
-
-AST::ASTFor::ASTFor(const ASTFor &old_for) {
-    for (auto &i: old_for.init_clause) init_clause.emplace_back(i->clone());
-    for (auto &i: old_for.iterate_clause) iterate_clause.emplace_back(i->clone());
-    if_clause = old_for.if_clause->cloneExpr();
-    body = old_for.body->clone();
+    else_clause = std::move(new_else_clause);
 }
 
 void AST::ASTFor::addInitClause(std::vector<std::unique_ptr<AST::Statement>> &new_init_clause) {
     for (auto &i: new_init_clause)
-        init_clause.emplace_back(i->clone());
+        init_clause.emplace_back(std::move(i));
 }
 
 void AST::ASTFor::addIterClause(std::vector<std::unique_ptr<AST::Statement>> &new_iter_clause) {
     for (auto &i: new_iter_clause)
-        iterate_clause.emplace_back(i->clone());
+        iterate_clause.emplace_back(std::move(i));
 }
 
-void AST::ASTFor::addCondClause(std::unique_ptr<AST::ASTExpression> &new_condition) {
-    if_clause = new_condition->cloneExpr();
+void AST::ASTFor::addCondClause(std::unique_ptr<AST::ASTExpression> &&new_condition) {
+    if_clause = std::move(new_condition);
 }
 
-void AST::ASTFor::addBody(std::unique_ptr<AST::Statement> &new_body) {
-    body = new_body->clone();
+void AST::ASTFor::addBody(std::unique_ptr<AST::Statement> &&new_body) {
+    body = std::move(new_body);
 }
 
-AST::ASTAssign::ASTAssign(std::unique_ptr<AST::ASTExpression> &new_variable,
-                          std::unique_ptr<AST::ASTExpression> &new_value, Type new_type) {
-    variable = new_variable->cloneExpr();
-    value = new_value->cloneExpr();
+AST::ASTAssign::ASTAssign(std::unique_ptr<AST::ASTExpression> &&new_variable,
+                          std::unique_ptr<AST::ASTExpression> &&new_value, Type new_type) {
+    variable = std::move(new_variable);
+    value = std::move(new_value);
     type = new_type;
-}
-
-std::unique_ptr<AST::Statement> AST::ASTAssign::clone() const {
-    return std::make_unique<ASTAssign>(*this);
-}
-
-AST::ASTAssign::ASTAssign(const ASTAssign &old_assign) {
-    variable = old_assign.variable->cloneExpr();
-    value = old_assign.value->cloneExpr();
-    type = old_assign.type;
 }
 
 void AST::Function::setName(std::string new_name) {
@@ -478,7 +294,7 @@ void AST::Function::addReturn(std::unique_ptr<AST::ASTType> &new_return) {
 }
 
 void AST::Function::setBody(std::unique_ptr<AST::Statement> &new_body) {
-    body = new_body->clone();
+    body = std::move(new_body);
 }
 
 void AST::Function::addLineNumber(int num) {
@@ -487,7 +303,7 @@ void AST::Function::addLineNumber(int num) {
 }
 
 void AST::Program::addDecl(std::unique_ptr<ASTDeclaration> &new_decl) {
-    declarations.push_back(new_decl->cloneDecl());
+    declarations.push_back(std::move(new_decl));
 }
 
 void AST::Program::addFunction(std::unique_ptr<Function> &new_func) {
