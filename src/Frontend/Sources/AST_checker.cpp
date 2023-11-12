@@ -295,8 +295,8 @@ void AST::ASTContinue::checker(std::vector<Variable> &name_space, Info &inf) {
 }
 
 void AST::ASTReturn::checker(std::vector<Variable> &name_space, Info &inf) {
-    if (!(*inf.return_type == return_value->getType(name_space)))
-        throw std::invalid_argument("ERROR. Return type and return expr mismatches");
+//    if (!(*inf.return_type == return_value->getType(name_space)))
+//        throw std::invalid_argument("ERROR. Return type and return expr mismatches");
 }
 
 void AST::ASTSwitch::checker(std::vector<Variable> &name_space, Info &inf) {

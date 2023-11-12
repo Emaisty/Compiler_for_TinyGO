@@ -46,7 +46,7 @@ bool Parser::parse() {
         }
 
     }
-    program.checker();
+//    program.checker();
     return true;
 
 }
@@ -327,8 +327,10 @@ std::unique_ptr<AST::ASTExpression> Parser::E1_PRIME(std::unique_ptr<AST::ASTExp
         }
         case tok_dot: {
             cur_tok = lexer.gettok();
-            auto member = E0();
-            return E1_PRIME(std::make_unique<AST::ASTMemberAccess>(left, member));
+            match(tok_identifier);
+            auto name_of_member = lexer.identifierStr();
+            matchAndGoNext(tok_identifier);
+            return E1_PRIME(std::make_unique<AST::ASTMemberAccess>(left, name_of_member));
         }
         case tok_inc: {
             cur_tok = lexer.gettok();
@@ -389,7 +391,7 @@ std::unique_ptr<AST::ASTExpression> Parser::E0() {
                 matchAndGoNext(tok_identifier);
                 matchAndGoNext(tok_colon);
                 auto type_of_field = parseExpression();
-                values.emplace_back(std::make_pair(name, type_of_field->cloneExpr()));
+                values.emplace_back(std::make_pair(name, std::move(type_of_field)));
             } while (cur_tok == tok_comma && (cur_tok = lexer.gettok()));
 
             matchAndGoNext(tok_clfigbr);
@@ -513,7 +515,7 @@ std::vector<std::unique_ptr<AST::Statement>> Parser::parseSimpleStat() {
             throw std::invalid_argument("ERROR. Diff size of declared var and expressions");
 
         for (unsigned long long i = 0; i < exprs.size(); ++i)
-            res.emplace_back(AST::ASTAssign(exprs[i], values[i], type));
+            res.emplace_back(std::make_unique<AST::ASTAssign>(exprs[i], values[i], type));
 
         return res;
     }
@@ -525,7 +527,7 @@ std::vector<std::unique_ptr<AST::Statement>> Parser::parseSimpleStat() {
         if (names.size() != values.size())
             throw std::invalid_argument("ERROR. Diff size of declared var and expressions");
         for (unsigned long long i = 0; i < names.size(); ++i)
-            res.emplace_back(AST::ASTVarDeclaration(names[i], values[i]));
+            res.emplace_back(std::make_unique<AST::ASTVarDeclaration>(names[i], values[i]));
         return res;
     }
 
@@ -551,8 +553,6 @@ std::unique_ptr<AST::Statement> Parser::parseReturn() {
     if (return_values.size() == 1)
         res->addReturnValue(return_values[0]);
     else
-
-
         for (auto &i: parseExpressionListOrNone())
             res->addReturnValue(i);
 
@@ -597,7 +597,7 @@ std::unique_ptr<AST::Statement> Parser::parseForLoop() {
     res->addCondClause(expr);
     res->addIterClause(iterate_clause);
 
-    auto body = parseBlock()->clone();
+    auto body = parseBlock();
 
     res->addBody(body);
 
@@ -632,9 +632,8 @@ std::unique_ptr<AST::Statement> Parser::parseSwitch() {
         auto block = std::make_unique<AST::ASTBlock>();
         for (auto &i: parseStatementList())
             block->addStatement(i);
-        auto stat = block->clone();
 
-        res->addCase(case_expr, stat);
+        res->addCase(case_expr, block);
 
     }
 
@@ -650,7 +649,7 @@ std::vector<std::unique_ptr<AST::Statement>> Parser::parseStatement() {
         case tok_const:
         case tok_type:
             for (auto &i: parseDeclaration())
-                res.emplace_back(i->clone());
+                res.emplace_back(std::move(i));
             break;
         case tok_if:
             res.emplace_back(parseIfStat());
@@ -676,7 +675,7 @@ std::vector<std::unique_ptr<AST::Statement>> Parser::parseStatement() {
             break;
         default:
             for (auto &i: parseSimpleStat())
-                res.emplace_back(i->clone());
+                res.emplace_back(std::move(i));
             break;
 
     }
@@ -689,7 +688,7 @@ std::vector<std::unique_ptr<AST::Statement>> Parser::parseStatementList() {
     do {
         stat = parseStatement();
         for (auto &i: stat)
-            res.emplace_back(i->clone());
+            res.emplace_back(std::move(i));
     } while (!stat.empty() && checkForSeparator());
 
     return res;
@@ -819,7 +818,7 @@ std::unique_ptr<AST::Function> Parser::parseFunction() {
     parseFuncSignature(res);
 
     //body of a function
-    auto body = parseBlock()->clone();
+    auto body = parseBlock();
     res->setBody(body);
 
     return res;
@@ -948,7 +947,7 @@ Parser::parseDeclarationBlock(const std::function<std::vector<std::unique_ptr<AS
         while (cur_tok != tok_clbr) {
             auto decl_line = type_of_line();
             for (auto &i: decl_line)
-                result.push_back(i->cloneDecl());
+                result.push_back(std::move(i));
             if (!checkForSeparator()) {
                 match(tok_clbr);
                 break;
@@ -961,7 +960,7 @@ Parser::parseDeclarationBlock(const std::function<std::vector<std::unique_ptr<AS
         auto decl_line = type_of_line();
 
         for (auto &i: decl_line)
-            result.push_back(i->cloneDecl());
+            result.push_back(std::move(i));
     }
 
     return result;

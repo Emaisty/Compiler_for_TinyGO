@@ -8,7 +8,7 @@ int main() {
     if (!p.parse())
         return 0;
 
-    p.printIR(std::cout);
+//    p.printIR(std::cout);
 
     return 0;
 }
