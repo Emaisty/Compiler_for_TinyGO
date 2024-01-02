@@ -2,6 +2,8 @@
 #define COMPILER_AST_H
 
 #include <vector>
+#include <set>
+#include <map>
 #include <stack>
 #include <string>
 #include <memory>
@@ -10,7 +12,6 @@
 
 
 namespace AST {
-
 
     class ASTType {
     public:
@@ -23,9 +24,9 @@ namespace AST {
 
         virtual bool operator==(const std::unique_ptr<ASTType> &&) const = 0;
 
-        std::unique_ptr<ASTType> set_addressability(bool flag);
+        ASTType &set_addressability(bool flag);
 
-        std::unique_ptr<ASTType> set_constability(bool flag);
+        ASTType &set_constability(bool flag);
 
         bool addressable();
 
@@ -40,42 +41,47 @@ namespace AST {
     };
 
 
-    struct Variable {
+    struct ItemInSpaceName {
 
-        enum TypeOfVariable {
-            FUNC, VAR, TYPE, CONST
-        };
+        bool is_func;
         std::string name;
 
         int level;
 
-        std::unique_ptr<ASTType> type;
-        // if function -- params
+        ASTType *type;
+
         std::vector<std::unique_ptr<ASTType>> params;
 
-        enum TypeOfVariable type_of_var;
-
-        Variable(std::string new_name, std::unique_ptr<ASTType> &new_type, int new_level, TypeOfVariable new_type_of)
+        ItemInSpaceName(std::string new_name, std::unique_ptr<ASTType> &new_type, int new_level,
+                        bool func)
                 : name(new_name),
-                  type(new_type->clone()),
+                  type(new_type.get()),
                   level(new_level),
-                  type_of_var(new_type_of) {}
+                  is_func(func) {}
 
         void addParam(std::unique_ptr<ASTType> &new_type) {
-            params.emplace_back(new_type->clone());
+            params.emplace_back(new_type.get());
         }
     };
 
-    struct Info {
+    struct Context {
+
+        std::vector<ItemInSpaceName> name_space;
+
         bool in_loop = false;
         int level = 0;
         std::unique_ptr<ASTType> return_type = nullptr;
+
+        std::map<std::string, std::set<std::string>> uses_of_other_var;
 
         void goDeeper();
 
         void goUp();
 
+        void checkIfNameInSpace(std::string name);
+
     private:
+
         std::stack<bool> pr_loop_status;
     };
 
@@ -132,7 +138,7 @@ namespace AST {
 
         ASTTypePointer() = default;
 
-        ASTTypePointer(std::unique_ptr<ASTType> new_type);
+        ASTTypePointer(std::unique_ptr<ASTType> &&new_type);
 
         ASTTypePointer(const ASTTypePointer &old_pointer);
 
@@ -140,7 +146,7 @@ namespace AST {
 
         bool operator==(const std::unique_ptr<ASTType> &&type) const override;
 
-        std::unique_ptr<ASTType> getValue();
+        ASTType *getValue();
 
         std::shared_ptr<IR::IRType> generateIR() override;
 
@@ -157,16 +163,35 @@ namespace AST {
 
         [[nodiscard]] std::unique_ptr<ASTType> clone() const override;
 
-        void addField(std::string name, std::unique_ptr<ASTType> &type);
+        void addField(std::string name, std::unique_ptr<ASTType> &&type);
 
         bool operator==(const std::unique_ptr<ASTType> &&type) const override;
 
-        std::unique_ptr<ASTType> findField(std::string name);
+        ASTType *findField(std::string name);
 
         std::shared_ptr<IR::IRType> generateIR() override;
 
     private:
         std::vector<std::pair<std::string, std::unique_ptr<ASTType >>> fileds;
+    };
+
+    class ASTTypeNamed : public ASTType {
+
+        ASTTypeNamed() = default;
+
+        [[nodiscard]] std::unique_ptr<ASTType> clone() const override;
+
+        bool operator==(const std::unique_ptr<ASTType> &&type) const override;
+
+        std::shared_ptr<IR::IRType> generateIR() override;
+
+    private:
+        std::string name;
+    };
+
+    class ASTTypeFunction : public ASTType {
+
+    private:
     };
 
     class Statement {
@@ -176,7 +201,7 @@ namespace AST {
 
         virtual ~Statement() = default;
 
-        virtual void checker(std::vector<Variable> &, Info &) = 0;
+        virtual void checker(Context &) = 0;
 
         void addLineNumber(int);
 
@@ -187,7 +212,7 @@ namespace AST {
     class ASTExpression : public Statement {
     public:
 
-        virtual std::unique_ptr<ASTType> getType(const std::vector<Variable> &) const = 0;
+        virtual std::unique_ptr<ASTType> getType(Context &) const = 0;
 
     private:
     };
@@ -195,9 +220,9 @@ namespace AST {
     class ASTNullExpr : public ASTExpression {
     public:
 
-        [[nodiscard]] std::unique_ptr<ASTType> getType(const std::vector<Variable> &) const override;
+        [[nodiscard]] std::unique_ptr<ASTType> getType(Context &) const override;
 
-        void checker(std::vector<Variable> &, Info &) override;
+        void checker(Context &) override;
     };
 
     class ASTBinaryOperator : public ASTExpression {
@@ -207,11 +232,11 @@ namespace AST {
             OR, AND, BINOR, BINAND, PLUS, MINUS, MUL, DIV, MOD, EQ, NE, GT, GE, LT, LE
         };
 
-        [[nodiscard]] std::unique_ptr<ASTType> getType(const std::vector<Variable> &) const override;
+        [[nodiscard]] std::unique_ptr<ASTType> getType(Context &) const override;
 
-        void checker(std::vector<Variable> &, Info &) override;
+        void checker(Context &) override;
 
-        ASTBinaryOperator(std::unique_ptr<ASTExpression> &, std::unique_ptr<ASTExpression> &,
+        ASTBinaryOperator(std::unique_ptr<ASTExpression> &&, std::unique_ptr<ASTExpression> &&,
                           Operator new_op = PLUS);
 
     private:
@@ -226,11 +251,9 @@ namespace AST {
         };
 
 
-        [[nodiscard]] std::unique_ptr<ASTType> getType(const std::vector<Variable> &) const override;
+        [[nodiscard]] std::unique_ptr<ASTType> getType(Context &) const override;
 
-        void checker(std::vector<Variable> &, Info &) override;
-
-        ASTUnaryOperator(std::unique_ptr<ASTExpression> &, Operator new_op = PLUS);
+        void checker(Context &) override;
 
         ASTUnaryOperator(std::unique_ptr<ASTExpression> &&, Operator new_op = PLUS);
 
@@ -242,11 +265,11 @@ namespace AST {
     class ASTFunctionCall : public ASTExpression {
     public:
 
-        [[nodiscard]] std::unique_ptr<ASTType> getType(const std::vector<Variable> &) const override;
+        [[nodiscard]] std::unique_ptr<ASTType> getType(Context &) const override;
 
-        void checker(std::vector<Variable> &, Info &) override;
+        void checker(Context &) override;
 
-        ASTFunctionCall(std::unique_ptr<ASTExpression> &, std::vector<std::unique_ptr<ASTExpression>> &);
+        ASTFunctionCall(std::unique_ptr<ASTExpression> &&, std::vector<std::unique_ptr<ASTExpression>> &);
 
     private:
         std::unique_ptr<ASTExpression> name;
@@ -256,11 +279,11 @@ namespace AST {
     class ASTMemberAccess : public ASTExpression {
     public:
 
-        [[nodiscard]] std::unique_ptr<ASTType> getType(const std::vector<Variable> &) const override;
+        [[nodiscard]] std::unique_ptr<ASTType> getType(Context &) const override;
 
-        void checker(std::vector<Variable> &, Info &) override;
+        void checker(Context &) override;
 
-        ASTMemberAccess(std::unique_ptr<ASTExpression> &, std::string &);
+        ASTMemberAccess(std::unique_ptr<ASTExpression> &&, std::string &);
 
     private:
         std::unique_ptr<ASTExpression> name;
@@ -271,9 +294,9 @@ namespace AST {
     class ASTGetPointer : public ASTExpression {
     public:
 
-        [[nodiscard]] std::unique_ptr<ASTType> getType(const std::vector<Variable> &) const override;
+        [[nodiscard]] std::unique_ptr<ASTType> getType(Context &) const override;
 
-        void checker(std::vector<Variable> &, Info &) override;
+        void checker(Context &) override;
 
         ASTGetPointer(std::unique_ptr<ASTExpression> &&);
 
@@ -283,9 +306,9 @@ namespace AST {
 
     class ASTGetValue : public ASTExpression {
     public:
-        [[nodiscard]] std::unique_ptr<ASTType> getType(const std::vector<Variable> &) const override;
+        [[nodiscard]] std::unique_ptr<ASTType> getType(Context &) const override;
 
-        void checker(std::vector<Variable> &, Info &) override;
+        void checker(Context &) override;
 
         ASTGetValue(std::unique_ptr<ASTExpression> &&);
 
@@ -296,9 +319,9 @@ namespace AST {
 
     class ASTIntNumber : public ASTExpression {
     public:
-        [[nodiscard]] std::unique_ptr<ASTType> getType(const std::vector<Variable> &) const override;
+        [[nodiscard]] std::unique_ptr<ASTType> getType(Context &) const override;
 
-        void checker(std::vector<Variable> &, Info &) override;
+        void checker(Context &) override;
 
         ASTIntNumber(const int new_value = 0);
 
@@ -308,9 +331,9 @@ namespace AST {
 
     class ASTFloatNumber : public ASTExpression {
     public:
-        [[nodiscard]] std::unique_ptr<ASTType> getType(const std::vector<Variable> &) const override;
+        [[nodiscard]] std::unique_ptr<ASTType> getType(Context &) const override;
 
-        void checker(std::vector<Variable> &, Info &) override;
+        void checker(Context &) override;
 
         ASTFloatNumber(double new_value = 0);
 
@@ -320,9 +343,9 @@ namespace AST {
 
     class ASTBoolNumber : public ASTExpression {
     public:
-        [[nodiscard]] std::unique_ptr<ASTType> getType(const std::vector<Variable> &) const override;
+        [[nodiscard]] std::unique_ptr<ASTType> getType(Context &) const override;
 
-        void checker(std::vector<Variable> &, Info &) override;
+        void checker(Context &) override;
 
         ASTBoolNumber(const bool new_value = false);
 
@@ -332,11 +355,11 @@ namespace AST {
 
     class ASTStruct : public ASTExpression {
     public:
-        [[nodiscard]] std::unique_ptr<ASTType> getType(const std::vector<Variable> &) const override;
+        [[nodiscard]] std::unique_ptr<ASTType> getType(Context &) const override;
 
-        void checker(std::vector<Variable> &, Info &) override;
+        void checker(Context &) override;
 
-        ASTStruct(std::unique_ptr<ASTTypeStruct> &,
+        ASTStruct(std::unique_ptr<ASTTypeStruct> &&,
                   std::vector<std::pair<std::string, std::unique_ptr<ASTExpression>>> &);
 
     private:
@@ -347,9 +370,9 @@ namespace AST {
     class ASTVar : public ASTExpression {
     public:
 
-        [[nodiscard]] std::unique_ptr<ASTType> getType(const std::vector<Variable> &) const override;
+        [[nodiscard]] std::unique_ptr<ASTType> getType(Context &) const override;
 
-        void checker(std::vector<Variable> &, Info &) override;
+        void checker(Context &) override;
 
         ASTVar(const std::string new_name);
 
@@ -363,20 +386,21 @@ namespace AST {
     class ASTDeclaration : public Statement {
     public:
 
-        ASTDeclaration(const std::string new_name, std::unique_ptr<ASTExpression> &, std::unique_ptr<ASTType> &);
+        ASTDeclaration(std::vector<std::string> &&new_name, std::vector<std::unique_ptr<ASTExpression>> &&,
+                       std::unique_ptr<ASTType> &&);
 
-        ASTDeclaration(const std::string new_name, std::unique_ptr<ASTExpression> &);
+        ASTDeclaration(std::vector<std::string> &&new_name, std::vector<std::unique_ptr<ASTExpression>> &&);
 
-        ASTDeclaration(const std::string new_name, std::unique_ptr<ASTType> &);
+        ASTDeclaration(std::vector<std::string> &&new_name, std::unique_ptr<ASTType> &&);
 
-        virtual void checkerGlobal(std::vector<Variable> &) = 0;
+        virtual void checkerGlobal(Context &) = 0;
 
         virtual std::shared_ptr<IR::IRGlobalDecl> generateIRGlobal() const = 0;
 
 
     protected:
-        std::string name;
-        std::unique_ptr<ASTExpression> value;
+        std::vector<std::string> name;
+        std::vector<std::unique_ptr<ASTExpression>> value;
         std::unique_ptr<ASTType> type;
 
 
@@ -387,9 +411,9 @@ namespace AST {
     public:
         using ASTDeclaration::ASTDeclaration;
 
-        void checkerGlobal(std::vector<Variable> &) override;
+        void checkerGlobal(Context &) override;
 
-        void checker(std::vector<Variable> &, Info &) override;
+        void checker(Context &) override;
 
         std::shared_ptr<IR::IRGlobalDecl> generateIRGlobal() const override;
 
@@ -400,9 +424,9 @@ namespace AST {
     public:
         using ASTDeclaration::ASTDeclaration;
 
-        void checkerGlobal(std::vector<Variable> &) override;
+        void checkerGlobal(Context &) override;
 
-        void checker(std::vector<Variable> &, Info &) override;
+        void checker(Context &) override;
 
         std::shared_ptr<IR::IRGlobalDecl> generateIRGlobal() const override;
 
@@ -415,9 +439,9 @@ namespace AST {
     public:
         using ASTDeclaration::ASTDeclaration;
 
-        void checkerGlobal(std::vector<Variable> &) override;
+        void checkerGlobal(Context &) override;
 
-        void checker(std::vector<Variable> &, Info &) override;
+        void checker(Context &) override;
 
         std::shared_ptr<IR::IRGlobalDecl> generateIRGlobal() const override;
 
@@ -429,9 +453,9 @@ namespace AST {
 
         ASTBlock() = default;
 
-        void addStatement(std::unique_ptr<AST::Statement> &);
+        void addStatement(std::unique_ptr<AST::Statement> &&);
 
-        void checker(std::vector<Variable> &, Info &) override;
+        void checker(Context &) override;
 
     private:
         std::vector<std::unique_ptr<AST::Statement>> statements;
@@ -442,7 +466,7 @@ namespace AST {
 
         ASTBreak() = default;
 
-        void checker(std::vector<Variable> &, Info &) override;
+        void checker(Context &) override;
 
     private:
 
@@ -453,7 +477,7 @@ namespace AST {
 
         ASTContinue() = default;
 
-        void checker(std::vector<Variable> &, Info &) override;
+        void checker(Context &) override;
 
     private:
 
@@ -464,9 +488,9 @@ namespace AST {
 
         ASTReturn() = default;
 
-        void addReturnValue(std::unique_ptr<ASTExpression> &);
+        void addReturnValue(std::unique_ptr<ASTExpression> &&);
 
-        void checker(std::vector<Variable> &, Info &) override;
+        void checker(Context &) override;
 
     private:
         std::vector<std::unique_ptr<AST::ASTExpression>> return_value;
@@ -477,11 +501,11 @@ namespace AST {
 
         ASTSwitch() = default;
 
-        void addExpr(std::unique_ptr<ASTExpression> &);
+        void addExpr(std::unique_ptr<ASTExpression> &&);
 
-        void addCase(std::unique_ptr<ASTExpression> &, std::unique_ptr<AST::ASTBlock> &);
+        void addCase(std::unique_ptr<ASTExpression> &&, std::unique_ptr<AST::ASTBlock> &&);
 
-        void checker(std::vector<Variable> &, Info &) override;
+        void checker(Context &) override;
 
     private:
         std::unique_ptr<ASTExpression> expr;
@@ -495,13 +519,13 @@ namespace AST {
 
         ASTIf() = default;
 
-        void addExpr(std::unique_ptr<AST::ASTExpression> &);
+        void addExpr(std::unique_ptr<AST::ASTExpression> &&);
 
-        void addIfClause(std::unique_ptr<AST::ASTBlock> &);
+        void addIfClause(std::unique_ptr<AST::ASTBlock> &&);
 
-        void addElseClause(std::unique_ptr<AST::ASTBlock> &);
+        void addElseClause(std::unique_ptr<AST::ASTBlock> &&);
 
-        void checker(std::vector<Variable> &, Info &) override;
+        void checker(Context &) override;
 
     private:
         std::unique_ptr<AST::ASTExpression> expr;
@@ -518,11 +542,11 @@ namespace AST {
 
         void addIterClause(std::vector<std::unique_ptr<AST::Statement>> &);
 
-        void addCondClause(std::unique_ptr<AST::ASTExpression> &);
+        void addCondClause(std::unique_ptr<AST::ASTExpression> &&);
 
-        void addBody(std::unique_ptr<AST::ASTBlock> &);
+        void addBody(std::unique_ptr<AST::ASTBlock> &&);
 
-        void checker(std::vector<Variable> &, Info &) override;
+        void checker(Context &) override;
 
     private:
         std::vector<std::unique_ptr<AST::Statement>> init_clause, iterate_clause;
@@ -540,10 +564,10 @@ namespace AST {
 
         ASTAssign() = default;
 
-        ASTAssign(std::unique_ptr<AST::ASTExpression> &, std::unique_ptr<AST::ASTExpression> &,
+        ASTAssign(std::unique_ptr<AST::ASTExpression> &&, std::unique_ptr<AST::ASTExpression> &&,
                   Type new_type);
 
-        void checker(std::vector<Variable> &, Info &) override;
+        void checker(Context &) override;
 
     private:
 
@@ -562,15 +586,15 @@ namespace AST {
 
         void setParams(std::vector<std::pair<std::string, std::unique_ptr<AST::ASTType>>> new_params);
 
-        void addParam(std::string new_name, std::unique_ptr<AST::ASTType> &type);
+        void addParam(std::string new_name, std::unique_ptr<AST::ASTType> &&);
 
-        void addReturn(std::unique_ptr<AST::ASTType> &new_return);
+        void addReturn(std::unique_ptr<AST::ASTType> &&);
 
-        void setBody(std::unique_ptr<AST::ASTBlock> &new_body);
+        void setBody(std::unique_ptr<AST::ASTBlock> &&);
 
-        void checkerBody(std::vector<Variable> &);
+        void checkerBody(Context &);
 
-        void checkerName(std::vector<Variable> &);
+        void checkerName(Context &);
 
         std::shared_ptr<IR::IRFunc> generateFunc();
 
@@ -598,9 +622,9 @@ namespace AST {
 
         void setName(std::string new_name);
 
-        void addDecl(std::unique_ptr<ASTDeclaration> &new_decl);
+        void addDecl(std::unique_ptr<ASTDeclaration> &&);
 
-        void addFunction(std::unique_ptr<Function> &new_func);
+        void addFunction(std::unique_ptr<Function> &&);
 
         void checker();
 

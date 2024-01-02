@@ -28,6 +28,10 @@ std::shared_ptr<IR::IRType> AST::ASTTypeStruct::generateIR() {
     return res;
 }
 
+std::shared_ptr<IR::IRType> AST::ASTTypeNamed::generateIR() {
+
+}
+
 std::shared_ptr<IR::IRGlobalDecl> AST::ASTTypeDeclaration::generateIRGlobal() const {
     auto res = std::make_shared<IR::IRGlobalTypeDecl>();
     res->addName(name);

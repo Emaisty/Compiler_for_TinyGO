@@ -1,32 +1,37 @@
 #include "AST.h"
 
 
-void name_in_space(const std::string &name, const std::vector<AST::Variable> &name_space) {
+void AST::Context::checkIfNameInSpace(std::string name) {
     for (auto &i: name_space)
         if (i.name == name)
             throw std::invalid_argument("ERROR. This name already exists");
 }
 
-void AST::Info::goDeeper() {
+void AST::Context::goDeeper() {
     level += 1;
     pr_loop_status.push(in_loop);
     in_loop = true;
 }
 
-void AST::Info::goUp() {
+void AST::Context::goUp() {
+    for (int i = name_space.size() - 1; i >= 0; --i)
+        if (name_space[i].level == level)
+            name_space.erase(name_space.end() - 1, name_space.end());
+
+
     level -= 1;
     in_loop = pr_loop_status.top();
 }
 
-std::unique_ptr<AST::ASTType> AST::ASTNullExpr::getType(const std::vector<Variable> &name_space) const {
+std::unique_ptr<AST::ASTType> AST::ASTNullExpr::getType(const std::vector<ItemInNameSpace> &name_space) const {
     return std::make_unique<AST::ASTTypeNull>();
 }
 
-void AST::ASTNullExpr::checker(std::vector<Variable> &name_space, Info &inf) {
+void AST::ASTNullExpr::checker(std::vector<ItemInNameSpace> &name_space, Context &inf) {
     return;
 }
 
-std::unique_ptr<AST::ASTType> AST::ASTBinaryOperator::getType(const std::vector<Variable> &name_space) const {
+std::unique_ptr<AST::ASTType> AST::ASTBinaryOperator::getType(const std::vector<ItemInNameSpace> &name_space) const {
     if (op == AND || op == OR || op == EQ || op == NE || op == GE || op == GT || op == LE || op == LT)
         return std::make_unique<AST::ASTTypeBool>();
 
@@ -36,7 +41,7 @@ std::unique_ptr<AST::ASTType> AST::ASTBinaryOperator::getType(const std::vector<
     return std::make_unique<AST::ASTTypeFloat>();
 }
 
-void AST::ASTBinaryOperator::checker(std::vector<Variable> &name_space, Info &inf) {
+void AST::ASTBinaryOperator::checker(std::vector<ItemInNameSpace> &name_space, Context &inf) {
     left->checker(name_space, inf);
     right->checker(name_space, inf);
     if (!(AST::ASTTypeInt() == left->getType(name_space) || AST::ASTTypeFloat() == left->getType(name_space) ||
@@ -57,13 +62,13 @@ void AST::ASTBinaryOperator::checker(std::vector<Variable> &name_space, Info &in
         throw std::invalid_argument("ERROR. Unsupported bin operation for bool type");
 }
 
-std::unique_ptr<AST::ASTType> AST::ASTUnaryOperator::getType(const std::vector<Variable> &name_space) const {
+std::unique_ptr<AST::ASTType> AST::ASTUnaryOperator::getType(const std::vector<ItemInNameSpace> &name_space) const {
     if (op == AST::ASTUnaryOperator::NOT)
         return std::make_unique<AST::ASTTypeBool>();
     return value->getType(name_space);
 }
 
-void AST::ASTUnaryOperator::checker(std::vector<Variable> &name_space, Info &inf) {
+void AST::ASTUnaryOperator::checker(std::vector<ItemInNameSpace> &name_space, Context &inf) {
     value->checker(name_space, inf);
 
     if (!(AST::ASTTypeInt() == value->getType(name_space) || AST::ASTTypeFloat() == value->getType(name_space) ||
@@ -80,19 +85,19 @@ void AST::ASTUnaryOperator::checker(std::vector<Variable> &name_space, Info &inf
 
 }
 
-std::unique_ptr<AST::ASTType> AST::ASTFunctionCall::getType(const std::vector<Variable> &name_space) const {
+std::unique_ptr<AST::ASTType> AST::ASTFunctionCall::getType(const std::vector<ItemInNameSpace> &name_space) const {
 //TODO
 }
 
-void AST::ASTFunctionCall::checker(std::vector<Variable> &name_space, Info &inf) {
+void AST::ASTFunctionCall::checker(std::vector<ItemInNameSpace> &name_space, Context &inf) {
     //TODO
 }
 
-std::unique_ptr<AST::ASTType> AST::ASTMemberAccess::getType(const std::vector<Variable> &name_space) const {
+std::unique_ptr<AST::ASTType> AST::ASTMemberAccess::getType(const std::vector<ItemInNameSpace> &name_space) const {
     //TODO
 }
 
-void AST::ASTMemberAccess::checker(std::vector<Variable> &name_space, Info &inf) {
+void AST::ASTMemberAccess::checker(std::vector<ItemInNameSpace> &name_space, Context &inf) {
 //    name->checker(name_space, inf);
 //    member->checker(name_space, inf);
 //    auto struc = dynamic_cast<ASTTypeStruct *>(name->getType(name_space).get());
@@ -117,58 +122,58 @@ void AST::ASTMemberAccess::checker(std::vector<Variable> &name_space, Info &inf)
 
 }
 
-std::unique_ptr<AST::ASTType> AST::ASTGetPointer::getType(const std::vector<Variable> &name_space) const {
+std::unique_ptr<AST::ASTType> AST::ASTGetPointer::getType(const std::vector<ItemInNameSpace> &name_space) const {
     return std::make_unique<ASTTypePointer>(var->getType(name_space));
 }
 
-void AST::ASTGetPointer::checker(std::vector<Variable> &name_space, Info &inf) {
+void AST::ASTGetPointer::checker(std::vector<ItemInNameSpace> &name_space, Context &inf) {
     var->checker(name_space, inf);
     if (var->getType(name_space)->constable() || !var->getType(name_space)->addressable())
         throw std::invalid_argument("ERROR. Cannot take address of const value");
 }
 
-std::unique_ptr<AST::ASTType> AST::ASTGetValue::getType(const std::vector<Variable> &name_space) const {
+std::unique_ptr<AST::ASTType> AST::ASTGetValue::getType(const std::vector<ItemInNameSpace> &name_space) const {
     auto val = dynamic_cast<ASTTypePointer *>(var->getType(name_space).get());
     if (!val)
         throw std::invalid_argument("!!!!!!!!!!!!!!!!!!!!! SHOULD NEVER SEE THIS");
     return val->getValue();
 }
 
-void AST::ASTGetValue::checker(std::vector<Variable> &name_space, Info &inf) {
+void AST::ASTGetValue::checker(std::vector<ItemInNameSpace> &name_space, Context &inf) {
     var->checker(name_space, inf);
     if (var->getType(name_space) != AST::ASTTypePointer())
         throw std::invalid_argument("ERROR. Cannot inderect non-pointer type");
 }
 
-std::unique_ptr<AST::ASTType> AST::ASTIntNumber::getType(const std::vector<Variable> &name_space) const {
+std::unique_ptr<AST::ASTType> AST::ASTIntNumber::getType(const std::vector<ItemInNameSpace> &name_space) const {
     return std::make_unique<ASTTypeInt>();
 }
 
-void AST::ASTIntNumber::checker(std::vector<Variable> &name_space, Info &inf) {
+void AST::ASTIntNumber::checker(std::vector<ItemInNameSpace> &name_space, Context &inf) {
     return;
 }
 
-std::unique_ptr<AST::ASTType> AST::ASTFloatNumber::getType(const std::vector<Variable> &name_space) const {
+std::unique_ptr<AST::ASTType> AST::ASTFloatNumber::getType(const std::vector<ItemInNameSpace> &name_space) const {
     return std::make_unique<ASTTypeFloat>();
 }
 
-void AST::ASTFloatNumber::checker(std::vector<Variable> &name_space, Info &inf) {
+void AST::ASTFloatNumber::checker(std::vector<ItemInNameSpace> &name_space, Context &inf) {
     return;
 }
 
-std::unique_ptr<AST::ASTType> AST::ASTBoolNumber::getType(const std::vector<Variable> &name_space) const {
+std::unique_ptr<AST::ASTType> AST::ASTBoolNumber::getType(const std::vector<ItemInNameSpace> &name_space) const {
     return std::make_unique<ASTTypeBool>();
 }
 
-void AST::ASTBoolNumber::checker(std::vector<Variable> &name_space, Info &inf) {
+void AST::ASTBoolNumber::checker(std::vector<ItemInNameSpace> &name_space, Context &inf) {
     return;
 }
 
-std::unique_ptr<AST::ASTType> AST::ASTStruct::getType(const std::vector<Variable> &name_space) const {
+std::unique_ptr<AST::ASTType> AST::ASTStruct::getType(const std::vector<ItemInNameSpace> &name_space) const {
     return type->clone();
 }
 
-void AST::ASTStruct::checker(std::vector<Variable> &name_space, Info &inf) {
+void AST::ASTStruct::checker(std::vector<ItemInNameSpace> &name_space, Context &inf) {
     if (*type != std::make_unique<ASTTypeStruct>())
         throw std::invalid_argument("!!!!!!!!!!!!!! U SHOULD NEVER SEE THIS");
     for (auto &i: values) {
@@ -178,17 +183,17 @@ void AST::ASTStruct::checker(std::vector<Variable> &name_space, Info &inf) {
     }
 }
 
-std::unique_ptr<AST::ASTType> AST::ASTVar::getType(const std::vector<Variable> &name_space) const {
+std::unique_ptr<AST::ASTType> AST::ASTVar::getType(const std::vector<ItemInNameSpace> &name_space) const {
     for (auto &i: name_space)
         if (i.name == name) {
-            if (i.type_of_var == AST::Variable::VAR)
+            if (i.type_of_var == AST::ItemInNameSpace::VAR)
                 return i.type->set_addressability(true)->set_constability(false);
             return i.type->set_addressability(true);
         }
 
 }
 
-void AST::ASTVar::checker(std::vector<Variable> &name_space, Info &inf) {
+void AST::ASTVar::checker(Context &inf) {
     for (auto &i: name_space)
         if (i.name == name)
             return;
@@ -197,37 +202,37 @@ void AST::ASTVar::checker(std::vector<Variable> &name_space, Info &inf) {
 
 }
 
-void AST::ASTTypeDeclaration::checkerGlobal(std::vector<Variable> &name_space) {
-    name_in_space(name, name_space);
-    name_space.emplace_back(name, type, 0, AST::Variable::TYPE);
+void AST::ASTTypeDeclaration::checkerGlobal(Context &context) {
+    context.checkIfNameInSpace(name);
+    context.name_space.emplace_back(name, type, 0, false);
 }
 
-void AST::ASTTypeDeclaration::checker(std::vector<Variable> &name_space, Info &inf) {
-    if (inf.level != 0) {
-        name_in_space(name, name_space);
-        name_space.emplace_back(name, type, inf.level, AST::Variable::TYPE);
+void AST::ASTTypeDeclaration::checker(Context &context) {
+    if (context.level != 0) {
+        context.checkIfNameInSpace(name);
+        context.name_space.emplace_back(name, type, context.level, false);
     }
 }
 
-void AST::ASTVarDeclaration::checkerGlobal(std::vector<Variable> &name_space) {
-    name_in_space(name, name_space);
+void AST::ASTVarDeclaration::checkerGlobal(Context &context) {
+    context.checkIfNameInSpace(name);
     if (type)
-        name_space.emplace_back(name, type, 0, AST::Variable::VAR);
+        context.name_space.emplace_back(name, type, 0, false);
     else {
         auto tmp = value->getType(name_space);
-        name_space.emplace_back(name, tmp, 0, AST::Variable::VAR);
+        name_space.emplace_back(name, tmp, 0, AST::ItemInNameSpace::VAR);
     }
 }
 
 
-void AST::ASTVarDeclaration::checker(std::vector<Variable> &name_space, Info &inf) {
+void AST::ASTVarDeclaration::checker(std::vector<ItemInNameSpace> &name_space, Context &inf) {
     if (inf.level != 0) {
         name_in_space(name, name_space);
         if (type)
-            name_space.emplace_back(name, type, inf.level, AST::Variable::VAR);
+            name_space.emplace_back(name, type, inf.level, AST::ItemInNameSpace::VAR);
         else {
             auto tmp = value->getType(name_space);
-            name_space.emplace_back(name, tmp, 0, AST::Variable::VAR);
+            name_space.emplace_back(name, tmp, 0, AST::ItemInNameSpace::VAR);
         }
     }
 
@@ -241,24 +246,24 @@ void AST::ASTVarDeclaration::checker(std::vector<Variable> &name_space, Info &in
     }
 }
 
-void AST::ASTConstDeclaration::checkerGlobal(std::vector<Variable> &name_space) {
+void AST::ASTConstDeclaration::checkerGlobal(std::vector<ItemInNameSpace> &name_space) {
     name_in_space(name, name_space);
     if (type)
-        name_space.emplace_back(name, type, 0, AST::Variable::CONST);
+        name_space.emplace_back(name, type, 0, AST::ItemInNameSpace::CONST);
     else {
         auto tmp = value->getType(name_space);
-        name_space.emplace_back(name, tmp, 0, AST::Variable::CONST);
+        name_space.emplace_back(name, tmp, 0, AST::ItemInNameSpace::CONST);
     }
 }
 
-void AST::ASTConstDeclaration::checker(std::vector<Variable> &name_space, Info &inf) {
+void AST::ASTConstDeclaration::checker(std::vector<ItemInNameSpace> &name_space, Context &inf) {
     if (inf.level != 0) {
         name_in_space(name, name_space);
         if (type)
-            name_space.emplace_back(name, type, inf.level, AST::Variable::CONST);
+            name_space.emplace_back(name, type, inf.level, AST::ItemInNameSpace::CONST);
         else {
             auto tmp = value->getType(name_space);
-            name_space.emplace_back(name, tmp, 0, AST::Variable::CONST);
+            name_space.emplace_back(name, tmp, 0, AST::ItemInNameSpace::CONST);
         }
     }
     value->checker(name_space, inf);
@@ -271,7 +276,7 @@ void AST::ASTConstDeclaration::checker(std::vector<Variable> &name_space, Info &
         throw std::invalid_argument("Error. Non-const value for const var");
 }
 
-void AST::ASTBlock::checker(std::vector<Variable> &name_space, Info &inf) {
+void AST::ASTBlock::checker(std::vector<ItemInNameSpace> &name_space, Context &inf) {
     inf.goDeeper();
     for (auto &i: statements)
         i->checker(name_space, inf);
@@ -284,22 +289,22 @@ void AST::ASTBlock::checker(std::vector<Variable> &name_space, Info &inf) {
 
 }
 
-void AST::ASTBreak::checker(std::vector<Variable> &name_space, Info &inf) {
+void AST::ASTBreak::checker(std::vector<ItemInNameSpace> &name_space, Context &inf) {
     if (!inf.in_loop)
         throw std::invalid_argument("ERROR. Try to break not in clause");
 }
 
-void AST::ASTContinue::checker(std::vector<Variable> &name_space, Info &inf) {
+void AST::ASTContinue::checker(std::vector<ItemInNameSpace> &name_space, Context &inf) {
     if (!inf.in_loop)
         throw std::invalid_argument("ERROR. Try to continue not in clause");
 }
 
-void AST::ASTReturn::checker(std::vector<Variable> &name_space, Info &inf) {
+void AST::ASTReturn::checker(std::vector<ItemInNameSpace> &name_space, Context &inf) {
 //    if (!(*inf.return_type == return_value->getType(name_space)))
 //        throw std::invalid_argument("ERROR. Return type and return expr mismatches");
 }
 
-void AST::ASTSwitch::checker(std::vector<Variable> &name_space, Info &inf) {
+void AST::ASTSwitch::checker(std::vector<ItemInNameSpace> &name_space, Context &inf) {
     expr->checker(name_space, inf);
 
     inf.goDeeper();
@@ -316,7 +321,7 @@ void AST::ASTSwitch::checker(std::vector<Variable> &name_space, Info &inf) {
 
 }
 
-void AST::ASTIf::checker(std::vector<Variable> &name_space, Info &inf) {
+void AST::ASTIf::checker(std::vector<ItemInNameSpace> &name_space, Context &inf) {
     expr->checker(name_space, inf);
 
     inf.goDeeper();
@@ -333,7 +338,7 @@ void AST::ASTIf::checker(std::vector<Variable> &name_space, Info &inf) {
     inf.goUp();
 }
 
-void AST::ASTFor::checker(std::vector<Variable> &name_space, Info &inf) {
+void AST::ASTFor::checker(std::vector<ItemInNameSpace> &name_space, Context &inf) {
     inf.goDeeper();
     for (auto &i: init_clause)
         i->checker(name_space, inf);
@@ -349,7 +354,7 @@ void AST::ASTFor::checker(std::vector<Variable> &name_space, Info &inf) {
     inf.goUp();
 }
 
-void AST::ASTAssign::checker(std::vector<Variable> &name_space, Info &inf) {
+void AST::ASTAssign::checker(std::vector<ItemInNameSpace> &name_space, Context &inf) {
     variable->checker(name_space, inf);
     value->checker(name_space, inf);
     if (!(*variable->getType(name_space) == value->getType(name_space)))
@@ -364,15 +369,15 @@ void AST::ASTAssign::checker(std::vector<Variable> &name_space, Info &inf) {
 }
 
 
-void AST::Function::checkerBody(std::vector<Variable> &name_space) {
-    Info inf;
+void AST::Function::checkerBody(std::vector<ItemInNameSpace> &name_space) {
+    Context inf;
     inf.level = 1;
     inf.return_type = return_type->clone();
 
     //add params into name space
     for (auto &i: params) {
         name_in_space(i.first, name_space);
-        name_space.emplace_back(i.first, i.second, inf.level, AST::Variable::VAR);
+        name_space.emplace_back(i.first, i.second, inf.level, AST::ItemInNameSpace::VAR);
     }
 
     // check body
@@ -386,10 +391,10 @@ void AST::Function::checkerBody(std::vector<Variable> &name_space) {
 }
 
 
-void AST::Function::checkerName(std::vector<Variable> &name_space) {
+void AST::Function::checkerName(std::vector<ItemInNameSpace> &name_space) {
     name_in_space(name, name_space);
 
-    Variable var(name, return_type, 0, AST::Variable::FUNC);
+    ItemInNameSpace var(name, return_type, 0, AST::ItemInNameSpace::FUNC);
     for (auto &i: params)
         var.addParam(i.second);
 
@@ -398,18 +403,17 @@ void AST::Function::checkerName(std::vector<Variable> &name_space) {
 
 
 void AST::Program::checker() {
-    std::vector<Variable> name_space;
-    Info inf;
+    Context context;
 
     for (auto &i: declarations)
-        i->checkerGlobal(name_space);
+        i->checkerGlobal(context);
 
     for (auto &i: functions)
-        i->checkerName(name_space);
+        i->checkerName(context);
 
     for (auto &i: declarations)
-        i->checker(name_space, inf);
+        i->checker(context);
 
     for (auto &i: functions)
-        i->checkerBody(name_space);
+        i->checkerBody(context);
 }
