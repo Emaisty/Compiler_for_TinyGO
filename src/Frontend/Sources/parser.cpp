@@ -315,11 +315,11 @@ std::unique_ptr<AST::ASTExpression> Parser::E2() {
         }
         case tok_asterisk: {
             cur_tok = lexer.gettok();
-            return std::make_unique<AST::ASTGetValue>(E2());
+            return std::make_unique<AST::ASTUnaryOperator>(E2(), AST::ASTUnaryOperator::DEREFER);
         }
         case tok_binand: {
             cur_tok = lexer.gettok();
-            return std::make_unique<AST::ASTGetPointer>(E2());
+            return std::make_unique<AST::ASTUnaryOperator>(E2(), AST::ASTUnaryOperator::REFER);
         }
         default: {
             return E1();
@@ -529,10 +529,7 @@ std::vector<std::unique_ptr<AST::Statement>> Parser::parseSimpleStat() {
         auto values = parseExpressionList();
         if (exprs.size() != values.size())
             throw std::invalid_argument("ERROR. Diff size of declared var and expressions");
-
-        for (unsigned long long i = 0; i < exprs.size(); ++i)
-            res.emplace_back(std::make_unique<AST::ASTAssign>(std::move(exprs[i]), std::move(values[i]), type));
-
+        res.emplace_back(std::make_unique<AST::ASTAssign>(std::move(exprs), std::move(values), type));
         return res;
     }
 
@@ -546,11 +543,13 @@ std::vector<std::unique_ptr<AST::Statement>> Parser::parseSimpleStat() {
         return res;
     }
 
+    // if line is a seq of expresions
 
     for (auto &i: exprs)
         res.emplace_back(std::move(i));
 
     for (auto &i: res)
+
         i->addLineNumber(line_number);
 
     return res;
@@ -711,36 +710,26 @@ std::unique_ptr<AST::ASTType> Parser::parseType() {
     switch (cur_tok) {
         case tok_int:
         case tok_int32:
-            cur_tok = lexer.gettok();
-            return std::make_unique<AST::ASTTypeInt>();
         case tok_int8:
-            cur_tok = lexer.gettok();
-            return std::make_unique<AST::ASTTypeInt>(8);
         case tok_int64:
-            cur_tok = lexer.gettok();
-            return std::make_unique<AST::ASTTypeInt>(64);
         case tok_float:
-            cur_tok = lexer.gettok();
-            return std::make_unique<AST::ASTTypeFloat>();
         case tok_bool:
+        case tok_identifier: {
+            auto name = lexer.identifierStr();
             cur_tok = lexer.gettok();
-            return std::make_unique<AST::ASTTypeBool>();
+            return std::make_unique<AST::ASTTypeNamed>(name);
+        }
+        case tok_asterisk:
+            matchAndGoNext(tok_asterisk);
+            return std::make_unique<AST::ASTTypePointer>(parseType());
         case tok_struct:
             return parseStruct();
+
         case tok_opbr: {
             cur_tok = lexer.gettok();
             auto tmp = parseType();
             matchAndGoNext(tok_clbr);
             return tmp;
-        }
-        case tok_asterisk:
-            matchAndGoNext(tok_asterisk);
-            return std::make_unique<AST::ASTTypePointer>(parseType());
-
-        case tok_identifier: {
-            auto name = lexer.identifierStr();
-            cur_tok = lexer.gettok();
-            return std::make_unique<AST::ASTTypeNamed>(name);
         }
         default:
             throw std::invalid_argument("ERROR. UNPARSABLE TYPE");
@@ -772,7 +761,7 @@ void Parser::parseFuncSignature(std::unique_ptr<AST::Function> &function) {
             auto names = parseIdentifierList();
             auto type = parseType();
             for (auto &name: names)
-                function->addParam(name, type->clone());
+                function->addParam(std::make_unique<AST::ASTDeclaration>(std::move(names), std::move(type)));
 
         } while (cur_tok == tok_comma && (cur_tok = lexer.gettok()));
 
@@ -828,7 +817,7 @@ std::unique_ptr<AST::Function> Parser::parseFunction() {
         match(tok_identifier);
         name_of_struct = lexer.identifierStr();
         matchAndGoNext(tok_identifier);
-        res->addParam(name_of_struct, parseType());
+        res->addParam(std::make_unique<AST::ASTDeclaration>(std::vector<std::string>{name_of_struct}, parseType()));
         matchAndGoNext(tok_clbr);
     }
 

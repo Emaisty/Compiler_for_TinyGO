@@ -187,12 +187,13 @@ Token Lexer::readString() {
         cur_symb = inputSymbol();
     }
 
+
+    m_IdentifierStr = str;
+
     for (auto &i: keyWordTable) {
         if (i.slovo == str)
             return i.symb;
     }
-
-    m_IdentifierStr = str;
     return tok_identifier;
 
 }

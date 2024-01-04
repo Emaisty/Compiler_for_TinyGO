@@ -1,65 +1,14 @@
 #include "AST.h"
 
-AST::ASTType &AST::ASTType::set_addressability(bool flag) {
-    is_variable = flag;
-    return *this;
+void AST::ASTNode::addLineNumber(int line_num) {
+    line = line_num;
 }
 
-AST::ASTType &AST::ASTType::set_constability(bool flag) {
-    is_const = flag;
-    return *this;
-}
-
-bool AST::ASTType::addressable() {
-    return is_variable;
-}
-
-bool AST::ASTType::constable() {
-    return is_const;
-}
-
-std::unique_ptr<AST::ASTType> AST::ASTTypeNull::clone() const {
-    return std::make_unique<AST::ASTTypeNull>(*this);
-}
-
-bool AST::ASTTypeNull::operator==(const std::unique_ptr<ASTType> &&type) const {
-    if (dynamic_cast<AST::ASTTypeNull *>(type.get()))
-        return true;
+bool AST::ASTNode::hasAddress() {
     return false;
 }
 
-AST::ASTTypeInt::ASTTypeInt(int new_bits) : bits(new_bits) {}
-
-std::unique_ptr<AST::ASTType> AST::ASTTypeInt::clone() const {
-
-    return std::make_unique<ASTTypeInt>(*this);
-}
-
-bool AST::ASTTypeInt::operator==(const std::unique_ptr<ASTType> &&type) const {
-    if (dynamic_cast<AST::ASTTypeInt *>(type.get()) || dynamic_cast<AST::ASTTypeFloat *>(type.get()))
-        return true;
-    return false;
-}
-
-
-std::unique_ptr<AST::ASTType> AST::ASTTypeFloat::clone() const {
-    return std::make_unique<ASTTypeFloat>(*this);
-}
-
-bool AST::ASTTypeFloat::operator==(const std::unique_ptr<ASTType> &&type) const {
-    if (dynamic_cast<AST::ASTTypeInt *>(type.get()) || dynamic_cast<AST::ASTTypeFloat *>(type.get()))
-        return true;
-    return false;
-}
-
-
-std::unique_ptr<AST::ASTType> AST::ASTTypeBool::clone() const {
-    return std::make_unique<ASTTypeBool>(*this);
-}
-
-bool AST::ASTTypeBool::operator==(const std::unique_ptr<ASTType> &&type) const {
-    if (dynamic_cast<AST::ASTTypeBool *>(type.get()))
-        return true;
+bool AST::ASTNode::isConst() {
     return false;
 }
 
@@ -67,33 +16,8 @@ AST::ASTTypePointer::ASTTypePointer(std::unique_ptr<ASTType> &&new_type) {
     type = std::move(new_type);
 }
 
-
-AST::ASTTypePointer::ASTTypePointer(const AST::ASTTypePointer &old_pointer) {
-    type = old_pointer.type->clone();
-}
-
-std::unique_ptr<AST::ASTType> AST::ASTTypePointer::clone() const {
-    return std::make_unique<ASTTypePointer>(*this);
-}
-
-bool AST::ASTTypePointer::operator==(const std::unique_ptr<ASTType> &&type) const {
-    auto pointer = dynamic_cast<AST::ASTTypePointer *>(type.get());
-    if (pointer)
-        return this->type == pointer->type;
-    return false;
-}
-
 AST::ASTType *AST::ASTTypePointer::getValue() {
     return type.get();
-}
-
-AST::ASTTypeStruct::ASTTypeStruct(const AST::ASTTypeStruct &old_pointer) {
-    for (auto &i: old_pointer.fileds)
-        fileds.emplace_back(i.first, i.second->clone());
-}
-
-std::unique_ptr<AST::ASTType> AST::ASTTypeStruct::clone() const {
-    return std::make_unique<ASTTypeStruct>(*this);
 }
 
 void AST::ASTTypeStruct::addField(std::string name, std::unique_ptr<AST::ASTType> &&type) {
@@ -103,38 +27,12 @@ void AST::ASTTypeStruct::addField(std::string name, std::unique_ptr<AST::ASTType
     fileds.emplace_back(name, std::move(type));
 }
 
-bool AST::ASTTypeStruct::operator==(const std::unique_ptr<ASTType> &&type) const {
-    auto struc = dynamic_cast<AST::ASTTypeStruct *>(type.get());
-    if (!struc)
-        return false;
-
-    if (this->fileds.size() != struc->fileds.size())
-        return false;
-    for (int i = 0; i < fileds.size(); ++i)
-        if (!(fileds[i].second == struc->fileds[0].second))
-            return false;
-
-    return true;
-}
-
 AST::ASTType *AST::ASTTypeStruct::findField(std::string name) {
     for (auto &i: fileds)
         if (i.first == name)
             return i.second.get();
 
     return nullptr;
-}
-
-std::unique_ptr<AST::ASTType> AST::ASTTypeNamed::clone() const {
-    return std::make_unique<AST::ASTTypeNamed>(*this);
-}
-
-bool AST::ASTTypeNamed::operator==(const std::unique_ptr<AST::ASTType> &&type) const {
-    throw std::invalid_argument("ERROR. Should not be here");
-}
-
-void AST::Statement::addLineNumber(int num) {
-    line_number = num;
 }
 
 AST::ASTBinaryOperator::ASTBinaryOperator(std::unique_ptr<AST::ASTExpression> &&new_left,
@@ -160,14 +58,6 @@ AST::ASTMemberAccess::ASTMemberAccess(std::unique_ptr<AST::ASTExpression> &&new_
                                       std::string &new_member) {
     name = std::move(new_name);
     member = new_member;
-}
-
-AST::ASTGetPointer::ASTGetPointer(std::unique_ptr<ASTExpression> &&new_var) {
-    var = std::move(new_var);
-}
-
-AST::ASTGetValue::ASTGetValue(std::unique_ptr<ASTExpression> &&new_var) {
-    var = std::move(new_var);
 }
 
 AST::ASTIntNumber::ASTIntNumber(const int new_value) {
@@ -274,8 +164,8 @@ void AST::ASTFor::addBody(std::unique_ptr<AST::ASTBlock> &&new_body) {
     body = std::move(new_body);
 }
 
-AST::ASTAssign::ASTAssign(std::unique_ptr<AST::ASTExpression> &&new_variable,
-                          std::unique_ptr<AST::ASTExpression> &&new_value, Type new_type) {
+AST::ASTAssign::ASTAssign(std::vector<std::unique_ptr<AST::ASTExpression>> &&new_variable,
+                          std::vector<std::unique_ptr<AST::ASTExpression>> &&new_value, Type new_type) {
     variable = std::move(new_variable);
     value = std::move(new_value);
     type = new_type;
@@ -285,13 +175,12 @@ void AST::Function::setName(std::string new_name) {
     name = new_name;
 }
 
-void AST::Function::setParams(std::vector<std::pair<std::string, std::unique_ptr<AST::ASTType>>> new_params) {
-    for (auto &i: new_params)
-        params.emplace_back(i.first, i.second->clone());
+void AST::Function::setParams(std::vector<std::unique_ptr<ASTDeclaration>> &&new_params) {
+    params = std::move(new_params);
 }
 
-void AST::Function::addParam(std::string new_name, std::unique_ptr<AST::ASTType> &&type) {
-    params.emplace_back(new_name, std::move(type));
+void AST::Function::addParam(std::unique_ptr<ASTDeclaration> &&new_param) {
+    params.emplace_back(std::move(new_param));
 }
 
 void AST::Function::addReturn(std::unique_ptr<AST::ASTType> &&new_return) {
@@ -300,11 +189,6 @@ void AST::Function::addReturn(std::unique_ptr<AST::ASTType> &&new_return) {
 
 void AST::Function::setBody(std::unique_ptr<AST::ASTBlock> &&new_body) {
     body = std::move(new_body);
-}
-
-void AST::Function::addLineNumber(int num) {
-    line_number = num;
-
 }
 
 void AST::Program::addDecl(std::unique_ptr<ASTDeclaration> &&new_decl) {
