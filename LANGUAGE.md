@@ -58,7 +58,7 @@ Some identifiers already occupied. Knows as keywords("for","else" etc)
     CONSTPRIME := IDENTIFIER_LIST [TYPE] "=" EXPR_LIST
 
     TYPEDECL := "type" (TYPEPRIME | "(" {TYPEPRIME ";"} ")")
-    TYPEPRIME := IDENTIFIER ["="] Type
+    TYPEPRIME := IDENTIFIER ["="] TypeOfAssign
 
     VARDECL := "var" (VARPRIME | "(" {VARPRIME ";"} ")")
     VARPRIME := IDENTIFIER_LIST ( (TYPE [ "=" EXPR_LIST]) | "=" EXPR_LIST )

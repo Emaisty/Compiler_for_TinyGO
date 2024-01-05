@@ -1,16 +1,23 @@
 #include "AST.h"
 
-
-void AST::Context::checkIfNameInSpace(std::string name) {
+void AST::Context::checkIfNameExist(std::string name) {
     for (auto &i: name_space)
         if (i.name == name)
             throw std::invalid_argument("ERROR. This name already exists");
 }
 
-void AST::Context::goDeeper() {
+void AST::Context::checkIfTypeExist(std::string name) {
+    for (auto &i: type_space)
+        if (i.name == name)
+            throw std::invalid_argument("ERROR. This type already exists");
+}
+
+void AST::Context::goDeeper(bool go_in_loop = false, bool go_in_switch = false) {
     level += 1;
     pr_loop_status.push(in_loop);
-    in_loop = true;
+    pr_switch_status.push(in_switch);
+    in_loop = go_in_loop || in_loop;
+    in_switch = go_in_switch || in_switch;
 }
 
 void AST::Context::goUp() {
@@ -18,10 +25,41 @@ void AST::Context::goUp() {
         if (name_space[i].level == level)
             name_space.erase(name_space.end() - 1, name_space.end());
 
+    for (int i = type_space.size() - 1; i >= 0; --i)
+        if (type_space[i].level == level)
+            type_space.erase(type_space.end() - 1, type_space.end());
 
     level -= 1;
     in_loop = pr_loop_status.top();
+    in_switch = pr_switch_status.top();
 }
+
+Type *AST::Context::getTypeByTypeName(std::string name) {
+    for (auto &i: type_space)
+        if (i.name == name)
+            return i.type.get();
+    return nullptr;
+}
+
+Type *AST::Context::getTypeByVarName(std::string name) {
+    for (auto &i: name_space)
+        if (i.name == name)
+            return i.type;
+    return nullptr;
+}
+
+void AST::Context::addType(std::string new_name, std::unique_ptr<Type> &&new_type) {
+    checkIfTypeExist(new_name);
+    type_space.emplace_back(new_name, std::move(new_type), level);
+}
+
+void AST::Context::addIntoNameSpace(std::string new_name, Type *new_type) {
+    checkIfNameExist(new_name);
+    name_space.emplace_back(new_name, new_type, level);
+}
+
+/*
+
 
 std::unique_ptr<AST::ASTType> AST::ASTNullExpr::getType(const std::vector<ItemInNameSpace> &name_space) const {
     return std::make_unique<AST::ASTTypeNull>();
@@ -416,4 +454,152 @@ void AST::Program::checker() {
 
     for (auto &i: functions)
         i->checkerBody(context);
+}*/
+
+void AST::ASTTypeDeclaration::globalPreInit(Context &ctx) {
+    ctx.checkIfTypeExist(name[0]);
+
+    typ
+}
+
+Type *AST::ASTTypeDeclaration::checker(Context &ctx) {
+    return nullptr;
+}
+
+void AST::ASTVarDeclaration::globalPreInit(Context &ctx) {
+
+}
+
+Type *AST::ASTVarDeclaration::checker(Context &ctx) {
+
+    return nullptr;
+}
+
+void AST::ASTConstDeclaration::globalPreInit(Context &ctx) {
+
+}
+
+Type *AST::ASTConstDeclaration::checker(Context &ctx) {
+    for (int i = 0; i < name.size(); ++i) {
+        ctx.checkIfNameExist(name[i]);
+        if (!value[i]->isConst())
+            throw std::invalid_argument("ERROR. Not constable expression is tried to passed to const var.");
+
+    }
+    return nullptr;
+}
+
+Type *AST::ASTBlock::checker(Context &ctx) {
+    ctx.goDeeper();
+    for (auto &i: statements)
+        i->checker(ctx);
+    ctx.goUp();
+    return nullptr;
+}
+
+Type *AST::ASTBreak::checker(Context &ctx) {
+    if (ctx.in_switch || ctx.in_loop)
+        return nullptr;
+    throw std::invalid_argument("ERROR. Called Break statement not in switch case or not in loop");
+}
+
+Type *AST::ASTContinue::checker(Context &ctx) {
+    if (ctx.in_loop)
+        return nullptr;
+    throw std::invalid_argument("ERROR. Called Continue statement not in loop");
+}
+
+Type *AST::ASTReturn::checker(Context &ctx) {
+    if (ctx.return_type.size() != return_value.size())
+        throw std::invalid_argument("ERROR. Mismatch number of returned values.");
+
+    for (int i = 0; i < return_value.size(); ++i)
+        if (!return_value[i]->checker(ctx)->compare(ctx.return_type[i]))
+            throw std::invalid_argument("ERROR. Not matching return value");
+
+    return nullptr;
+}
+
+Type *AST::ASTSwitch::checker(Context &ctx) {
+    auto type_of_stat = expr->checker(ctx);
+    for (auto &i: cases) {
+        ctx.goDeeper(false, true);
+        if (!type_of_stat->compare(i.first->checker(ctx)))
+            throw std::invalid_argument("ERROR. Not comparable types between case and expression.");
+        i.second->checker(ctx);
+        ctx.goUp();
+    }
+
+    return nullptr;
+}
+
+Type *AST::ASTIf::checker(Context &ctx) {
+    auto type_of_clause = if_clause->checker(ctx);
+    if (!type_of_clause->compare(ctx.getTypeByTypeName("bool")))
+        throw std::invalid_argument("ERROR. If clause cannot be converted to bool");
+
+    if_clause->checker(ctx);
+    if (else_clause)
+        else_clause->checker(ctx);
+
+    return nullptr;
+}
+
+Type *AST::ASTFor::checker(Context &ctx) {
+    ctx.goDeeper(true);
+    for (auto &i: init_clause)
+        i->checker(ctx);
+
+    auto type_of_clause = if_clause->checker(ctx);
+    if (!type_of_clause->compare(ctx.getTypeByTypeName("bool")))
+        throw std::invalid_argument("ERROR. If clause cannot be converted to bool");
+
+    for (auto &i: iterate_clause)
+        i->checker(ctx);
+
+    body->checker(ctx);
+
+    ctx.goUp();
+    return nullptr;
+}
+
+
+Type *AST::ASTAssign::checker(Context &ctx) {
+
+    for (int i = 0; i < variable.size(); ++i) {
+        auto var_type = variable[i]->checker(ctx);
+        if (!variable[i]->hasAddress())
+            throw std::invalid_argument("ERROR. Var is not assignable type.");
+        auto val_type = value[i]->checker(ctx);
+        if (!var_type || !val_type || !var_type->compare(val_type))
+            throw std::invalid_argument("ERROR. Var and assigned value not the same types");
+    }
+
+    return nullptr;
+}
+
+Type *AST::Function::checker(Context &ctx) {
+    ctx.goDeeper();
+    for (auto &i: params)
+        i->checker(ctx);
+
+    for (auto &i: return_type)
+        ctx.return_type.emplace_back(i->checker(ctx));
+
+    body->checker(ctx);
+
+    ctx.goUp();
+
+    return nullptr;
+}
+
+
+Type *AST::Program::checker(Context &ctx) {
+    for (auto &i: declarations)
+        i->checker(ctx);
+
+    for (auto &i: functions)
+        i->checker(ctx);
+
+    return nullptr;
 }

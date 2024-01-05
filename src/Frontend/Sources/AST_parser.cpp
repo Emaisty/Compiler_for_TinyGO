@@ -146,14 +146,12 @@ void AST::ASTIf::addElseClause(std::unique_ptr<AST::ASTBlock> &&new_else_clause)
     else_clause = std::move(new_else_clause);
 }
 
-void AST::ASTFor::addInitClause(std::vector<std::unique_ptr<AST::Statement>> &new_init_clause) {
-    for (auto &i: new_init_clause)
-        init_clause.emplace_back(std::move(i));
+void AST::ASTFor::addInitClause(std::vector<std::unique_ptr<AST::Statement>> &&new_init_clause) {
+    init_clause = std::move(new_init_clause);
 }
 
-void AST::ASTFor::addIterClause(std::vector<std::unique_ptr<AST::Statement>> &new_iter_clause) {
-    for (auto &i: new_iter_clause)
-        iterate_clause.emplace_back(std::move(i));
+void AST::ASTFor::addIterClause(std::vector<std::unique_ptr<AST::Statement>> &&new_iter_clause) {
+    iterate_clause = std::move(new_iter_clause);
 }
 
 void AST::ASTFor::addCondClause(std::unique_ptr<AST::ASTExpression> &&new_condition) {
@@ -165,7 +163,7 @@ void AST::ASTFor::addBody(std::unique_ptr<AST::ASTBlock> &&new_body) {
 }
 
 AST::ASTAssign::ASTAssign(std::vector<std::unique_ptr<AST::ASTExpression>> &&new_variable,
-                          std::vector<std::unique_ptr<AST::ASTExpression>> &&new_value, Type new_type) {
+                          std::vector<std::unique_ptr<AST::ASTExpression>> &&new_value, TypeOfAssign new_type) {
     variable = std::move(new_variable);
     value = std::move(new_value);
     type = new_type;
@@ -184,7 +182,7 @@ void AST::Function::addParam(std::unique_ptr<ASTDeclaration> &&new_param) {
 }
 
 void AST::Function::addReturn(std::unique_ptr<AST::ASTType> &&new_return) {
-    return_type = std::move(new_return);
+    return_type.emplace_back(std::move(new_return));
 }
 
 void AST::Function::setBody(std::unique_ptr<AST::ASTBlock> &&new_body) {

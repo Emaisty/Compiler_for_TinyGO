@@ -2,7 +2,10 @@
 #define COMPILER_TYPES_H
 
 class Type {
+public:
+    bool compare(const Type *other) const;
 
+private:
 };
 
 class SimpleType : public Type {

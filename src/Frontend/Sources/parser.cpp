@@ -502,26 +502,26 @@ std::vector<std::unique_ptr<AST::Statement>> Parser::parseSimpleStat() {
 
     if (cur_tok == tok_plusassign || cur_tok == tok_minassign || cur_tok == tok_mulassign ||
         cur_tok == tok_divassign || cur_tok == tok_modassign || cur_tok == tok_assign) {
-        AST::ASTAssign::Type type;
+        AST::ASTAssign::TypeOfAssign type;
         line_number = lexer.getLineNumber();
         switch (cur_tok) {
             case tok_plusassign:
-                type = AST::ASTAssign::Type::PLUSASSIGN;
+                type = AST::ASTAssign::TypeOfAssign::PLUSASSIGN;
                 break;
             case tok_minassign:
-                type = AST::ASTAssign::Type::MINUSASSIGN;
+                type = AST::ASTAssign::TypeOfAssign::MINUSASSIGN;
                 break;
             case tok_mulassign:
-                type = AST::ASTAssign::Type::MULTASSIGN;
+                type = AST::ASTAssign::TypeOfAssign::MULTASSIGN;
                 break;
             case tok_divassign:
-                type = AST::ASTAssign::Type::DIVASSIGN;
+                type = AST::ASTAssign::TypeOfAssign::DIVASSIGN;
                 break;
             case tok_modassign:
-                type = AST::ASTAssign::Type::MODASSIGN;
+                type = AST::ASTAssign::TypeOfAssign::MODASSIGN;
                 break;
             case tok_assign:
-                type = AST::ASTAssign::Type::ASSIGN;
+                type = AST::ASTAssign::TypeOfAssign::ASSIGN;
                 break;
         }
         cur_tok = lexer.gettok();
@@ -601,15 +601,18 @@ std::unique_ptr<AST::Statement> Parser::parseForLoop() {
 
     res->addLineNumber(lexer.getLineNumber());
 
-    auto init_clause = parseSimpleStat();
-    matchAndGoNext(tok_semicolon);
-    auto expr = parseExpression();
-    matchAndGoNext(tok_semicolon);
-    auto iterate_clause = parseSimpleStat();
+    if (cur_tok != tok_semicolon)
+        res->addInitClause(parseSimpleStat());
 
-    res->addInitClause(init_clause);
-    res->addCondClause(std::move(expr));
-    res->addIterClause(iterate_clause);
+    matchAndGoNext(tok_semicolon);
+    if (cur_tok != tok_semicolon)
+        res->addCondClause(parseExpression());
+    else
+        res->addCondClause(std::make_unique<AST::ASTBoolNumber>(true));
+    matchAndGoNext(tok_semicolon);
+    if (cur_tok != tok_opfigbr)
+        res->addIterClause(parseSimpleStat());
+
 
     res->addBody(parseBlock());
 
@@ -761,14 +764,13 @@ void Parser::parseFuncSignature(std::unique_ptr<AST::Function> &function) {
             auto names = parseIdentifierList();
             auto type = parseType();
             for (auto &name: names)
-                function->addParam(std::make_unique<AST::ASTDeclaration>(std::move(names), std::move(type)));
+                function->addParam(std::make_unique<AST::ASTVarDeclaration>(std::move(names), std::move(type)));
 
         } while (cur_tok == tok_comma && (cur_tok = lexer.gettok()));
 
     }
 
     matchAndGoNext(tok_clbr);
-
 
     // return type
 
@@ -786,19 +788,17 @@ void Parser::parseFuncSignature(std::unique_ptr<AST::Function> &function) {
             } while (cur_tok == tok_comma && (cur_tok = lexer.gettok()));
             matchAndGoNext(tok_clbr);
 
-        } else {
+        } else
             // just a single type
             return_type.emplace_back(std::move(parseType()));
-        }
+
 
         if (return_type.size() == 1)
             function->addReturn(std::move(return_type[0]));
-        else {
-            auto tmp = std::make_unique<AST::ASTTypeStruct>();
+        else
             for (auto &i: return_type)
-                tmp->addField("", std::move(i));
-            function->addReturn(std::move(tmp));
-        }
+                function->addReturn(std::move(i));
+
     }
 
 }
@@ -817,7 +817,7 @@ std::unique_ptr<AST::Function> Parser::parseFunction() {
         match(tok_identifier);
         name_of_struct = lexer.identifierStr();
         matchAndGoNext(tok_identifier);
-        res->addParam(std::make_unique<AST::ASTDeclaration>(std::vector<std::string>{name_of_struct}, parseType()));
+        res->addParam(std::make_unique<AST::ASTVarDeclaration>(std::vector<std::string>{name_of_struct}, parseType()));
         matchAndGoNext(tok_clbr);
     }
 
