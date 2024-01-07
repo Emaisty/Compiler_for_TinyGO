@@ -33,14 +33,31 @@ bool Parser::parse() {
                 break;
             }
                 // declaration
-            case tok_const:
-            case tok_type:
-            case tok_var: {
-                auto decl = parseDeclaration();
-                for (auto &i: decl)
-                    program.addDecl(std::move(i));
-            }
+
+            case tok_type: {
+                matchAndGoNext(tok_type);
+                for (auto &i: parseDeclarationBlock(std::bind(&Parser::parseTypeDeclarationLine, this)))
+                    program.addTypeDecl(std::move(i));
+                if (!checkForSeparator())
+                    throw std::invalid_argument("ERROR. No separator after declaration");
                 break;
+            }
+            case tok_const: {
+                matchAndGoNext(tok_type);
+                for (auto &i: parseDeclarationBlock(std::bind(&Parser::parseConstDeclarationLine, this)))
+                    program.addVarDecl(std::move(i));
+                if (!checkForSeparator())
+                    throw std::invalid_argument("ERROR. No separator after declaration");
+                break;
+            }
+            case tok_var: {
+                matchAndGoNext(tok_type);
+                for (auto &i: parseDeclarationBlock(std::bind(&Parser::parseVarDeclarationLine, this)))
+                    program.addVarDecl(std::move(i));
+                if (!checkForSeparator())
+                    throw std::invalid_argument("ERROR. No separator after declaration");
+                break;
+            }
             default:
                 return false;
         }
