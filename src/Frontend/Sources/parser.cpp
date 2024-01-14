@@ -69,7 +69,7 @@ bool Parser::parse() {
 }
 
 void Parser::printIR(std::ostream &os) {
-    os << *program.generateIR();
+//    os << *program.generateIR();
 }
 
 bool Parser::checkForSeparator() {
@@ -826,13 +826,11 @@ std::unique_ptr<AST::Function> Parser::parseFunction() {
     auto res = std::make_unique<AST::Function>();
     res->addLineNumber(lexer.getLineNumber());
 
-    std::string name_of_struct = "";
-
     //parse if method
     if (cur_tok == tok_opbr) {
         matchAndGoNext(tok_opbr);
         match(tok_identifier);
-        name_of_struct = lexer.identifierStr();
+        auto name_of_struct = lexer.identifierStr();
         matchAndGoNext(tok_identifier);
         res->addParam(std::make_unique<AST::ASTVarDeclaration>(std::vector<std::string>{name_of_struct}, parseType()));
         matchAndGoNext(tok_clbr);
@@ -841,10 +839,7 @@ std::unique_ptr<AST::Function> Parser::parseFunction() {
     // name of func
     match(tok_identifier);
     auto name = lexer.identifierStr();
-    if (!name_of_struct.empty())
-        res->setName(name_of_struct + "." + name);
-    else
-        res->setName(name);
+    res->setName(name);
     cur_tok = lexer.gettok();
 
     //parameters and return types

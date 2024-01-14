@@ -1,5 +1,20 @@
 #include "AST.h"
 
+AST::Context::Context() {
+    for (auto &i: base_types) {
+        if (i == "int8")
+            addType(i, std::make_unique<IntType>(8));
+        if (i == "int32")
+            addType(i, std::make_unique<IntType>(32));
+        if (i == "int64")
+            addType(i, std::make_unique<IntType>(64));
+        if (i == "bool")
+            addType(i, std::make_unique<BoolType>());
+        if (i == "float")
+            addType(i, std::make_unique<FloatType>());
+    }
+}
+
 void AST::Context::checkIfNameExist(std::string name) {
     for (auto &i: name_space)
         if (i.name == name)
@@ -35,6 +50,8 @@ void AST::Context::goUp() {
 }
 
 Type *AST::Context::getTypeByTypeName(std::string name) {
+    if (name == "int")
+        name = "int32";
     for (auto &i: type_space)
         if (i.name == name)
             return i.type.get();
@@ -57,7 +74,6 @@ Type *AST::Context::addType(std::string new_name, std::unique_ptr<Type> &&new_ty
     } else {
         // add type which uses by program but user havent define by himself
 
-        // if it already exists -- lose unique_ptr and return already existed instance
         for (auto &i: type_space) {
             if (i.type->compareSignatures(new_type.get()))
                 return i.type.get();
@@ -103,7 +119,21 @@ std::set<std::string> AST::ASTTypePointer::getDependencies() {
 }
 
 Type *AST::ASTTypeStruct::checker(Context &ctx) {
+    auto res = std::unique_ptr<StructType>();
 
+
+    for (auto &i: fileds) {
+        try {
+            res->addNewField(i.first, i.second->checker(ctx));
+        } catch (std::invalid_argument e) {
+            if (ctx.GlobalInit) {
+                //TODO add to global stack while not yet implemented (it must be pointer)
+            } else
+                throw e;
+        }
+    }
+
+    return ctx.addType("", std::move(res));
 }
 
 std::set<std::string> AST::ASTTypeStruct::getDependencies() {
@@ -113,8 +143,11 @@ std::set<std::string> AST::ASTTypeStruct::getDependencies() {
     return res;
 }
 
-Type *AST::ASTTypeNamed::checker(Context &) {
-
+Type *AST::ASTTypeNamed::checker(Context &ctx) {
+    auto res = ctx.getTypeByTypeName(name);
+    if (res)
+        return res;
+    throw std::invalid_argument("ERROR. Unknown type.");
 }
 
 std::set<std::string> AST::ASTTypeNamed::getDependencies() {
@@ -131,7 +164,12 @@ bool AST::ASTBinaryOperator::isConst() {
 }
 
 Type *AST::ASTBinaryOperator::checker(AST::Context &ctx) {
+    auto LType = left->checker(ctx);
+    auto RType = right->checker(ctx);
 
+
+
+    throw std::invalid_argument("ERROR. Not allowed operation above types.");
 }
 
 std::set<std::string> AST::ASTBinaryOperator::getVarNames() {
@@ -186,7 +224,7 @@ std::set<std::string> AST::ASTMemberAccess::getVarNames() {
     return name->getVarNames();
 }
 
-bool AST::ASTIntNumber::isConst(){
+bool AST::ASTIntNumber::isConst() {
     return true;
 }
 
@@ -198,7 +236,7 @@ std::set<std::string> AST::ASTIntNumber::getVarNames() {
     return {};
 }
 
-bool AST::ASTFloatNumber::isConst(){
+bool AST::ASTFloatNumber::isConst() {
     return true;
 }
 
@@ -210,7 +248,7 @@ std::set<std::string> AST::ASTFloatNumber::getVarNames() {
     return {};
 }
 
-bool AST::ASTBoolNumber::isConst(){
+bool AST::ASTBoolNumber::isConst() {
     return true;
 }
 
@@ -229,6 +267,17 @@ bool AST::ASTStruct::isConst() {
 
 Type *AST::ASTStruct::checker(AST::Context &ctx) {
 
+    auto struct_type = dynamic_cast<StructType *>(type->checker(ctx));
+
+    for (auto &i: values) {
+        auto field_type = struct_type->getField(i.first);
+        if (!field_type)
+            throw std::invalid_argument("ERROR. Field with such name does not exists in structure.");
+        if (field_type->canConvertToThisType(i.second->checker(ctx)))
+            throw std::invalid_argument("ERROR. Filed and assigned type mismatch.");
+    }
+
+    return struct_type;
 }
 
 std::set<std::string> AST::ASTStruct::getVarNames() {
@@ -330,7 +379,7 @@ Type *AST::ASTReturn::checker(Context &ctx) {
         throw std::invalid_argument("ERROR. Mismatch number of returned values.");
 
     for (int i = 0; i < return_value.size(); ++i)
-        if (!return_value[i]->checker(ctx)->compare(ctx.return_type[i]))
+        if (!return_value[i]->checker(ctx)->canConvertToThisType(ctx.return_type[i]))
             throw std::invalid_argument("ERROR. Not matching return value");
 
     return nullptr;
@@ -340,7 +389,7 @@ Type *AST::ASTSwitch::checker(Context &ctx) {
     auto type_of_stat = expr->checker(ctx);
     for (auto &i: cases) {
         ctx.goDeeper(false, true);
-        if (!type_of_stat->compare(i.first->checker(ctx)))
+        if (!type_of_stat->canConvertToThisType(i.first->checker(ctx)))
             throw std::invalid_argument("ERROR. Not comparable types between case and expression.");
         i.second->checker(ctx);
         ctx.goUp();
@@ -351,7 +400,7 @@ Type *AST::ASTSwitch::checker(Context &ctx) {
 
 Type *AST::ASTIf::checker(Context &ctx) {
     auto type_of_clause = if_clause->checker(ctx);
-    if (!type_of_clause->compare(ctx.getTypeByTypeName("bool")))
+    if (!ctx.getTypeByTypeName("bool")->canConvertToThisType(type_of_clause))
         throw std::invalid_argument("ERROR. If clause cannot be converted to bool");
 
     if_clause->checker(ctx);
@@ -367,7 +416,7 @@ Type *AST::ASTFor::checker(Context &ctx) {
         i->checker(ctx);
 
     auto type_of_clause = if_clause->checker(ctx);
-    if (!type_of_clause->compare(ctx.getTypeByTypeName("bool")))
+    if (!ctx.getTypeByTypeName("bool")->canConvertToThisType(type_of_clause))
         throw std::invalid_argument("ERROR. If clause cannot be converted to bool");
 
     for (auto &i: iterate_clause)
@@ -387,7 +436,7 @@ Type *AST::ASTAssign::checker(Context &ctx) {
         if (!variable[i]->hasAddress())
             throw std::invalid_argument("ERROR. Var is not assignable type.");
         auto val_type = value[i]->checker(ctx);
-        if (!var_type || !val_type || !var_type->compare(val_type))
+        if (!var_type || !val_type || !var_type->canConvertToThisType(val_type))
             throw std::invalid_argument("ERROR. Var and assigned value not the same types");
     }
 
@@ -425,6 +474,9 @@ Type *AST::Program::checker(Context &ctx) {
 
 //    for (auto &i: declarations)
 //        i->checker(ctx);
+
+
+    ctx.GlobalInit = false;
 
     for (auto &i: functions)
         i->checker(ctx);

@@ -15,6 +15,7 @@
 
 
 namespace AST {
+
     struct ItemInNameSpace {
 
         ItemInNameSpace(std::string new_name, Type *new_type, int new_level)
@@ -43,6 +44,8 @@ namespace AST {
 
     struct Context {
 
+        Context();
+
         std::vector<ItemInNameSpace> name_space;
 
         std::vector<ItemInTypeSpace> type_space;
@@ -53,6 +56,8 @@ namespace AST {
         bool in_switch = false;
         int level = 0;
         std::vector<Type *> return_type;
+
+        bool GlobalInit = true;
 
         void checkIfNameExist(std::string);
 
@@ -67,13 +72,13 @@ namespace AST {
 
         Type *getTypeByVarName(std::string);
 
-        Type* addType(std::string, std::unique_ptr<Type> &&);
+        Type *addType(std::string, std::unique_ptr<Type> &&);
 
         void addIntoNameSpace(std::string, Type *);
 
         Type *getPointer(Type *);
 
-        inline static std::vector<std::string> base_types = {""};
+        inline static std::vector<std::string> base_types = {"int8", "int32", "int64", "bool", "float"};
 
     private:
 
@@ -136,14 +141,14 @@ namespace AST {
 
         void addField(std::string name, std::unique_ptr<ASTType> &&type);
 
-        ASTType *findField(std::string name);
+        ASTType *findField(std::string name) const;
 
         Type *checker(Context &) override;
 
         std::set<std::string> getDependencies() override;
 
     private:
-        std::set<std::pair<std::string, std::unique_ptr<ASTType >>> fileds;
+        std::vector<std::pair<std::string, std::unique_ptr<ASTType >>> fileds;
     };
 
     class ASTTypeNamed : public ASTType {
