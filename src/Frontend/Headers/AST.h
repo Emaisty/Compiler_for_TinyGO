@@ -18,14 +18,16 @@ namespace AST {
 
     struct ItemInNameSpace {
 
-        ItemInNameSpace(std::string new_name, Type *new_type, int new_level)
+        ItemInNameSpace(std::string new_name, Type *new_type, int new_level, bool new_is_const = false)
                 : name(new_name),
                   type(new_type),
-                  level(new_level) {}
+                  level(new_level), is_const(new_is_const) {}
 
         std::string name;
         Type *type;
         int level;
+        bool is_const;
+
 
     };
 
@@ -77,6 +79,14 @@ namespace AST {
         void addIntoNameSpace(std::string, Type *);
 
         Type *getPointer(Type *);
+
+        bool isInt(const Type *);
+
+        Type *greaterInt(const Type *, const Type *);
+
+        bool isFloat(const Type *);
+
+        bool isBool(const Type *);
 
         inline static std::vector<std::string> base_types = {"int8", "int32", "int64", "bool", "float"};
 
@@ -251,8 +261,6 @@ namespace AST {
 
         bool hasAddress() override;
 
-        bool isConst() override;
-
         Type *checker(Context &) override;
 
         std::set<std::string> getVarNames() override;
@@ -343,6 +351,18 @@ namespace AST {
 
     private:
         std::string name;
+
+        bool is_const = false;
+    };
+
+    struct dispatchedDecl {
+        std::string name;
+        ASTExpression *expression;
+        ASTType *type;
+
+        std::set<std::string> depends;
+
+        void declare(Context &);
     };
 
 
@@ -357,7 +377,7 @@ namespace AST {
         ASTDeclaration(std::vector<std::string> &&new_name, std::unique_ptr<ASTType> &&);
 
 
-        virtual std::vector<std::pair<std::string, std::set<std::string>>> globalPreInit() = 0;
+        virtual std::vector<dispatchedDecl> globalPreInit() = 0;
 
     protected:
         std::vector<std::string> name;
@@ -372,9 +392,7 @@ namespace AST {
     public:
         using ASTDeclaration::ASTDeclaration;
 
-        std::vector<std::pair<std::string, std::set<std::string>>> globalPreInit() override;
-
-        void globChecker(Context &);
+        std::vector<dispatchedDecl> globalPreInit() override;
 
         Type *checker(Context &) override;
 
@@ -385,7 +403,7 @@ namespace AST {
     public:
         using ASTDeclaration::ASTDeclaration;
 
-        std::vector<std::pair<std::string, std::set<std::string>>> globalPreInit() override;
+        std::vector<dispatchedDecl> globalPreInit() override;
 
         Type *checker(Context &) override;
 
@@ -398,7 +416,7 @@ namespace AST {
     public:
         using ASTDeclaration::ASTDeclaration;
 
-        std::vector<std::pair<std::string, std::set<std::string>>> globalPreInit() override;
+        std::vector<dispatchedDecl> globalPreInit() override;
 
         Type *checker(Context &) override;
 
@@ -538,13 +556,11 @@ namespace AST {
 
     class Function : public ASTNode {
     public:
-
-
         void setName(std::string new_name);
 
-        void setParams(std::vector<std::unique_ptr<ASTDeclaration>> &&);
+        void addParam(std::vector<std::string> &&, std::unique_ptr<ASTType> &&);
 
-        void addParam(std::unique_ptr<ASTDeclaration> &&);
+        void setMethod(std::string, std::unique_ptr<ASTType> &&);
 
         void addReturn(std::unique_ptr<AST::ASTType> &&);
 
@@ -552,14 +568,20 @@ namespace AST {
 
         Type *checker(Context &) override;
 
+        void globalPreInit(Context &);
+
     private:
         std::string name;
 
-        std::vector<std::unique_ptr<ASTDeclaration>> params;
+        std::vector<std::pair<std::vector<std::string>, std::unique_ptr<ASTType>>> params;
 
         std::vector<std::unique_ptr<AST::ASTType>> return_type;
 
         std::unique_ptr<AST::Statement> body;
+
+        std::unique_ptr<ASTType> type_of_method;
+
+        std::string inner_name;
 
     };
 
@@ -581,7 +603,8 @@ namespace AST {
 
         Type *checker(Context &) override;
 
-        std::queue<std::string> topSort(std::vector<std::pair<std::string, std::set<std::string>>> &);
+        template<typename T>
+        std::queue<T> topSort(std::vector<std::pair<std::pair<std::string, T>, std::set<std::string>>> &);
 
     private:
         std::string name;

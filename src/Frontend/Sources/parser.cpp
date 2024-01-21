@@ -544,8 +544,6 @@ std::vector<std::unique_ptr<AST::Statement>> Parser::parseSimpleStat() {
         cur_tok = lexer.gettok();
 
         auto values = parseExpressionList();
-        if (exprs.size() != values.size())
-            throw std::invalid_argument("ERROR. Diff size of declared var and expressions");
         res.emplace_back(std::make_unique<AST::ASTAssign>(std::move(exprs), std::move(values), type));
         return res;
     }
@@ -554,8 +552,6 @@ std::vector<std::unique_ptr<AST::Statement>> Parser::parseSimpleStat() {
         matchAndGoNext(tok_fastassign);
         line_number = lexer.getLineNumber();
         auto values = parseExpressionList();
-        if (names.size() != values.size())
-            throw std::invalid_argument("ERROR. Diff size of declared var and expressions");
         res.emplace_back(std::make_unique<AST::ASTVarDeclaration>(std::move(names), std::move(values)));
         return res;
     }
@@ -780,9 +776,7 @@ void Parser::parseFuncSignature(std::unique_ptr<AST::Function> &function) {
         do {
             auto names = parseIdentifierList();
             auto type = parseType();
-            for (auto &name: names)
-                function->addParam(std::make_unique<AST::ASTVarDeclaration>(std::move(names), std::move(type)));
-
+            function->addParam(std::move(names), std::move(type));
         } while (cur_tok == tok_comma && (cur_tok = lexer.gettok()));
 
     }
@@ -832,7 +826,7 @@ std::unique_ptr<AST::Function> Parser::parseFunction() {
         match(tok_identifier);
         auto name_of_struct = lexer.identifierStr();
         matchAndGoNext(tok_identifier);
-        res->addParam(std::make_unique<AST::ASTVarDeclaration>(std::vector<std::string>{name_of_struct}, parseType()));
+        res->setMethod(name_of_struct,parseType());
         matchAndGoNext(tok_clbr);
     }
 
@@ -868,10 +862,6 @@ std::vector<std::unique_ptr<AST::ASTDeclaration>> Parser::parseConstDeclarationL
     int line_number = lexer.getLineNumber();
 
     auto values = parseExpressionList();
-
-    // Checks
-    if (names.size() != values.size())
-        throw std::invalid_argument("ERROR. Diff size of declared var and expressions");
 
     if (type)
         res.push_back(std::make_unique<AST::ASTConstDeclaration>(std::move(names), std::move(values), std::move(type)));
@@ -923,14 +913,8 @@ std::vector<std::unique_ptr<AST::ASTDeclaration>> Parser::parseVarDeclarationLin
 
             auto values = parseExpressionList();
 
-            // Checks
-            if (names.size() != values.size())
-                throw std::invalid_argument("ERROR. Diff size of declared var and expressions");
-
-
             res.push_back(
                     std::make_unique<AST::ASTVarDeclaration>(std::move(names), std::move(values), std::move(type)));
-
 
         } else
             // type without value
@@ -942,10 +926,6 @@ std::vector<std::unique_ptr<AST::ASTDeclaration>> Parser::parseVarDeclarationLin
         line_number = lexer.getLineNumber();
 
         auto values = parseExpressionList();
-
-        // Checks
-        if (names.size() != values.size())
-            throw std::invalid_argument("ERROR. Diff size of declared var and expressions");
 
         res.push_back(std::make_unique<AST::ASTVarDeclaration>(std::move(names), std::move(values)));
 

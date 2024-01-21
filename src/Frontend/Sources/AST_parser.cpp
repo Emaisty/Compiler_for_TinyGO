@@ -168,12 +168,13 @@ void AST::Function::setName(std::string new_name) {
     name = new_name;
 }
 
-void AST::Function::setParams(std::vector<std::unique_ptr<ASTDeclaration>> &&new_params) {
-    params = std::move(new_params);
+void AST::Function::addParam(std::vector<std::string> &&new_names, std::unique_ptr<ASTType> &&new_type) {
+    params.emplace_back(std::move(new_names), std::move(new_type));
 }
 
-void AST::Function::addParam(std::unique_ptr<ASTDeclaration> &&new_param) {
-    params.emplace_back(std::move(new_param));
+void AST::Function::setMethod(std::string new_name, std::unique_ptr<ASTType> &&new_type) {
+    inner_name = new_name;
+    type_of_method = std::move(new_type);
 }
 
 void AST::Function::addReturn(std::unique_ptr<AST::ASTType> &&new_return) {

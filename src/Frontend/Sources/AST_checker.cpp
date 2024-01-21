@@ -102,6 +102,35 @@ Type *AST::Context::getPointer(Type *base_type) {
     return pointers.find(base_type)->second;
 }
 
+bool AST::Context::isInt(const Type *other) {
+    if (getTypeByTypeName("int8") == other || getTypeByTypeName("int32") == other ||
+        getTypeByTypeName("int64") == other)
+        return true;
+    return false;
+}
+
+Type *AST::Context::greaterInt(const Type *TypeA, const Type *TypeB) {
+    if (TypeA == getTypeByTypeName("int64") || TypeB == getTypeByTypeName("int64"))
+        return getTypeByTypeName("int64");
+
+    if (TypeA == getTypeByTypeName("int32") || TypeB == getTypeByTypeName("int32"))
+        return getTypeByTypeName("int32");
+
+    return getTypeByTypeName("int8");
+}
+
+bool AST::Context::isFloat(const Type *other) {
+    if (getTypeByTypeName("float") == other)
+        return true;
+    return false;
+}
+
+bool AST::Context::isBool(const Type *other) {
+    if (getTypeByTypeName("bool") == other)
+        return true;
+    return false;
+}
+
 bool AST::ASTNode::hasAddress() {
     return false;
 }
@@ -166,8 +195,27 @@ bool AST::ASTBinaryOperator::isConst() {
 Type *AST::ASTBinaryOperator::checker(AST::Context &ctx) {
     auto LType = left->checker(ctx);
     auto RType = right->checker(ctx);
+    if ((op == BINAND || op == BINOR || op == MOD) && ctx.isInt(LType) && ctx.isInt(RType))
+        return ctx.greaterInt(LType, RType);
 
+    if ((op == LT || op == LE || op == GT || op == GE) &&
+        (ctx.isInt(LType) || ctx.isFloat(LType)) && (ctx.isInt(RType) || ctx.isFloat(RType)))
+        return ctx.getTypeByTypeName("bool");
 
+    if ((op == EQ || op == NE) && LType->canConvertToThisType(RType))
+        return ctx.getTypeByTypeName("bool");
+
+    if ((op == PLUS || op == MINUS || op == MUL || op == DIV) &&
+        (ctx.isInt(LType) || ctx.isFloat(LType)) && (ctx.isInt(RType) || ctx.isFloat(RType))) {
+
+        if (ctx.isInt(LType) && ctx.isInt(RType))
+            return ctx.greaterInt(LType, RType);
+        return ctx.getTypeByTypeName("float");
+
+    }
+
+    if ((op == AND || op == OR) && ctx.isBool(LType) && ctx.isBool(RType))
+        return ctx.getTypeByTypeName("bool");
 
     throw std::invalid_argument("ERROR. Not allowed operation above types.");
 }
@@ -179,7 +227,7 @@ std::set<std::string> AST::ASTBinaryOperator::getVarNames() {
 }
 
 bool AST::ASTUnaryOperator::hasAddress() {
-    if (op == DEREFER)
+    if (op == DEREFER || op == REFER)
         return true;
     return false;
 }
@@ -189,7 +237,32 @@ bool AST::ASTUnaryOperator::isConst() {
 }
 
 Type *AST::ASTUnaryOperator::checker(AST::Context &ctx) {
+    auto Type = value->checker(ctx);
+    if ((op == PLUS || op == MINUS) && (ctx.isInt(Type) || ctx.isFloat(Type)))
+        return Type;
 
+    if ((op == POSTDEC || op == POSTINC || op == PREDEC || op == PREINC) && (ctx.isInt(Type) || ctx.isFloat(Type)) &&
+        value->hasAddress())
+        return Type;
+
+    if (op == DEREFER) {
+        auto pointType = dynamic_cast<PointerType *>(Type);
+        if (!pointType)
+            throw std::invalid_argument("ERROR. Attempt to deref not pointer type.");
+
+        return pointType->getBase();
+    }
+
+    if (op == REFER) {
+        if (!value->hasAddress())
+            throw std::invalid_argument("ERROR. Attempt to take pointer from non-addressable var.");
+        return ctx.getPointer(Type);
+    }
+
+    if (op == NOT && ctx.isBool(Type))
+        return Type;
+
+    throw std::invalid_argument("ERROR. Not allowed operation above type.");
 }
 
 std::set<std::string> AST::ASTUnaryOperator::getVarNames() {
@@ -198,7 +271,18 @@ std::set<std::string> AST::ASTUnaryOperator::getVarNames() {
 
 
 Type *AST::ASTFunctionCall::checker(AST::Context &ctx) {
+    auto func_type = dynamic_cast<FunctionType *>(name->checker(ctx));
+    if (!func_type)
+        throw std::invalid_argument("ERROR. Attempt to call function call on non-function.");
 
+    std::vector<Type *> args;
+    for (auto &i: arg)
+        args.emplace_back(i->checker(ctx));
+
+    if (!func_type->compareArgs(args))
+        throw std::invalid_argument("ERROR. Mismatch in types between passed argument type and expected type.");
+
+    return func_type->getReturn();
 }
 
 std::set<std::string> AST::ASTFunctionCall::getVarNames() {
@@ -209,15 +293,25 @@ std::set<std::string> AST::ASTFunctionCall::getVarNames() {
 }
 
 bool AST::ASTMemberAccess::hasAddress() {
-
-}
-
-bool AST::ASTMemberAccess::isConst() {
-
+    return this->name->hasAddress();
 }
 
 Type *AST::ASTMemberAccess::checker(AST::Context &ctx) {
+    auto type = name->checker(ctx);
 
+    StructType *struct_type;
+    if (dynamic_cast<StructType *>(type))
+        struct_type = dynamic_cast<StructType *>(type);
+    else if (dynamic_cast<PointerType *>(type))
+        struct_type = dynamic_cast<StructType *>(dynamic_cast<PointerType *>(type)->getBase());
+
+    if (!struct_type)
+        throw std::invalid_argument("ERROR. Field does not exist.");
+
+    auto field = struct_type->getField(member);
+    if (!field)
+        throw std::invalid_argument("ERROR. Field does not exist.");
+    return field;
 }
 
 std::set<std::string> AST::ASTMemberAccess::getVarNames() {
@@ -292,11 +386,17 @@ bool AST::ASTVar::hasAddress() {
 }
 
 bool AST::ASTVar::isConst() {
-
+    return is_const;
 }
 
 Type *AST::ASTVar::checker(AST::Context &ctx) {
     ctx.checkIfNameExist(name);
+
+    for (auto &i: ctx.name_space)
+        if (i.name == name)
+            is_const = i.is_const;
+
+
     return ctx.getTypeByVarName(name);
 }
 
@@ -304,12 +404,12 @@ std::set<std::string> AST::ASTVar::getVarNames() {
     return {name};
 }
 
-std::vector<std::pair<std::string, std::set<std::string>>> AST::ASTTypeDeclaration::globalPreInit() {
-    return {std::make_pair(name[0], type->getDependencies())};
+void AST::dispatchedDecl::declare(Context &ctx) {
+
 }
 
-void AST::ASTTypeDeclaration::globChecker(Context &ctx) {
-
+std::vector<std::pair<std::string, std::set<std::string>>> AST::ASTTypeDeclaration::globalPreInit() {
+    return {std::make_pair(name[0], type->getDependencies())};
 }
 
 Type *AST::ASTTypeDeclaration::checker(Context &ctx) {
@@ -458,25 +558,53 @@ Type *AST::Function::checker(Context &ctx) {
     return nullptr;
 }
 
+void AST::Function::globalPreInit(Context &ctx) {
+    auto new_function_type = std::make_unique<FunctionType>();
+
+    // todo with return
+
+    for (auto &i: params)
+        for (auto &j: i.first)
+            new_function_type->addParam(i.second->checker(ctx));
+
+    //if it is function
+    if (!type_of_method) {
+        ctx.add
+
+        return;
+    }
+}
+
 
 Type *AST::Program::checker(Context &ctx) {
-    std::vector<std::pair<std::string, std::set<std::string>>> declarations;
-    for (auto &i: typeDeclarations)
-        for (auto &j: i->globalPreInit())
-            declarations.push_back(j);
+    // type declarations
+    {
+        std::vector<std::pair<std::pair<std::string, ASTDeclaration *>, std::set<std::string>>> declarations;
+        for (auto &i: typeDeclarations)
+            for (auto &j: i->globalPreInit())
+                declarations.push_back(std::make_pair(std::make_pair(j.first, i.get()), j.second));
 
-    auto q = topSort(declarations);
+        auto q = topSort(declarations);
 
-    // TODO
+        while (!q.empty()) {
+            auto top = q.front();
+            q.pop();
 
+            top->checker(ctx);
+        }
+        // TODO post declarations
+    }
 
+    // var and const declarations
+    {
 
-
-//    for (auto &i: declarations)
-//        i->checker(ctx);
+    }
 
 
     ctx.GlobalInit = false;
+
+    for (auto &i: functions)
+        i->globalPreInit(ctx);
 
     for (auto &i: functions)
         i->checker(ctx);
@@ -484,15 +612,16 @@ Type *AST::Program::checker(Context &ctx) {
     return nullptr;
 }
 
-std::queue<std::string> AST::Program::topSort(std::vector<std::pair<std::string, std::set<std::string>>> &g) {
-    std::queue<std::string> res;
+template<typename T>
+std::queue<T> AST::Program::topSort(std::vector<std::pair<std::pair<std::string, T>, std::set<std::string>>> &g) {
+    std::queue<T> res;
     while (!g.empty()) {
         auto pr_size = g.size();
         for (auto i = g.begin(); i != g.end(); i++)
             if (i->second.empty()) {
-                res.push(i->first);
+                res.push(i->first.second);
                 for (auto &j: g)
-                    j.second.erase(i->first);
+                    j.second.erase(i->first.first);
                 g.erase(i);
                 break;
             }

@@ -13,16 +13,6 @@ public:
     //requires to not duplicate structures
     virtual bool compareSignatures(const Type *other) const;
 
-    //can be compared by eq or not eq
-//    virtual bool comparableEq() = 0;
-
-    //comparable lower, greater etc
-//    virtual bool comparableLG() = 0;
-
-//    virtual bool arithmeticable() = 0;
-
-//    virtual bool canBeBool() = 0;
-
 private:
 };
 
@@ -109,6 +99,8 @@ public:
 
     PointerType(Type *new_base) : base_type(new_base) {}
 
+    Type *getBase();
+
 private:
     Type *base_type;
 };
@@ -118,7 +110,21 @@ public:
 
     bool canConvertToThisType(const Type *other) const override;
 
+    bool compareSignatures(const Type *other) const override;
+
+    bool compareArgs(const std::vector<Type *> &);
+
+    Type *getReturn();
+
+    void setReturn(Type *);
+
+    void addParam(Type *);
+
 private:
+
+    std::vector<Type *> args;
+
+    Type *return_type;
 };
 
 #endif //COMPILER_TYPES_H
