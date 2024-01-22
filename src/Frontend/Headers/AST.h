@@ -16,6 +16,8 @@
 
 namespace AST {
 
+    class ASTType;
+
     struct ItemInNameSpace {
 
         ItemInNameSpace(std::string new_name, Type *new_type, int new_level, bool new_is_const = false)
@@ -88,9 +90,24 @@ namespace AST {
 
         bool isBool(const Type *);
 
+        void addForLater(std::string, ASTType *, UnNamedStruct *);
+
+        void fillLaterStack();
+
         inline static std::vector<std::string> base_types = {"int8", "int32", "int64", "bool", "float"};
 
     private:
+
+        struct fullFillLater {
+            std::string name;
+
+            ASTType *type;
+
+            UnNamedStruct *struc;
+
+        };
+
+        std::vector<fullFillLater> unfinishedDecl;
 
         std::stack<bool> pr_loop_status;
         std::stack<bool> pr_switch_status;
@@ -362,6 +379,15 @@ namespace AST {
 
         std::set<std::string> depends;
 
+        bool is_type_decl;
+
+        bool is_const;
+
+        dispatchedDecl(std::string new_name = "", ASTExpression *expr = nullptr, ASTType *new_type = nullptr,
+                       std::set<std::string> &&depend = {}, bool flag_type = false, bool flag_const = false) : name(
+                new_name), expression(expr), type(new_type), depends(depend), is_type_decl(flag_type), is_const(
+                flag_const) {}
+
         void declare(Context &);
     };
 
@@ -603,8 +629,7 @@ namespace AST {
 
         Type *checker(Context &) override;
 
-        template<typename T>
-        std::queue<T> topSort(std::vector<std::pair<std::pair<std::string, T>, std::set<std::string>>> &);
+        std::queue<dispatchedDecl> topSort(std::vector<dispatchedDecl>);
 
     private:
         std::string name;

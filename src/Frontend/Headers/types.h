@@ -2,6 +2,7 @@
 #define COMPILER_TYPES_H
 
 #include <memory>
+#include <vector>
 #include <string>
 
 class Type {
@@ -125,6 +126,24 @@ private:
     std::vector<Type *> args;
 
     Type *return_type;
+};
+
+
+// this class created only for times, when func returns more than 1 type at the same time
+class SeqType : public Type {
+public:
+
+    bool canConvertToThisType(const Type *other) const override;
+
+    bool compareSignatures(const Type *other) const override;
+
+    void addType(Type*);
+
+    std::vector<Type*> getTypes();
+
+private:
+
+    std::vector<Type*> types;
 };
 
 #endif //COMPILER_TYPES_H

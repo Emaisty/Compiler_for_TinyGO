@@ -131,6 +131,15 @@ bool AST::Context::isBool(const Type *other) {
     return false;
 }
 
+void AST::Context::addForLater(std::string new_name, ASTType *new_type, UnNamedStruct *unNamedStruct) {
+    unfinishedDecl.emplace_back(new_name, new_type, unNamedStruct);
+}
+
+void AST::Context::fillLaterStack() {
+    for (auto &i: unfinishedDecl)
+        i.struc->addNewField(i.name, i.type->checker(*this));
+}
+
 bool AST::ASTNode::hasAddress() {
     return false;
 }
@@ -148,7 +157,7 @@ std::set<std::string> AST::ASTTypePointer::getDependencies() {
 }
 
 Type *AST::ASTTypeStruct::checker(Context &ctx) {
-    auto res = std::unique_ptr<StructType>();
+    auto res = std::unique_ptr<UnNamedStruct>();
 
 
     for (auto &i: fileds) {
@@ -156,7 +165,8 @@ Type *AST::ASTTypeStruct::checker(Context &ctx) {
             res->addNewField(i.first, i.second->checker(ctx));
         } catch (std::invalid_argument e) {
             if (ctx.GlobalInit) {
-                //TODO add to global stack while not yet implemented (it must be pointer)
+                // TODO what if res will be deleted?????
+                ctx.addForLater(i.first, i.second.get(), res.get());
             } else
                 throw e;
         }
@@ -405,11 +415,11 @@ std::set<std::string> AST::ASTVar::getVarNames() {
 }
 
 void AST::dispatchedDecl::declare(Context &ctx) {
-
+    //TODO
 }
 
-std::vector<std::pair<std::string, std::set<std::string>>> AST::ASTTypeDeclaration::globalPreInit() {
-    return {std::make_pair(name[0], type->getDependencies())};
+std::vector<AST::dispatchedDecl> AST::ASTTypeDeclaration::globalPreInit() {
+    return {dispatchedDecl(name[0], nullptr, type.get(), type->getDependencies(), true)};
 }
 
 Type *AST::ASTTypeDeclaration::checker(Context &ctx) {
@@ -421,11 +431,18 @@ Type *AST::ASTTypeDeclaration::checker(Context &ctx) {
 //    TODO
 }
 
-std::vector<std::pair<std::string, std::set<std::string>>> AST::ASTVarDeclaration::globalPreInit() {
-    std::vector<std::pair<std::string, std::set<std::string>>> res(name.size());
+std::vector<AST::dispatchedDecl> AST::ASTVarDeclaration::globalPreInit() {
+    std::vector<AST::dispatchedDecl> res;
+    // TODO if value.size() = 1 and it is func -- parse
+    if (name.size() != value.size() && value.size() != 0)
+        throw std::invalid_argument("ERROR. Assignment number mismatch.");
 
     for (int i = 0; i < name.size(); ++i)
-        res[i] = std::make_pair(name[i], value[i]->getVarNames());
+        if (type == nullptr)
+            res.emplace_back(name[i], value[i].get(), nullptr, value[i]->getVarNames());
+        else
+            res.emplace_back(name[i], nullptr, type.get(),
+                             value.size() == 0 ? std::set<std::string>() : value[i]->getVarNames());
 
     return res;
 }
@@ -435,11 +452,17 @@ Type *AST::ASTVarDeclaration::checker(Context &ctx) {
     return nullptr;
 }
 
-std::vector<std::pair<std::string, std::set<std::string>>> AST::ASTConstDeclaration::globalPreInit() {
-    std::vector<std::pair<std::string, std::set<std::string>>> res(name.size());
+std::vector<AST::dispatchedDecl> AST::ASTConstDeclaration::globalPreInit() {
+    std::vector<AST::dispatchedDecl> res;
+    // TODO if value.size() = 1 and it is func -- parse
+    if (name.size() != value.size())
+        throw std::invalid_argument("ERROR. Assignment number mismatch.");
 
     for (int i = 0; i < name.size(); ++i)
-        res[i] = std::make_pair(name[i], value[i]->getVarNames());
+        if (type == nullptr)
+            res.emplace_back(name[i], value[i].get(), nullptr, value[i]->getVarNames(), false, true);
+        else
+            res.emplace_back(name[i], nullptr, type.get(), value[i]->getVarNames(), false, true);
 
     return res;
 }
@@ -545,8 +568,15 @@ Type *AST::ASTAssign::checker(Context &ctx) {
 
 Type *AST::Function::checker(Context &ctx) {
     ctx.goDeeper();
+
+    if (type_of_method) {
+        ctx.addIntoNameSpace(inner_name, type_of_method->checker(ctx));
+    }
+
     for (auto &i: params)
-        i->checker(ctx);
+        for (auto &j: i.first)
+            ctx.addIntoNameSpace(j, i.second->checker(ctx));
+
 
     for (auto &i: return_type)
         ctx.return_type.emplace_back(i->checker(ctx));
@@ -562,49 +592,75 @@ void AST::Function::globalPreInit(Context &ctx) {
     auto new_function_type = std::make_unique<FunctionType>();
 
     // todo with return
+    if (return_type.size() == 1)
+        new_function_type->setReturn(return_type[0]->checker(ctx));
+
 
     for (auto &i: params)
         for (auto &j: i.first)
             new_function_type->addParam(i.second->checker(ctx));
 
-    //if it is function
-    if (!type_of_method) {
-        ctx.add
+    //if it is method
+    if (type_of_method) {
+        NamedStructure *structType;
+        if (dynamic_cast<NamedStructure *>(type_of_method->checker(ctx)))
+            structType = dynamic_cast<NamedStructure *>(type_of_method->checker(ctx));
 
+        if (dynamic_cast<PointerType *>(type_of_method->checker(ctx)) &&
+            dynamic_cast<NamedStructure *>(dynamic_cast<PointerType *>(type_of_method->checker(ctx))->getBase()))
+            structType = dynamic_cast<NamedStructure *>(dynamic_cast<PointerType *>(type_of_method->checker(
+                    ctx))->getBase());
+
+        if (!structType)
+            throw std::invalid_argument("ERROR. Cannot create method for such type.");
+
+        structType->addNewField(name, ctx.addType("", std::move(new_function_type)));
         return;
     }
+
+    // if it is function
+    ctx.addIntoNameSpace(name, ctx.addType("", std::move(new_function_type)));
 }
 
 
 Type *AST::Program::checker(Context &ctx) {
     // type declarations
     {
-        std::vector<std::pair<std::pair<std::string, ASTDeclaration *>, std::set<std::string>>> declarations;
+        std::vector<dispatchedDecl> declarations;
         for (auto &i: typeDeclarations)
-            for (auto &j: i->globalPreInit())
-                declarations.push_back(std::make_pair(std::make_pair(j.first, i.get()), j.second));
+            declarations.push_back(i->globalPreInit()[0]);
 
         auto q = topSort(declarations);
 
         while (!q.empty()) {
-            auto top = q.front();
+            q.front().declare(ctx);
             q.pop();
-
-            top->checker(ctx);
         }
         // TODO post declarations
     }
 
+    //
+    for (auto &i: functions)
+        i->globalPreInit(ctx);
+
     // var and const declarations
     {
+        std::vector<dispatchedDecl> declarations;
+        for (auto &i: varDeclarations)
+            for (auto &j: i->globalPreInit())
+                declarations.push_back(j);
 
+        auto q = topSort(declarations);
+
+        while (!q.empty()) {
+            q.front().declare(ctx);
+            q.pop();
+        }
     }
 
 
     ctx.GlobalInit = false;
 
-    for (auto &i: functions)
-        i->globalPreInit(ctx);
 
     for (auto &i: functions)
         i->checker(ctx);
@@ -612,17 +668,17 @@ Type *AST::Program::checker(Context &ctx) {
     return nullptr;
 }
 
-template<typename T>
-std::queue<T> AST::Program::topSort(std::vector<std::pair<std::pair<std::string, T>, std::set<std::string>>> &g) {
-    std::queue<T> res;
+std::queue<AST::dispatchedDecl> AST::Program::topSort(std::vector<dispatchedDecl> g) {
+    std::queue<dispatchedDecl> res;
     while (!g.empty()) {
         auto pr_size = g.size();
-        for (auto i = g.begin(); i != g.end(); i++)
-            if (i->second.empty()) {
-                res.push(i->first.second);
+
+        for (auto i = 0; i < g.size(); ++i)
+            if (g[i].depends.empty()) {
+                res.push(g[i]);
                 for (auto &j: g)
-                    j.second.erase(i->first.first);
-                g.erase(i);
+                    j.depends.erase(g[i].name);
+                g.erase(g.begin() + i, g.begin() + i + 1);
                 break;
             }
 
