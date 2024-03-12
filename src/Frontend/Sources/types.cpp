@@ -95,3 +95,23 @@ bool FunctionType::canConvertToThisType(const Type *other) const {
     //TODO IDK
 }
 
+bool FunctionType::compareSignatures(const Type *other) const {
+
+}
+
+bool FunctionType::compareArgs(const std::vector<Type *> &) {
+
+}
+
+Type *FunctionType::getReturn() {
+
+}
+
+void FunctionType::setReturn(Type *) {
+
+}
+
+void FunctionType::addParam(Type *) {
+
+}
+

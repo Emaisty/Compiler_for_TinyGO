@@ -16,52 +16,43 @@ AST::Context::Context() {
 }
 
 void AST::Context::checkIfNameExist(std::string name) {
-    for (auto &i: name_space)
-        if (i.name == name)
-            throw std::invalid_argument("ERROR. This name already exists");
+    if (name_space.find(name) != name_space.end())
+        return;
+
+    if (!prCtx)
+        throw std::invalid_argument("ERROR. This name already exists");
+
+    prCtx->checkIfTypeExist(name);
 }
 
 void AST::Context::checkIfTypeExist(std::string name) {
-    for (auto &i: type_space)
-        if (i.name == name)
-            throw std::invalid_argument("ERROR. This type already exists");
-}
+    if (type_space.find(name) != type_space.end())
+        return;
 
-void AST::Context::goDeeper(bool go_in_loop = false, bool go_in_switch = false) {
-    level += 1;
-    pr_loop_status.push(in_loop);
-    pr_switch_status.push(in_switch);
-    in_loop = go_in_loop || in_loop;
-    in_switch = go_in_switch || in_switch;
-}
+    if (!prCtx)
+        throw std::invalid_argument("ERROR. This type already exists");
 
-void AST::Context::goUp() {
-    for (int i = name_space.size() - 1; i >= 0; --i)
-        if (name_space[i].level == level)
-            name_space.erase(name_space.end() - 1, name_space.end());
-
-    for (int i = type_space.size() - 1; i >= 0; --i)
-        if (type_space[i].level == level)
-            type_space.erase(type_space.end() - 1, type_space.end());
-
-    level -= 1;
-    in_loop = pr_loop_status.top();
-    in_switch = pr_switch_status.top();
+    prCtx->checkIfTypeExist(name);
 }
 
 Type *AST::Context::getTypeByTypeName(std::string name) {
     if (name == "int")
         name = "int32";
-    for (auto &i: type_space)
-        if (i.name == name)
-            return i.type.get();
+    if (type_space.find(name) != type_space.end())
+        return type_space[name].get();
+
+    if (prCtx)
+        return prCtx->getTypeByTypeName(name);
     return nullptr;
 }
 
-Type *AST::Context::getTypeByVarName(std::string name) {
-    for (auto &i: name_space)
-        if (i.name == name)
-            return i.type;
+AST::ItemInNameSpace *AST::Context::getTypeByVarName(std::string name) {
+    if (name_space.find(name) != name_space.end())
+        return &name_space.at(name);
+
+    if (prCtx)
+        return prCtx->getTypeByVarName(name);
+
     return nullptr;
 }
 
@@ -85,9 +76,9 @@ Type *AST::Context::addType(std::string new_name, std::unique_ptr<Type> &&new_ty
     }
 }
 
-void AST::Context::addIntoNameSpace(std::string new_name, Type *new_type) {
+void AST::Context::addIntoNameSpace(std::string new_name, Type *new_type, bool is_const) {
     checkIfNameExist(new_name);
-    name_space.emplace_back(new_name, new_type, level);
+    name_space.emplace_back(new_name, new_type, level, is_const);
 }
 
 Type *AST::Context::getPointer(Type *base_type) {
@@ -103,30 +94,30 @@ Type *AST::Context::getPointer(Type *base_type) {
 }
 
 bool AST::Context::isInt(const Type *other) {
-    if (getTypeByTypeName("int8") == other || getTypeByTypeName("int32") == other ||
-        getTypeByTypeName("int64") == other)
+    if (getTypeByTypeName("int8")->type.get() == other || getTypeByTypeName("int32")->type.get() == other ||
+        getTypeByTypeName("int64")->type.get() == other)
         return true;
     return false;
 }
 
 Type *AST::Context::greaterInt(const Type *TypeA, const Type *TypeB) {
-    if (TypeA == getTypeByTypeName("int64") || TypeB == getTypeByTypeName("int64"))
-        return getTypeByTypeName("int64");
+    if (TypeA == getTypeByTypeName("int64")->type.get() || TypeB == getTypeByTypeName("int64")->type.get())
+        return getTypeByTypeName("int64")->type.get();
 
-    if (TypeA == getTypeByTypeName("int32") || TypeB == getTypeByTypeName("int32"))
-        return getTypeByTypeName("int32");
+    if (TypeA == getTypeByTypeName("int32")->type.get() || TypeB == getTypeByTypeName("int32")->type.get())
+        return getTypeByTypeName("int32")->type.get();
 
-    return getTypeByTypeName("int8");
+    return getTypeByTypeName("int8")->type.get();
 }
 
 bool AST::Context::isFloat(const Type *other) {
-    if (getTypeByTypeName("float") == other)
+    if (getTypeByTypeName("float")->type.get() == other)
         return true;
     return false;
 }
 
 bool AST::Context::isBool(const Type *other) {
-    if (getTypeByTypeName("bool") == other)
+    if (getTypeByTypeName("bool")->type.get() == other)
         return true;
     return false;
 }
@@ -137,7 +128,23 @@ void AST::Context::addForLater(std::string new_name, ASTType *new_type, UnNamedS
 
 void AST::Context::fillLaterStack() {
     for (auto &i: unfinishedDecl)
-        i.struc->addNewField(i.name, i.type->checker(*this));
+
+}
+
+void AST::Context::setPrCtx(Context &pr_ctx, bool new_in_loop, bool new_in_switch) {
+    prCtx = &pr_ctx;
+    in_loop = new_in_loop ? new_in_loop : pr_ctx.in_loop;
+    in_switch = new_in_switch ? new_in_switch : pr_ctx.in_switch;
+}
+
+bool AST::DeclaredItems::nameBeenDeclared(std::string name) {
+    if (declaredNames.find(name) != declaredNames.end())
+        return true;
+
+    if (prScope)
+        return prScope->nameBeenDeclared(name);
+
+    return false;
 }
 
 bool AST::ASTNode::hasAddress() {
@@ -149,33 +156,36 @@ bool AST::ASTNode::isConst() {
 }
 
 Type *AST::ASTTypePointer::checker(Context &ctx) {
-    return ctx.getPointer(type->checker(ctx));
+    type_of_node = ctx.getPointer(type->checker(ctx));
+    return type_of_node;
 }
 
-std::set<std::string> AST::ASTTypePointer::getDependencies() {
+std::set<std::string> AST::ASTTypePointer::getDependencies(DeclaredItems &items) {
     return {};
 }
 
 Type *AST::ASTTypeStruct::checker(Context &ctx) {
     auto res = std::unique_ptr<UnNamedStruct>();
 
-
     for (auto &i: fileds) {
         try {
             res->addNewField(i.first, i.second->checker(ctx));
-        } catch (std::invalid_argument e) {
+        } catch (std::invalid_argument &e) {
+            // TODO
             if (ctx.GlobalInit) {
-                // TODO what if res will be deleted?????
-                ctx.addForLater(i.first, i.second.get(), res.get());
+                res->addNewField(i.first, nullptr);
+                auto fillLater = res->getField(i.first);
+                ctx.addForLater(&fillLater, i.second.get());
             } else
                 throw e;
         }
     }
 
-    return ctx.addType("", std::move(res));
+    type_of_node = ctx.addType("", std::move(res));
+    return type_of_node;
 }
 
-std::set<std::string> AST::ASTTypeStruct::getDependencies() {
+std::set<std::string> AST::ASTTypeStruct::getDependencies(DeclaredItems &items) {
     std::set<std::string> res;
     for (auto &i: fileds)
         res.merge(i.second->getDependencies());
@@ -185,11 +195,11 @@ std::set<std::string> AST::ASTTypeStruct::getDependencies() {
 Type *AST::ASTTypeNamed::checker(Context &ctx) {
     auto res = ctx.getTypeByTypeName(name);
     if (res)
-        return res;
+        return res->type.get();
     throw std::invalid_argument("ERROR. Unknown type.");
 }
 
-std::set<std::string> AST::ASTTypeNamed::getDependencies() {
+std::set<std::string> AST::ASTTypeNamed::getDependencies(DeclaredItems &items) {
     if (std::find(AST::Context::base_types.begin(), AST::Context::base_types.end(), name) ==
         AST::Context::base_types.end())
         return {name};
@@ -206,33 +216,36 @@ Type *AST::ASTBinaryOperator::checker(AST::Context &ctx) {
     auto LType = left->checker(ctx);
     auto RType = right->checker(ctx);
     if ((op == BINAND || op == BINOR || op == MOD) && ctx.isInt(LType) && ctx.isInt(RType))
-        return ctx.greaterInt(LType, RType);
+        type_of_node = ctx.greaterInt(LType, RType);
 
     if ((op == LT || op == LE || op == GT || op == GE) &&
         (ctx.isInt(LType) || ctx.isFloat(LType)) && (ctx.isInt(RType) || ctx.isFloat(RType)))
-        return ctx.getTypeByTypeName("bool");
+        type_of_node = ctx.getTypeByTypeName("bool")->type.get();
 
     if ((op == EQ || op == NE) && LType->canConvertToThisType(RType))
-        return ctx.getTypeByTypeName("bool");
+        type_of_node = ctx.getTypeByTypeName("bool")->type.get();
 
     if ((op == PLUS || op == MINUS || op == MUL || op == DIV) &&
         (ctx.isInt(LType) || ctx.isFloat(LType)) && (ctx.isInt(RType) || ctx.isFloat(RType))) {
 
         if (ctx.isInt(LType) && ctx.isInt(RType))
-            return ctx.greaterInt(LType, RType);
-        return ctx.getTypeByTypeName("float");
+            type_of_node = ctx.greaterInt(LType, RType);
+        type_of_node = ctx.getTypeByTypeName("float")->type.get();
 
     }
 
     if ((op == AND || op == OR) && ctx.isBool(LType) && ctx.isBool(RType))
-        return ctx.getTypeByTypeName("bool");
+        type_of_node = ctx.getTypeByTypeName("bool")->type.get();
+
+    if (type_of_node)
+        return type_of_node;
 
     throw std::invalid_argument("ERROR. Not allowed operation above types.");
 }
 
-std::set<std::string> AST::ASTBinaryOperator::getVarNames() {
-    auto res = left->getVarNames();
-    res.merge(right->getVarNames());
+std::set<std::string> AST::ASTBinaryOperator::getDependencies(DeclaredItems &items) {
+    auto res = left->getDependencies(items);
+    res.merge(right->getDependencies(items));
     return res;
 }
 
@@ -249,34 +262,37 @@ bool AST::ASTUnaryOperator::isConst() {
 Type *AST::ASTUnaryOperator::checker(AST::Context &ctx) {
     auto Type = value->checker(ctx);
     if ((op == PLUS || op == MINUS) && (ctx.isInt(Type) || ctx.isFloat(Type)))
-        return Type;
+        type_of_node = Type;
 
     if ((op == POSTDEC || op == POSTINC || op == PREDEC || op == PREINC) && (ctx.isInt(Type) || ctx.isFloat(Type)) &&
         value->hasAddress())
-        return Type;
+        type_of_node = Type;
 
     if (op == DEREFER) {
         auto pointType = dynamic_cast<PointerType *>(Type);
         if (!pointType)
             throw std::invalid_argument("ERROR. Attempt to deref not pointer type.");
 
-        return pointType->getBase();
+        type_of_node = pointType->getBase();
     }
 
     if (op == REFER) {
         if (!value->hasAddress())
             throw std::invalid_argument("ERROR. Attempt to take pointer from non-addressable var.");
-        return ctx.getPointer(Type);
+        type_of_node = ctx.getPointer(Type);
     }
 
     if (op == NOT && ctx.isBool(Type))
-        return Type;
+        type_of_node = Type;
+
+    if (type_of_node)
+        return type_of_node;
 
     throw std::invalid_argument("ERROR. Not allowed operation above type.");
 }
 
-std::set<std::string> AST::ASTUnaryOperator::getVarNames() {
-    return value->getVarNames();
+std::set<std::string> AST::ASTUnaryOperator::getDependencies(DeclaredItems &items) {
+    return value->getDependencies(items);
 }
 
 
@@ -292,13 +308,14 @@ Type *AST::ASTFunctionCall::checker(AST::Context &ctx) {
     if (!func_type->compareArgs(args))
         throw std::invalid_argument("ERROR. Mismatch in types between passed argument type and expected type.");
 
-    return func_type->getReturn();
+    type_of_node = func_type->getReturn();
+    return type_of_node;
 }
 
-std::set<std::string> AST::ASTFunctionCall::getVarNames() {
+std::set<std::string> AST::ASTFunctionCall::getDependencies(DeclaredItems &items) {
     std::set<std::string> res;
     for (auto &i: arg)
-        res.merge(i->getVarNames());
+        res.merge(i->getDependencies(items));
     return res;
 }
 
@@ -321,11 +338,14 @@ Type *AST::ASTMemberAccess::checker(AST::Context &ctx) {
     auto field = struct_type->getField(member);
     if (!field)
         throw std::invalid_argument("ERROR. Field does not exist.");
-    return field;
+
+    type_of_node = field;
+
+    return type_of_node;
 }
 
-std::set<std::string> AST::ASTMemberAccess::getVarNames() {
-    return name->getVarNames();
+std::set<std::string> AST::ASTMemberAccess::getDependencies(DeclaredItems &items) {
+    return name->getDependencies(items);
 }
 
 bool AST::ASTIntNumber::isConst() {
@@ -333,7 +353,8 @@ bool AST::ASTIntNumber::isConst() {
 }
 
 Type *AST::ASTIntNumber::checker(AST::Context &ctx) {
-    return ctx.getTypeByTypeName("int");
+    type_of_node = ctx.getTypeByTypeName("int")->type.get();
+    return type_of_node;
 }
 
 std::set<std::string> AST::ASTIntNumber::getVarNames() {
@@ -345,10 +366,11 @@ bool AST::ASTFloatNumber::isConst() {
 }
 
 Type *AST::ASTFloatNumber::checker(AST::Context &ctx) {
-    return ctx.getTypeByTypeName("float");
+    type_of_node = ctx.getTypeByTypeName("float")->type.get();
+    return type_of_node;
 }
 
-std::set<std::string> AST::ASTFloatNumber::getVarNames() {
+std::set<std::string> AST::ASTFloatNumber::getDependencies(DeclaredItems &items) {
     return {};
 }
 
@@ -358,10 +380,11 @@ bool AST::ASTBoolNumber::isConst() {
 
 
 Type *AST::ASTBoolNumber::checker(AST::Context &ctx) {
-    return ctx.getTypeByTypeName("bool");
+    type_of_node = ctx.getTypeByTypeName("bool")->type.get();
+    return type_of_node;
 }
 
-std::set<std::string> AST::ASTBoolNumber::getVarNames() {
+std::set<std::string> AST::ASTBoolNumber::getDependencies(DeclaredItems &items) {
     return {};
 }
 
@@ -380,14 +403,14 @@ Type *AST::ASTStruct::checker(AST::Context &ctx) {
         if (field_type->canConvertToThisType(i.second->checker(ctx)))
             throw std::invalid_argument("ERROR. Filed and assigned type mismatch.");
     }
-
-    return struct_type;
+    type_of_node = struct_type;
+    return type_of_node;
 }
 
-std::set<std::string> AST::ASTStruct::getVarNames() {
+std::set<std::string> AST::ASTStruct::getDependencies(DeclaredItems &items) {
     std::set<std::string> res;
     for (auto &i: values)
-        res.merge(i.second->getVarNames());
+        res.merge(i.second->getDependencies(items));
     return res;
 }
 
@@ -402,20 +425,23 @@ bool AST::ASTVar::isConst() {
 Type *AST::ASTVar::checker(AST::Context &ctx) {
     ctx.checkIfNameExist(name);
 
-    for (auto &i: ctx.name_space)
-        if (i.name == name)
-            is_const = i.is_const;
+    is_const = ctx.getTypeByVarName(name)->is_const;
 
-
-    return ctx.getTypeByVarName(name);
+    type_of_node = ctx.getTypeByVarName(name)->type;
+    return type_of_node;
 }
 
-std::set<std::string> AST::ASTVar::getVarNames() {
+std::set<std::string> AST::ASTVar::getDependencies(DeclaredItems &items) {
     return {name};
 }
 
 void AST::dispatchedDecl::declare(Context &ctx) {
-    //TODO
+    if (is_type_decl) {
+//        ctx.addType(name,);
+        return;
+    }
+    ctx.addIntoNameSpace(name, type == nullptr ? expression->checker(ctx) : type->checker(ctx), is_const);
+
 }
 
 std::vector<AST::dispatchedDecl> AST::ASTTypeDeclaration::globalPreInit() {
@@ -434,22 +460,22 @@ Type *AST::ASTTypeDeclaration::checker(Context &ctx) {
 std::vector<AST::dispatchedDecl> AST::ASTVarDeclaration::globalPreInit() {
     std::vector<AST::dispatchedDecl> res;
     // TODO if value.size() = 1 and it is func -- parse
-    if (name.size() != value.size() && value.size() != 0)
+    if (name.size() != value.size() && !value.empty())
         throw std::invalid_argument("ERROR. Assignment number mismatch.");
 
     for (int i = 0; i < name.size(); ++i)
         if (type == nullptr)
-            res.emplace_back(name[i], value[i].get(), nullptr, value[i]->getVarNames());
+            res.emplace_back(name[i], value[i].get(), nullptr, value[i]->getDependencies());
         else
             res.emplace_back(name[i], nullptr, type.get(),
-                             value.size() == 0 ? std::set<std::string>() : value[i]->getVarNames());
+                             value.size() == 0 ? std::set<std::string>() : value[i]->getDependencies());
 
     return res;
 }
 
 Type *AST::ASTVarDeclaration::checker(Context &ctx) {
 
-    return nullptr;
+    return type_of_node;
 }
 
 std::vector<AST::dispatchedDecl> AST::ASTConstDeclaration::globalPreInit() {
@@ -460,9 +486,9 @@ std::vector<AST::dispatchedDecl> AST::ASTConstDeclaration::globalPreInit() {
 
     for (int i = 0; i < name.size(); ++i)
         if (type == nullptr)
-            res.emplace_back(name[i], value[i].get(), nullptr, value[i]->getVarNames(), false, true);
+            res.emplace_back(name[i], value[i].get(), nullptr, value[i]->getDependencies(), false, true);
         else
-            res.emplace_back(name[i], nullptr, type.get(), value[i]->getVarNames(), false, true);
+            res.emplace_back(name[i], nullptr, type.get(), value[i]->getDependencies(), false, true);
 
     return res;
 }
@@ -478,22 +504,22 @@ Type *AST::ASTConstDeclaration::checker(Context &ctx) {
 }
 
 Type *AST::ASTBlock::checker(Context &ctx) {
-    ctx.goDeeper();
+    Context new_ctx;
+    new_ctx.setPrCtx(ctx);
     for (auto &i: statements)
-        i->checker(ctx);
-    ctx.goUp();
-    return nullptr;
+        i->checker(new_ctx);
+    return type_of_node;
 }
 
 Type *AST::ASTBreak::checker(Context &ctx) {
     if (ctx.in_switch || ctx.in_loop)
-        return nullptr;
+        return type_of_node;
     throw std::invalid_argument("ERROR. Called Break statement not in switch case or not in loop");
 }
 
 Type *AST::ASTContinue::checker(Context &ctx) {
     if (ctx.in_loop)
-        return nullptr;
+        return type_of_node;
     throw std::invalid_argument("ERROR. Called Continue statement not in loop");
 }
 
@@ -511,44 +537,46 @@ Type *AST::ASTReturn::checker(Context &ctx) {
 Type *AST::ASTSwitch::checker(Context &ctx) {
     auto type_of_stat = expr->checker(ctx);
     for (auto &i: cases) {
-        ctx.goDeeper(false, true);
-        if (!type_of_stat->canConvertToThisType(i.first->checker(ctx)))
+        Context new_ctx;
+        new_ctx.setPrCtx(ctx, false, true);
+        if (!type_of_stat->canConvertToThisType(i.first->checker(new_ctx)))
             throw std::invalid_argument("ERROR. Not comparable types between case and expression.");
-        i.second->checker(ctx);
-        ctx.goUp();
+        i.second->checker(new_ctx);
     }
 
-    return nullptr;
+    return type_of_node;
 }
 
 Type *AST::ASTIf::checker(Context &ctx) {
     auto type_of_clause = if_clause->checker(ctx);
-    if (!ctx.getTypeByTypeName("bool")->canConvertToThisType(type_of_clause))
+    if (!ctx.getTypeByTypeName("bool")->type->canConvertToThisType(type_of_clause))
         throw std::invalid_argument("ERROR. If clause cannot be converted to bool");
 
     if_clause->checker(ctx);
     if (else_clause)
         else_clause->checker(ctx);
 
-    return nullptr;
+    return type_of_node;
 }
 
 Type *AST::ASTFor::checker(Context &ctx) {
-    ctx.goDeeper(true);
-    for (auto &i: init_clause)
-        i->checker(ctx);
 
-    auto type_of_clause = if_clause->checker(ctx);
-    if (!ctx.getTypeByTypeName("bool")->canConvertToThisType(type_of_clause))
+    Context new_ctx;
+    new_ctx.setPrCtx(ctx, true, false);
+
+    for (auto &i: init_clause)
+        i->checker(new_ctx);
+
+    auto type_of_clause = if_clause->checker(new_ctx);
+    if (!ctx.getTypeByTypeName("bool")->type->canConvertToThisType(type_of_clause))
         throw std::invalid_argument("ERROR. If clause cannot be converted to bool");
 
     for (auto &i: iterate_clause)
-        i->checker(ctx);
+        i->checker(new_ctx);
 
-    body->checker(ctx);
+    body->checker(new_ctx);
 
-    ctx.goUp();
-    return nullptr;
+    return type_of_node;
 }
 
 
@@ -556,6 +584,8 @@ Type *AST::ASTAssign::checker(Context &ctx) {
 
     for (int i = 0; i < variable.size(); ++i) {
         auto var_type = variable[i]->checker(ctx);
+        if (variable[i]->isConst())
+            throw std::invalid_argument("ERROR. Cannot change type of const val.");
         if (!variable[i]->hasAddress())
             throw std::invalid_argument("ERROR. Var is not assignable type.");
         auto val_type = value[i]->checker(ctx);
@@ -563,37 +593,36 @@ Type *AST::ASTAssign::checker(Context &ctx) {
             throw std::invalid_argument("ERROR. Var and assigned value not the same types");
     }
 
-    return nullptr;
+    return type_of_node;
 }
 
 Type *AST::Function::checker(Context &ctx) {
-    ctx.goDeeper();
+    Context new_ctx;
+    new_ctx.setPrCtx(ctx);
 
     if (type_of_method) {
-        ctx.addIntoNameSpace(inner_name, type_of_method->checker(ctx));
+        ctx.addIntoNameSpace(inner_name, type_of_method->checker(new_ctx));
     }
 
     for (auto &i: params)
         for (auto &j: i.first)
-            ctx.addIntoNameSpace(j, i.second->checker(ctx));
+            ctx.addIntoNameSpace(j, i.second->checker(new_ctx));
 
 
-    for (auto &i: return_type)
-        ctx.return_type.emplace_back(i->checker(ctx));
+    if (return_type)
+        ctx.return_type.emplace_back(return_type->checker(new_ctx));
 
-    body->checker(ctx);
+    body->checker(new_ctx);
 
-    ctx.goUp();
-
-    return nullptr;
+    return type_of_node;
 }
 
 void AST::Function::globalPreInit(Context &ctx) {
     auto new_function_type = std::make_unique<FunctionType>();
 
     // todo with return
-    if (return_type.size() == 1)
-        new_function_type->setReturn(return_type[0]->checker(ctx));
+    if (return_type)
+        new_function_type->setReturn(return_type->checker(ctx));
 
 
     for (auto &i: params)
@@ -665,7 +694,8 @@ Type *AST::Program::checker(Context &ctx) {
     for (auto &i: functions)
         i->checker(ctx);
 
-    return nullptr;
+
+    return type_of_node;
 }
 
 std::queue<AST::dispatchedDecl> AST::Program::topSort(std::vector<dispatchedDecl> g) {

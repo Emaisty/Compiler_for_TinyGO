@@ -18,104 +18,6 @@ namespace AST {
 
     class ASTType;
 
-    struct ItemInNameSpace {
-
-        ItemInNameSpace(std::string new_name, Type *new_type, int new_level, bool new_is_const = false)
-                : name(new_name),
-                  type(new_type),
-                  level(new_level), is_const(new_is_const) {}
-
-        std::string name;
-        Type *type;
-        int level;
-        bool is_const;
-
-
-    };
-
-    struct ItemInTypeSpace {
-
-        ItemInTypeSpace(std::string new_name, std::unique_ptr<Type> &&new_type, int new_level)
-                : name(new_name),
-                  type(std::move(new_type)),
-                  level(new_level) {}
-
-        std::string name;
-        std::unique_ptr<Type> type;
-        int level;
-
-    };
-
-    struct Context {
-
-        Context();
-
-        std::vector<ItemInNameSpace> name_space;
-
-        std::vector<ItemInTypeSpace> type_space;
-
-        std::map<Type *, PointerType *> pointers;
-
-        bool in_loop = false;
-        bool in_switch = false;
-        int level = 0;
-        std::vector<Type *> return_type;
-
-        bool GlobalInit = true;
-
-        void checkIfNameExist(std::string);
-
-        void checkIfTypeExist(std::string);
-
-        //Go into loop/switch
-        void goDeeper(bool, bool);
-
-        void goUp();
-
-        Type *getTypeByTypeName(std::string);
-
-        Type *getTypeByVarName(std::string);
-
-        Type *addType(std::string, std::unique_ptr<Type> &&);
-
-        void addIntoNameSpace(std::string, Type *);
-
-        Type *getPointer(Type *);
-
-        bool isInt(const Type *);
-
-        Type *greaterInt(const Type *, const Type *);
-
-        bool isFloat(const Type *);
-
-        bool isBool(const Type *);
-
-        void addForLater(std::string, ASTType *, UnNamedStruct *);
-
-        void fillLaterStack();
-
-        inline static std::vector<std::string> base_types = {"int8", "int32", "int64", "bool", "float"};
-
-    private:
-
-        struct fullFillLater {
-            std::string name;
-
-            ASTType *type;
-
-            UnNamedStruct *struc;
-
-        };
-
-        std::vector<fullFillLater> unfinishedDecl;
-
-        std::stack<bool> pr_loop_status;
-        std::stack<bool> pr_switch_status;
-
-        int count_for_tmp_types = 0;
-
-
-    };
 
 
     class ASTNode {
@@ -126,21 +28,14 @@ namespace AST {
 
         void addLineNumber(int line_num);
 
-        virtual bool hasAddress();
-
-        virtual bool isConst();
-
-        virtual Type *checker(Context &) = 0;
-
-    private:
+    protected:
         int line;
+
+
     };
 
     class ASTType : public ASTNode {
     public:
-
-        virtual std::set<std::string> getDependencies() = 0;
-
     protected:
     };
 
@@ -152,10 +47,6 @@ namespace AST {
         ASTTypePointer(std::unique_ptr<ASTType> &&new_type);
 
         ASTType *getValue();
-
-        Type *checker(Context &) override;
-
-        std::set<std::string> getDependencies() override;
 
     private:
         std::unique_ptr<ASTType> type;
@@ -170,9 +61,6 @@ namespace AST {
 
         ASTType *findField(std::string name) const;
 
-        Type *checker(Context &) override;
-
-        std::set<std::string> getDependencies() override;
 
     private:
         std::vector<std::pair<std::string, std::unique_ptr<ASTType >>> fileds;
@@ -182,9 +70,6 @@ namespace AST {
     public:
         ASTTypeNamed(std::string new_name) : name(new_name) {};
 
-        Type *checker(Context &) override;
-
-        std::set<std::string> getDependencies() override;
 
     private:
         std::string name;
@@ -203,9 +88,6 @@ namespace AST {
 
     class ASTExpression : public Statement {
     public:
-
-        virtual std::set<std::string> getVarNames() = 0;
-
     private:
     };
 
@@ -225,12 +107,6 @@ namespace AST {
         ASTBinaryOperator(std::unique_ptr<ASTExpression> &&, std::unique_ptr<ASTExpression> &&,
                           Operator new_op = PLUS);
 
-        bool isConst() override;
-
-        Type *checker(Context &) override;
-
-        std::set<std::string> getVarNames() override;
-
     private:
         std::unique_ptr<ASTExpression> left, right;
         Operator op;
@@ -244,14 +120,6 @@ namespace AST {
 
         ASTUnaryOperator(std::unique_ptr<ASTExpression> &&, Operator new_op = PLUS);
 
-        bool hasAddress() override;
-
-        bool isConst() override;
-
-        Type *checker(Context &) override;
-
-        std::set<std::string> getVarNames() override;
-
     private:
         Operator op;
         std::unique_ptr<ASTExpression> value;
@@ -261,10 +129,6 @@ namespace AST {
     public:
 
         ASTFunctionCall(std::unique_ptr<ASTExpression> &&, std::vector<std::unique_ptr<ASTExpression>> &);
-
-        Type *checker(Context &) override;
-
-        std::set<std::string> getVarNames() override;
 
     private:
         std::unique_ptr<ASTExpression> name;
@@ -276,11 +140,6 @@ namespace AST {
 
         ASTMemberAccess(std::unique_ptr<ASTExpression> &&, std::string &);
 
-        bool hasAddress() override;
-
-        Type *checker(Context &) override;
-
-        std::set<std::string> getVarNames() override;
 
     private:
         std::unique_ptr<ASTExpression> name;
@@ -294,12 +153,6 @@ namespace AST {
 
         ASTIntNumber(const int new_value = 0);
 
-        bool isConst() override;
-
-        Type *checker(Context &) override;
-
-        std::set<std::string> getVarNames() override;
-
     private:
         long long int value = 0;
     };
@@ -309,12 +162,6 @@ namespace AST {
 
         ASTFloatNumber(double new_value = 0);
 
-        bool isConst() override;
-
-        Type *checker(Context &) override;
-
-        std::set<std::string> getVarNames() override;
-
     private:
         double value = 0;
     };
@@ -323,12 +170,6 @@ namespace AST {
     public:
 
         ASTBoolNumber(const bool new_value = false);
-
-        bool isConst() override;
-
-        Type *checker(Context &) override;
-
-        std::set<std::string> getVarNames() override;
 
     private:
         bool value = false;
@@ -340,12 +181,6 @@ namespace AST {
         ASTStruct(std::unique_ptr<ASTTypeStruct> &&,
                   std::vector<std::pair<std::string, std::unique_ptr<ASTExpression>>> &);
 
-        bool isConst() override;
-
-        Type *checker(Context &) override;
-
-        std::set<std::string> getVarNames() override;
-
     private:
         std::unique_ptr<ASTType> type;
         std::vector<std::pair<std::string, std::unique_ptr<ASTExpression>>> values;
@@ -356,15 +191,7 @@ namespace AST {
 
         ASTVar(const std::string new_name);
 
-        bool hasAddress() override;
-
-        bool isConst() override;
-
         std::string getName();
-
-        Type *checker(Context &) override;
-
-        std::set<std::string> getVarNames() override;
 
     private:
         std::string name;
@@ -372,24 +199,6 @@ namespace AST {
         bool is_const = false;
     };
 
-    struct dispatchedDecl {
-        std::string name;
-        ASTExpression *expression;
-        ASTType *type;
-
-        std::set<std::string> depends;
-
-        bool is_type_decl;
-
-        bool is_const;
-
-        dispatchedDecl(std::string new_name = "", ASTExpression *expr = nullptr, ASTType *new_type = nullptr,
-                       std::set<std::string> &&depend = {}, bool flag_type = false, bool flag_const = false) : name(
-                new_name), expression(expr), type(new_type), depends(depend), is_type_decl(flag_type), is_const(
-                flag_const) {}
-
-        void declare(Context &);
-    };
 
 
     class ASTDeclaration : public Statement {
@@ -402,8 +211,6 @@ namespace AST {
 
         ASTDeclaration(std::vector<std::string> &&new_name, std::unique_ptr<ASTType> &&);
 
-
-        virtual std::vector<dispatchedDecl> globalPreInit() = 0;
 
     protected:
         std::vector<std::string> name;
@@ -418,20 +225,12 @@ namespace AST {
     public:
         using ASTDeclaration::ASTDeclaration;
 
-        std::vector<dispatchedDecl> globalPreInit() override;
-
-        Type *checker(Context &) override;
-
     private:
     };
 
     class ASTVarDeclaration : public ASTDeclaration {
     public:
         using ASTDeclaration::ASTDeclaration;
-
-        std::vector<dispatchedDecl> globalPreInit() override;
-
-        Type *checker(Context &) override;
 
     private:
 
@@ -441,10 +240,6 @@ namespace AST {
     class ASTConstDeclaration : public ASTDeclaration {
     public:
         using ASTDeclaration::ASTDeclaration;
-
-        std::vector<dispatchedDecl> globalPreInit() override;
-
-        Type *checker(Context &) override;
 
     private:
     };
@@ -456,8 +251,6 @@ namespace AST {
 
         void addStatement(std::unique_ptr<AST::Statement> &&);
 
-        Type *checker(Context &) override;
-
     private:
         std::vector<std::unique_ptr<AST::Statement>> statements;
     };
@@ -467,8 +260,6 @@ namespace AST {
 
         ASTBreak() = default;
 
-        Type *checker(Context &) override;
-
     private:
 
     };
@@ -477,8 +268,6 @@ namespace AST {
     public:
 
         ASTContinue() = default;
-
-        Type *checker(Context &) override;
 
     private:
 
@@ -490,8 +279,6 @@ namespace AST {
         ASTReturn() = default;
 
         void addReturnValue(std::unique_ptr<ASTExpression> &&);
-
-        Type *checker(Context &) override;
 
     private:
         std::vector<std::unique_ptr<AST::ASTExpression>> return_value;
@@ -505,8 +292,6 @@ namespace AST {
         void addExpr(std::unique_ptr<ASTExpression> &&);
 
         void addCase(std::unique_ptr<ASTExpression> &&, std::unique_ptr<AST::ASTBlock> &&);
-
-        Type *checker(Context &) override;
 
     private:
         std::unique_ptr<ASTExpression> expr;
@@ -525,8 +310,6 @@ namespace AST {
         void addIfClause(std::unique_ptr<AST::ASTBlock> &&);
 
         void addElseClause(std::unique_ptr<AST::ASTBlock> &&);
-
-        Type *checker(Context &) override;
 
     private:
         std::unique_ptr<AST::ASTExpression> expr;
@@ -547,8 +330,6 @@ namespace AST {
 
         void addBody(std::unique_ptr<AST::ASTBlock> &&);
 
-        Type *checker(Context &) override;
-
     private:
         std::vector<std::unique_ptr<AST::Statement>> init_clause, iterate_clause;
 
@@ -568,8 +349,6 @@ namespace AST {
         ASTAssign(std::vector<std::unique_ptr<AST::ASTExpression>> &&,
                   std::vector<std::unique_ptr<AST::ASTExpression>> &&,
                   TypeOfAssign new_type);
-
-        Type *checker(Context &) override;
 
     private:
 
@@ -592,16 +371,12 @@ namespace AST {
 
         void setBody(std::unique_ptr<AST::ASTBlock> &&);
 
-        Type *checker(Context &) override;
-
-        void globalPreInit(Context &);
-
     private:
         std::string name;
 
         std::vector<std::pair<std::vector<std::string>, std::unique_ptr<ASTType>>> params;
 
-        std::vector<std::unique_ptr<AST::ASTType>> return_type;
+        std::unique_ptr<AST::ASTType> return_type;
 
         std::unique_ptr<AST::Statement> body;
 
@@ -626,10 +401,6 @@ namespace AST {
         void addTypeDecl(std::unique_ptr<ASTDeclaration> &&);
 
         void addFunction(std::unique_ptr<Function> &&);
-
-        Type *checker(Context &) override;
-
-        std::queue<dispatchedDecl> topSort(std::vector<dispatchedDecl>);
 
     private:
         std::string name;

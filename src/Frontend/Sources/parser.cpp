@@ -789,26 +789,25 @@ void Parser::parseFuncSignature(std::unique_ptr<AST::Function> &function) {
     //if func return something
     if (cur_tok != tok_opfigbr) {
 
+
         std::vector<std::unique_ptr<AST::ASTType>> return_type;
 
-        if (cur_tok == tok_opbr) {
-            //maybe multiple of them
-            matchAndGoNext(tok_opbr);
-            do {
-                return_type.emplace_back(std::move(parseType()));
-            } while (cur_tok == tok_comma && (cur_tok = lexer.gettok()));
-            matchAndGoNext(tok_clbr);
+        // TODO in future maybe return multiple return types
+//        if (cur_tok == tok_opbr) {
+//            //maybe multiple of them
+//            matchAndGoNext(tok_opbr);
+//            do {
+//                return_type.emplace_back(std::move(parseType()));
+//            } while (cur_tok == tok_comma && (cur_tok = lexer.gettok()));
+//            matchAndGoNext(tok_clbr);
+//
+//        } else
+        // just a single type
+        return_type.emplace_back(std::move(parseType()));
 
-        } else
-            // just a single type
-            return_type.emplace_back(std::move(parseType()));
 
-
-        if (return_type.size() == 1)
-            function->addReturn(std::move(return_type[0]));
-        else
-            for (auto &i: return_type)
-                function->addReturn(std::move(i));
+        for (auto &i: return_type)
+            function->addReturn(std::move(i));
 
     }
 
@@ -826,7 +825,7 @@ std::unique_ptr<AST::Function> Parser::parseFunction() {
         match(tok_identifier);
         auto name_of_struct = lexer.identifierStr();
         matchAndGoNext(tok_identifier);
-        res->setMethod(name_of_struct,parseType());
+        res->setMethod(name_of_struct, parseType());
         matchAndGoNext(tok_clbr);
     }
 
