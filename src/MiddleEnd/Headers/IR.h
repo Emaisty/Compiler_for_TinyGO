@@ -11,7 +11,11 @@ namespace IR {
 
     class IRLine {
     public:
+
+        void addUse(IRLine *);
+
     private:
+        std::vector<IRLine *> uses;
     };
 
     class IRIntValue : public IRLine {
@@ -24,6 +28,11 @@ namespace IR {
     public:
     private:
         double value;
+    };
+
+    class IRNullValue : public IRLine {
+    public:
+    private:
     };
 
     class IRLabel : public IRLine {
@@ -46,25 +55,31 @@ namespace IR {
     class IRAlloca : public IRLine {
     public:
     private:
-        IRType *type;
+        std::unique_ptr<IRType> type;
     };
 
     class IRGlobal : public IRLine {
     public:
     private:
-
-        IRType *type;
-        IRLine *value;
+        std::unique_ptr<IRType> type;
+        std::unique_ptr<IRLine> value;
     };
 
     class IRFunc : public IRLine {
     public:
 
-    private:
+        void addDecl(std::unique_ptr<IRLine> &&);
 
+        void addBody(std::unique_ptr<IRLine> &&);
+
+    private:
+        std::unique_ptr<>;
+
+        std::vector<std::unique_ptr<IRLine>> decls;
+        std::unique_ptr<IRLine> body;
     };
 
-    class IRProgram {
+    class IRProgram : public IRLine {
     public:
 
         void addLine(std::unique_ptr<IRLine> &&);

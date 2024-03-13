@@ -5,10 +5,13 @@
 int main() {
 
     Parser p("../main.go");
-    if (!p.parse())
+    auto tree = p.parse();
+    if (!tree){
+        std::cerr << "Unsuccessful parsing." << std::endl;
         return 0;
+    }
 
-//    p.printIR(std::cout);
+
 
     return 0;
 }

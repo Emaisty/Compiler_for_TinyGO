@@ -13,7 +13,7 @@ public:
 
     ~Parser() = default;
 
-    bool parse();
+    std::unique_ptr<AST::Program> parse();
 
     void printIR(std::ostream &os);
 
@@ -127,8 +127,6 @@ private:
     void matchAndGoNext(Token tok);
 
     Token cur_tok;
-
-    AST::Program program;
 
     Lexer lexer;
 
