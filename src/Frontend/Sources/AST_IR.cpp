@@ -1,27 +1,56 @@
 #include "AST.h"
 
-std::unique_ptr<IR::IRLine> AST::ASTTypeDeclaration::generateIR(ContextForIR &ctx) {
+void AST::ASTTypeDeclaration::generateIR(ContextForIR &ctx) {
 
 }
 
-std::unique_ptr<IR::IRLine> AST::ASTVarDeclaration::generateIR(ContextForIR &ctx) {
-
-}
-
-std::unique_ptr<IR::IRLine> AST::ASTConstDeclaration::generateIR(ContextForIR &ctx) {
+void AST::ASTVarDeclaration::generateIR(ContextForIR &ctx) {
     if (!ctx.topFunc) {
         auto globAlloca = std::make_unique<IR::IRGlobal>();
 
+        return;
     }
+    auto block = std::make_unique<IR::IRBlock>();
 
+
+    ctx.topFunc->addDecl(std::move(block));
     return nullptr;
 }
 
-std::unique_ptr<IR::IRLine> AST::Function::generateIR(ContextForIR &ctx) {
+void AST::ASTConstDeclaration::generateIR(ContextForIR &ctx) {
+    if (!ctx.topFunc) {
+        auto globAlloca = std::make_unique<IR::IRGlobal>();
+
+        return globAlloca;
+    }
+    auto block = std::make_unique<IR::IRBlock>();
+
+
+    ctx.topFunc->addDecl(std::move(block));
+    return nullptr;
+}
+
+
+
+void AST::ASTIf::generateIR(ContextForIR &ctx) {
 
 }
 
-std::unique_ptr<IR::IRLine> AST::Program::generateIR(ContextForIR &ctx) {
+void AST::ASTFor::generateIR(ContextForIR &ctx) {
+
+}
+
+void AST::ASTAssign::generateIR(ContextForIR &ctx) {
+    auto store = std::make_unique<IR::IRStore>();
+
+    return;
+}
+
+void AST::Function::generateIR(ContextForIR &ctx) {
+
+}
+
+void AST::Program::generateIR(ContextForIR &ctx) {
     auto program = std::make_unique<IR::IRProgram>();
 
     for (auto &i: varDeclarations)

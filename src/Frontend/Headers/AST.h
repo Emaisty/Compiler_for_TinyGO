@@ -21,7 +21,7 @@ namespace AST {
         IR::IRLine *continueLabel;
         IR::IRLine *breakLabel;
         IR::IRFunc *topFunc;
-
+        IR::IRProgram *program;
     };
 
 
@@ -36,7 +36,7 @@ namespace AST {
 
         void addLineNumber(int line_num);
 
-        virtual std::unique_ptr<IR::IRLine> generateIR(ContextForIR &) = 0;
+        virtual void generateIR(ContextForIR &) = 0;
 
     protected:
         int line;
@@ -58,7 +58,7 @@ namespace AST {
 
         ASTType *getValue();
 
-        std::unique_ptr<IR::IRLine> generateIR(ContextForIR &) override;
+        void generateIR(ContextForIR &) override;
 
     private:
         std::unique_ptr<ASTType> type;
@@ -73,7 +73,7 @@ namespace AST {
 
         ASTType *findField(std::string name) const;
 
-        std::unique_ptr<IR::IRLine> generateIR(ContextForIR &) override;
+        void generateIR(ContextForIR &) override;
 
 
     private:
@@ -84,7 +84,7 @@ namespace AST {
     public:
         ASTTypeNamed(std::string new_name) : name(new_name) {};
 
-        std::unique_ptr<IR::IRLine> generateIR(ContextForIR &) override;
+        void generateIR(ContextForIR &) override;
 
     private:
         std::string name;
@@ -122,7 +122,7 @@ namespace AST {
         ASTBinaryOperator(std::unique_ptr<ASTExpression> &&, std::unique_ptr<ASTExpression> &&,
                           Operator new_op = PLUS);
 
-        std::unique_ptr<IR::IRLine> generateIR(ContextForIR &) override;
+        void generateIR(ContextForIR &) override;
 
     private:
         std::unique_ptr<ASTExpression> left, right;
@@ -137,7 +137,7 @@ namespace AST {
 
         ASTUnaryOperator(std::unique_ptr<ASTExpression> &&, Operator new_op = PLUS);
 
-        std::unique_ptr<IR::IRLine> generateIR(ContextForIR &) override;
+        void generateIR(ContextForIR &) override;
 
     private:
         Operator op;
@@ -149,7 +149,7 @@ namespace AST {
 
         ASTFunctionCall(std::unique_ptr<ASTExpression> &&, std::vector<std::unique_ptr<ASTExpression>> &);
 
-        std::unique_ptr<IR::IRLine> generateIR(ContextForIR &) override;
+        void generateIR(ContextForIR &) override;
 
     private:
         std::unique_ptr<ASTExpression> name;
@@ -161,7 +161,7 @@ namespace AST {
 
         ASTMemberAccess(std::unique_ptr<ASTExpression> &&, std::string &);
 
-        std::unique_ptr<IR::IRLine> generateIR(ContextForIR &) override;
+        void generateIR(ContextForIR &) override;
 
     private:
         std::unique_ptr<ASTExpression> name;
@@ -175,7 +175,7 @@ namespace AST {
 
         ASTIntNumber(const int new_value = 0);
 
-        std::unique_ptr<IR::IRLine> generateIR(ContextForIR &) override;
+        void generateIR(ContextForIR &) override;
 
     private:
         long long int value = 0;
@@ -186,7 +186,7 @@ namespace AST {
 
         ASTFloatNumber(double new_value = 0);
 
-        std::unique_ptr<IR::IRLine> generateIR(ContextForIR &) override;
+        void generateIR(ContextForIR &) override;
 
     private:
         double value = 0;
@@ -197,7 +197,7 @@ namespace AST {
 
         ASTBoolNumber(const bool new_value = false);
 
-        std::unique_ptr<IR::IRLine> generateIR(ContextForIR &) override;
+        void generateIR(ContextForIR &) override;
 
     private:
         bool value = false;
@@ -209,7 +209,7 @@ namespace AST {
         ASTStruct(std::unique_ptr<ASTTypeStruct> &&,
                   std::vector<std::pair<std::string, std::unique_ptr<ASTExpression>>> &);
 
-        std::unique_ptr<IR::IRLine> generateIR(ContextForIR &) override;
+        void generateIR(ContextForIR &) override;
 
     private:
         std::unique_ptr<ASTType> type;
@@ -223,7 +223,7 @@ namespace AST {
 
         std::string getName();
 
-        std::unique_ptr<IR::IRLine> generateIR(ContextForIR &) override;
+        void generateIR(ContextForIR &) override;
 
     private:
         std::string name;
@@ -256,7 +256,7 @@ namespace AST {
     public:
         using ASTDeclaration::ASTDeclaration;
 
-        std::unique_ptr<IR::IRLine> generateIR(ContextForIR &) override;
+        void generateIR(ContextForIR &) override;
 
     private:
     };
@@ -265,7 +265,7 @@ namespace AST {
     public:
         using ASTDeclaration::ASTDeclaration;
 
-        std::unique_ptr<IR::IRLine> generateIR(ContextForIR &) override;
+        void generateIR(ContextForIR &) override;
 
     private:
 
@@ -276,7 +276,7 @@ namespace AST {
     public:
         using ASTDeclaration::ASTDeclaration;
 
-        std::unique_ptr<IR::IRLine> generateIR(ContextForIR &) override;
+        void generateIR(ContextForIR &) override;
 
     private:
     };
@@ -288,7 +288,7 @@ namespace AST {
 
         void addStatement(std::unique_ptr<AST::Statement> &&);
 
-        std::unique_ptr<IR::IRLine> generateIR(ContextForIR &) override;
+        void generateIR(ContextForIR &) override;
 
     private:
         std::vector<std::unique_ptr<AST::Statement>> statements;
@@ -299,7 +299,7 @@ namespace AST {
 
         ASTBreak() = default;
 
-        std::unique_ptr<IR::IRLine> generateIR(ContextForIR &) override;
+        void generateIR(ContextForIR &) override;
 
     private:
 
@@ -310,7 +310,7 @@ namespace AST {
 
         ASTContinue() = default;
 
-        std::unique_ptr<IR::IRLine> generateIR(ContextForIR &) override;
+        void generateIR(ContextForIR &) override;
 
     private:
 
@@ -323,7 +323,7 @@ namespace AST {
 
         void addReturnValue(std::unique_ptr<ASTExpression> &&);
 
-        std::unique_ptr<IR::IRLine> generateIR(ContextForIR &) override;
+        void generateIR(ContextForIR &) override;
 
     private:
         std::vector<std::unique_ptr<AST::ASTExpression>> return_value;
@@ -338,7 +338,7 @@ namespace AST {
 
         void addCase(std::unique_ptr<ASTExpression> &&, std::unique_ptr<AST::ASTBlock> &&);
 
-        std::unique_ptr<IR::IRLine> generateIR(ContextForIR &) override;
+        void generateIR(ContextForIR &) override;
 
     private:
         std::unique_ptr<ASTExpression> expr;
@@ -358,7 +358,7 @@ namespace AST {
 
         void addElseClause(std::unique_ptr<AST::ASTBlock> &&);
 
-        std::unique_ptr<IR::IRLine> generateIR(ContextForIR &) override;
+        void generateIR(ContextForIR &) override;
 
     private:
         std::unique_ptr<AST::ASTExpression> expr;
@@ -379,7 +379,7 @@ namespace AST {
 
         void addBody(std::unique_ptr<AST::ASTBlock> &&);
 
-        std::unique_ptr<IR::IRLine> generateIR(ContextForIR &) override;
+        void generateIR(ContextForIR &) override;
 
     private:
         std::vector<std::unique_ptr<AST::Statement>> init_clause, iterate_clause;
@@ -401,7 +401,7 @@ namespace AST {
                   std::vector<std::unique_ptr<AST::ASTExpression>> &&,
                   TypeOfAssign new_type);
 
-        std::unique_ptr<IR::IRLine> generateIR(ContextForIR &) override;
+        void generateIR(ContextForIR &) override;
 
     private:
 
@@ -424,7 +424,7 @@ namespace AST {
 
         void setBody(std::unique_ptr<AST::ASTBlock> &&);
 
-        std::unique_ptr<IR::IRLine> generateIR(ContextForIR &) override;
+        void generateIR(ContextForIR &) override;
 
     private:
         std::string name;
@@ -457,7 +457,7 @@ namespace AST {
 
         void addFunction(std::unique_ptr<Function> &&);
 
-        std::unique_ptr<IR::IRLine> generateIR(ContextForIR &) override;
+        void generateIR(ContextForIR &) override;
 
     private:
         std::string name;

@@ -38,7 +38,7 @@ namespace IR {
     class IRLabel : public IRLine {
     public:
     private:
-
+        std::string name;
     };
 
     class IRLoad : public IRLine {
@@ -60,9 +60,32 @@ namespace IR {
 
     class IRGlobal : public IRLine {
     public:
+        void addValue(std::unique_ptr<IRLine>)
+
     private:
         std::unique_ptr<IRType> type;
         std::unique_ptr<IRLine> value;
+    };
+
+    class IRBlock : public IRLine {
+    public:
+        void addLine(std::unique_ptr<IRLine> &&);
+
+    private:
+        std::vector<std::unique_ptr<IRLine>> block;
+    };
+
+    class IRCMP : public IRLine {
+    public:
+    private:
+
+    };
+
+    class IRBranch : public IRLine {
+    public:
+    private:
+        std::unique_ptr<IRLine> result;
+        IRLine *brT, brNT;
     };
 
     class IRFunc : public IRLine {
