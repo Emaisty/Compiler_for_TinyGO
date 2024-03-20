@@ -1,34 +1,41 @@
 #include "AST.h"
 
 AST::Context::Context() {
+    typeSpace.emplace_back();
+    nameSpace.emplace_back();
     for (auto &i: base_types) {
         if (i == "int8")
-            addType(i, std::make_unique<IntType>(8));
+            addAliasType(i, addType(std::make_unique<IntType>(8)));
         if (i == "int32")
-            addType(i, std::make_unique<IntType>(32));
+            addAliasType(i, addType(std::make_unique<IntType>(32)));
         if (i == "int64")
-            addType(i, std::make_unique<IntType>(64));
+            addAliasType(i, addType(std::make_unique<IntType>(64)));
         if (i == "bool")
-            addType(i, std::make_unique<BoolType>());
+            addAliasType(i, addType(std::make_unique<BoolType>()));
         if (i == "float")
-            addType(i, std::make_unique<FloatType>());
+            addAliasType(i, addType(std::make_unique<FloatType>()));
+
     }
 }
 
-void AST::Context::checkIfNameExist(std::string name) {
-    for (auto &i: name_space)
-        if (i.name == name)
-            throw std::invalid_argument("ERROR. This name already exists");
+bool AST::Context::checkIfNameExist(std::string name) {
+    for (long long i = nameSpace.size() - 1; i >= 0; i--)
+        if (nameSpace[i].find(name) != nameSpace[i].end())
+            return true;
+    return false;
 }
 
-void AST::Context::checkIfTypeExist(std::string name) {
-    for (auto &i: type_space)
-        if (i.name == name)
-            throw std::invalid_argument("ERROR. This type already exists");
+bool AST::Context::checkIfTypeExist(std::string name) {
+    for (long long i = typeSpace.size() - 1; i >= 0; i--)
+        if (typeSpace[i].find(name) != typeSpace[i].end())
+            return true;
+    return false;
 }
 
 void AST::Context::goDeeper(bool go_in_loop = false, bool go_in_switch = false) {
-    level += 1;
+    typeSpace.emplace_back();
+    nameSpace.emplace_back();
+
     pr_loop_status.push(in_loop);
     pr_switch_status.push(in_switch);
     in_loop = go_in_loop || in_loop;
@@ -36,15 +43,9 @@ void AST::Context::goDeeper(bool go_in_loop = false, bool go_in_switch = false) 
 }
 
 void AST::Context::goUp() {
-    for (int i = name_space.size() - 1; i >= 0; --i)
-        if (name_space[i].level == level)
-            name_space.erase(name_space.end() - 1, name_space.end());
+    typeSpace.erase(typeSpace.end() - 1, typeSpace.end());
+    nameSpace.erase(nameSpace.end() - 1, nameSpace.end());
 
-    for (int i = type_space.size() - 1; i >= 0; --i)
-        if (type_space[i].level == level)
-            type_space.erase(type_space.end() - 1, type_space.end());
-
-    level -= 1;
     in_loop = pr_loop_status.top();
     in_switch = pr_switch_status.top();
 }
@@ -52,54 +53,73 @@ void AST::Context::goUp() {
 Type *AST::Context::getTypeByTypeName(std::string name) {
     if (name == "int")
         name = "int32";
-    for (auto &i: type_space)
-        if (i.name == name)
-            return i.type.get();
+    for (long long i = typeSpace.size() - 1; i >= 0; i--)
+        if (typeSpace[i].find(name) != typeSpace[i].end())
+            return typeSpace[i][name];
+
     return nullptr;
 }
 
-Type *AST::Context::getTypeByVarName(std::string name) {
-    for (auto &i: name_space)
-        if (i.name == name)
-            return i.type;
+AST::ItemInNameSpace *AST::Context::getInfByVarName(std::string name) {
+    for (long long i = nameSpace.size() - 1; i >= 0; i--)
+        if (nameSpace[i].find(name) != nameSpace[i].end())
+            return &nameSpace[i][name];
+
     return nullptr;
 }
 
-Type *AST::Context::addType(std::string new_name, std::unique_ptr<Type> &&new_type) {
-    if (!new_name.empty()) {
-        // add Alias created by user like "type [name] [type]"
-        checkIfTypeExist(new_name);
-        type_space.emplace_back(new_name, std::move(new_type), level);
-        return type_space.back().type.get();
-    } else {
-        // add type which uses by program but user havent define by himself
+Type *AST::Context::addType(std::unique_ptr<Type> &&new_type) {
+    for (auto &i: existItems)
+        if (i->compareSignatures(new_type.get()))
+            return i.get();
 
-        for (auto &i: type_space) {
-            if (i.type->compareSignatures(new_type.get()))
-                return i.type.get();
-        }
-
-        // if not -- add with unreachable name
-        type_space.emplace_back("", std::move(new_type), 0);
-        return type_space.back().type.get();
-    }
+    existItems.emplace_back(std::move(new_type));
+    return existItems[existItems.size() - 1].get();
 }
 
-void AST::Context::addIntoNameSpace(std::string new_name, Type *new_type) {
-    checkIfNameExist(new_name);
-    name_space.emplace_back(new_name, new_type, level);
+Type *AST::Context::addAliasType(std::string new_name, Type *new_type) {
+    typeSpace[typeSpace.size() - 1][new_name] = new_type;
+    return new_type;
+}
+
+void AST::Context::addIntoNameSpace(std::string new_name, Type *new_type, bool is_const = false) {
+    if (checkIfNameExist(new_name))
+        throw std::invalid_argument("ERROR. Var with such name (" + new_name + ") already exists.");
+    nameSpace[nameSpace.size() - 1][new_name] = ItemInNameSpace(new_type, is_const);
 }
 
 Type *AST::Context::getPointer(Type *base_type) {
-    auto pointer = pointers.find(base_type);
-    if (pointer != pointers.end())
-        return pointer->second;
+    if (pointers.find(base_type) != pointers.end())
+        return pointers[base_type];
 
     auto new_pointer = std::make_unique<PointerType>(base_type);
     pointers[base_type] = new_pointer.get();
 
-    addType("", std::move(new_pointer));
-    return pointers.find(base_type)->second;
+    addType(std::move(new_pointer));
+    return pointers[base_type];
+}
+
+Type *AST::Context::addForLater(std::unique_ptr<Type> &&new_tmp_type) {
+    linksToType[new_tmp_type.get()] = std::vector<Type **>();
+    this->notYetFinishedTypes.emplace_back(std::move(new_tmp_type));
+
+    return notYetFinishedTypes[notYetFinishedTypes.size() - 1].get();
+}
+
+void AST::Context::addFieldFillInLater(ASTType *type_node, Type **type) {
+    notYetFinishedFields.emplace_back(type_node, type);
+}
+
+void AST::Context::fillUpEmptyField() {
+    for (auto &i: notYetFinishedFields) {
+        *i.second = i.first->checker(*this);
+    }
+
+}
+
+void AST::Context::transFromTmpTypes() {
+    for (auto &i: notYetFinishedTypes)
+        addType(std::move(i));
 }
 
 bool AST::Context::isInt(const Type *other) {
@@ -131,15 +151,6 @@ bool AST::Context::isBool(const Type *other) {
     return false;
 }
 
-void AST::Context::addForLater(std::string new_name, ASTType *new_type, UnNamedStruct *unNamedStruct) {
-    unfinishedDecl.emplace_back(new_name, new_type, unNamedStruct);
-}
-
-void AST::Context::fillLaterStack() {
-    for (auto &i: unfinishedDecl)
-        i.struc->addNewField(i.name, i.type->checker(*this));
-}
-
 bool AST::ASTNode::hasAddress() {
     return false;
 }
@@ -157,22 +168,20 @@ std::set<std::string> AST::ASTTypePointer::getDependencies() {
 }
 
 Type *AST::ASTTypeStruct::checker(Context &ctx) {
-    auto res = std::unique_ptr<UnNamedStruct>();
-
-
+    auto res = std::make_unique<StructType>();
     for (auto &i: fileds) {
         try {
             res->addNewField(i.first, i.second->checker(ctx));
         } catch (std::invalid_argument e) {
             if (ctx.GlobalInit) {
-                // TODO what if res will be deleted?????
-                ctx.addForLater(i.first, i.second.get(), res.get());
+                res->addNewField(i.first, nullptr);
+                ctx.addFieldFillInLater(i.second.get(), res->getDoubleLinkToField(i.first));
             } else
                 throw e;
         }
     }
 
-    return ctx.addType("", std::move(res));
+    return ctx.addType(std::move(res));
 }
 
 std::set<std::string> AST::ASTTypeStruct::getDependencies() {
@@ -206,28 +215,31 @@ Type *AST::ASTBinaryOperator::checker(AST::Context &ctx) {
     auto LType = left->checker(ctx);
     auto RType = right->checker(ctx);
     if ((op == BINAND || op == BINOR || op == MOD) && ctx.isInt(LType) && ctx.isInt(RType))
-        return ctx.greaterInt(LType, RType);
+        typeOfNode = ctx.greaterInt(LType, RType);
 
     if ((op == LT || op == LE || op == GT || op == GE) &&
         (ctx.isInt(LType) || ctx.isFloat(LType)) && (ctx.isInt(RType) || ctx.isFloat(RType)))
-        return ctx.getTypeByTypeName("bool");
+        typeOfNode = ctx.getTypeByTypeName("bool");
 
     if ((op == EQ || op == NE) && LType->canConvertToThisType(RType))
-        return ctx.getTypeByTypeName("bool");
+        typeOfNode = ctx.getTypeByTypeName("bool");
 
     if ((op == PLUS || op == MINUS || op == MUL || op == DIV) &&
         (ctx.isInt(LType) || ctx.isFloat(LType)) && (ctx.isInt(RType) || ctx.isFloat(RType))) {
 
         if (ctx.isInt(LType) && ctx.isInt(RType))
-            return ctx.greaterInt(LType, RType);
-        return ctx.getTypeByTypeName("float");
+            typeOfNode = ctx.greaterInt(LType, RType);
+        typeOfNode = ctx.getTypeByTypeName("float");
 
     }
 
     if ((op == AND || op == OR) && ctx.isBool(LType) && ctx.isBool(RType))
-        return ctx.getTypeByTypeName("bool");
+        typeOfNode = ctx.getTypeByTypeName("bool");
 
-    throw std::invalid_argument("ERROR. Not allowed operation above types.");
+    if (!typeOfNode)
+        throw std::invalid_argument("ERROR. Not allowed operation above types.");
+
+    return typeOfNode;
 }
 
 std::set<std::string> AST::ASTBinaryOperator::getVarNames() {
@@ -249,30 +261,32 @@ bool AST::ASTUnaryOperator::isConst() {
 Type *AST::ASTUnaryOperator::checker(AST::Context &ctx) {
     auto Type = value->checker(ctx);
     if ((op == PLUS || op == MINUS) && (ctx.isInt(Type) || ctx.isFloat(Type)))
-        return Type;
+        typeOfNode = Type;
 
     if ((op == POSTDEC || op == POSTINC || op == PREDEC || op == PREINC) && (ctx.isInt(Type) || ctx.isFloat(Type)) &&
         value->hasAddress())
-        return Type;
+        typeOfNode = Type;
 
     if (op == DEREFER) {
         auto pointType = dynamic_cast<PointerType *>(Type);
         if (!pointType)
             throw std::invalid_argument("ERROR. Attempt to deref not pointer type.");
 
-        return pointType->getBase();
+        typeOfNode = pointType->getBase();
     }
 
     if (op == REFER) {
         if (!value->hasAddress())
             throw std::invalid_argument("ERROR. Attempt to take pointer from non-addressable var.");
-        return ctx.getPointer(Type);
+        typeOfNode = ctx.getPointer(Type);
     }
 
     if (op == NOT && ctx.isBool(Type))
-        return Type;
+        typeOfNode = Type;
 
-    throw std::invalid_argument("ERROR. Not allowed operation above type.");
+    if (!typeOfNode)
+        throw std::invalid_argument("ERROR. Not allowed operation above type.");
+    return typeOfNode;
 }
 
 std::set<std::string> AST::ASTUnaryOperator::getVarNames() {
@@ -292,7 +306,9 @@ Type *AST::ASTFunctionCall::checker(AST::Context &ctx) {
     if (!func_type->compareArgs(args))
         throw std::invalid_argument("ERROR. Mismatch in types between passed argument type and expected type.");
 
-    return func_type->getReturn();
+
+    typeOfNode = func_type->getReturn();
+    return typeOfNode;
 }
 
 std::set<std::string> AST::ASTFunctionCall::getVarNames() {
@@ -321,7 +337,8 @@ Type *AST::ASTMemberAccess::checker(AST::Context &ctx) {
     auto field = struct_type->getField(member);
     if (!field)
         throw std::invalid_argument("ERROR. Field does not exist.");
-    return field;
+    typeOfNode = field;
+    return typeOfNode;
 }
 
 std::set<std::string> AST::ASTMemberAccess::getVarNames() {
@@ -333,7 +350,8 @@ bool AST::ASTIntNumber::isConst() {
 }
 
 Type *AST::ASTIntNumber::checker(AST::Context &ctx) {
-    return ctx.getTypeByTypeName("int");
+    typeOfNode = ctx.getTypeByTypeName("int");
+    return typeOfNode;
 }
 
 std::set<std::string> AST::ASTIntNumber::getVarNames() {
@@ -345,7 +363,8 @@ bool AST::ASTFloatNumber::isConst() {
 }
 
 Type *AST::ASTFloatNumber::checker(AST::Context &ctx) {
-    return ctx.getTypeByTypeName("float");
+    typeOfNode = ctx.getTypeByTypeName("float");
+    return typeOfNode;
 }
 
 std::set<std::string> AST::ASTFloatNumber::getVarNames() {
@@ -358,7 +377,8 @@ bool AST::ASTBoolNumber::isConst() {
 
 
 Type *AST::ASTBoolNumber::checker(AST::Context &ctx) {
-    return ctx.getTypeByTypeName("bool");
+    typeOfNode = ctx.getTypeByTypeName("bool");
+    return typeOfNode;
 }
 
 std::set<std::string> AST::ASTBoolNumber::getVarNames() {
@@ -381,7 +401,8 @@ Type *AST::ASTStruct::checker(AST::Context &ctx) {
             throw std::invalid_argument("ERROR. Filed and assigned type mismatch.");
     }
 
-    return struct_type;
+    typeOfNode = struct_type;
+    return typeOfNode;
 }
 
 std::set<std::string> AST::ASTStruct::getVarNames() {
@@ -400,35 +421,28 @@ bool AST::ASTVar::isConst() {
 }
 
 Type *AST::ASTVar::checker(AST::Context &ctx) {
-    ctx.checkIfNameExist(name);
 
-    for (auto &i: ctx.name_space)
-        if (i.name == name)
-            is_const = i.is_const;
+    auto var = ctx.getInfByVarName(name);
+    is_const = var->is_const;
 
-
-    return ctx.getTypeByVarName(name);
+    typeOfNode = var->type;
+    return typeOfNode;
 }
 
 std::set<std::string> AST::ASTVar::getVarNames() {
     return {name};
 }
 
-void AST::dispatchedDecl::declare(Context &ctx) {
-    //TODO
-}
-
 std::vector<AST::dispatchedDecl> AST::ASTTypeDeclaration::globalPreInit() {
-    return {dispatchedDecl(name[0], nullptr, type.get(), type->getDependencies(), true)};
+    return {dispatchedDecl(name[0], this, type->getDependencies())};
 }
 
 Type *AST::ASTTypeDeclaration::checker(Context &ctx) {
-//    if (ctx.level != 0) {
-//        ctx.checkIfTypeExist(name[0]);
-//        ctx.addType(name[0], type->checker(ctx)->makeUnique());
-//    }
-//    return nullptr;
-//    TODO
+    if (!ctx.GlobalInit && ctx.checkIfTypeExist(name[0]))
+        throw std::invalid_argument("ERROR. Name " + name[0] + " used twice during declaration.");
+
+    ctx.addAliasType(name[0], type->checker(ctx));
+    return nullptr;
 }
 
 std::vector<AST::dispatchedDecl> AST::ASTVarDeclaration::globalPreInit() {
@@ -438,11 +452,7 @@ std::vector<AST::dispatchedDecl> AST::ASTVarDeclaration::globalPreInit() {
         throw std::invalid_argument("ERROR. Assignment number mismatch.");
 
     for (int i = 0; i < name.size(); ++i)
-        if (type == nullptr)
-            res.emplace_back(name[i], value[i].get(), nullptr, value[i]->getVarNames());
-        else
-            res.emplace_back(name[i], nullptr, type.get(),
-                             value.size() == 0 ? std::set<std::string>() : value[i]->getVarNames());
+        res.emplace_back(name[i], this, value[i]->getVarNames());
 
     return res;
 }
@@ -459,10 +469,7 @@ std::vector<AST::dispatchedDecl> AST::ASTConstDeclaration::globalPreInit() {
         throw std::invalid_argument("ERROR. Assignment number mismatch.");
 
     for (int i = 0; i < name.size(); ++i)
-        if (type == nullptr)
-            res.emplace_back(name[i], value[i].get(), nullptr, value[i]->getVarNames(), false, true);
-        else
-            res.emplace_back(name[i], nullptr, type.get(), value[i]->getVarNames(), false, true);
+        res.emplace_back(name[i], this, value[i]->getVarNames());
 
     return res;
 }
@@ -602,24 +609,24 @@ void AST::Function::globalPreInit(Context &ctx) {
 
     //if it is method
     if (type_of_method) {
-        NamedStructure *structType;
-        if (dynamic_cast<NamedStructure *>(type_of_method->checker(ctx)))
-            structType = dynamic_cast<NamedStructure *>(type_of_method->checker(ctx));
+        StructType *structType;
+        if (dynamic_cast<StructType *>(type_of_method->checker(ctx)))
+            structType = dynamic_cast<StructType *>(type_of_method->checker(ctx));
 
         if (dynamic_cast<PointerType *>(type_of_method->checker(ctx)) &&
-            dynamic_cast<NamedStructure *>(dynamic_cast<PointerType *>(type_of_method->checker(ctx))->getBase()))
-            structType = dynamic_cast<NamedStructure *>(dynamic_cast<PointerType *>(type_of_method->checker(
+            dynamic_cast<StructType *>(dynamic_cast<PointerType *>(type_of_method->checker(ctx))->getBase()))
+            structType = dynamic_cast<StructType *>(dynamic_cast<PointerType *>(type_of_method->checker(
                     ctx))->getBase());
 
         if (!structType)
             throw std::invalid_argument("ERROR. Cannot create method for such type.");
 
-        structType->addNewField(name, ctx.addType("", std::move(new_function_type)));
+        structType->addNewField(name, ctx.addType(std::move(new_function_type)));
         return;
     }
 
     // if it is function
-    ctx.addIntoNameSpace(name, ctx.addType("", std::move(new_function_type)));
+    ctx.addIntoNameSpace(name, ctx.addType(std::move(new_function_type)));
 }
 
 
@@ -630,16 +637,32 @@ Type *AST::Program::checker(Context &ctx) {
         for (auto &i: typeDeclarations)
             declarations.push_back(i->globalPreInit()[0]);
 
+        // check if there is the same names
+        for (long long i = 0; i < declarations.size(); ++i)
+            for (long long j = i + 1; j < declarations.size(); ++j)
+                if (i != j && declarations[i].name == declarations[j].name)
+                    throw std::invalid_argument(
+                            "ERROR. Name " + declarations[i].name + " used twice during declaration.");
+
+        // sort types in an order
         auto q = topSort(declarations);
 
+        // first round of declarations.
         while (!q.empty()) {
-            q.front().declare(ctx);
+            q.front().decl->checker(ctx);
+
             q.pop();
         }
-        // TODO post declarations
+
+        // Fulfill empty fields, which occur in case of a forward declaration.
+        ctx.fillUpEmptyField();
+
+        // run second round of declarations.
+        for (auto &i: typeDeclarations)
+            i->checker(ctx);
+
     }
 
-    //
     for (auto &i: functions)
         i->globalPreInit(ctx);
 
@@ -653,7 +676,7 @@ Type *AST::Program::checker(Context &ctx) {
         auto q = topSort(declarations);
 
         while (!q.empty()) {
-            q.front().declare(ctx);
+//            q.front().declare(ctx);
             q.pop();
         }
     }

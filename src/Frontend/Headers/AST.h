@@ -20,52 +20,28 @@ namespace AST {
 
     struct ItemInNameSpace {
 
-        ItemInNameSpace(std::string new_name, Type *new_type, int new_level, bool new_is_const = false)
-                : name(new_name),
-                  type(new_type),
-                  level(new_level), is_const(new_is_const) {}
+        ItemInNameSpace(Type *new_type = nullptr, bool new_is_const = false) :
+                type(new_type), is_const(new_is_const) {}
 
-        std::string name;
         Type *type;
-        int level;
         bool is_const;
-
-
     };
 
-    struct ItemInTypeSpace {
-
-        ItemInTypeSpace(std::string new_name, std::unique_ptr<Type> &&new_type, int new_level)
-                : name(new_name),
-                  type(std::move(new_type)),
-                  level(new_level) {}
-
-        std::string name;
-        std::unique_ptr<Type> type;
-        int level;
-
-    };
 
     struct Context {
-
         Context();
 
-        std::vector<ItemInNameSpace> name_space;
-
-        std::vector<ItemInTypeSpace> type_space;
-
-        std::map<Type *, PointerType *> pointers;
-
         bool in_loop = false;
+
         bool in_switch = false;
-        int level = 0;
-        std::vector<Type *> return_type;
 
         bool GlobalInit = true;
 
-        void checkIfNameExist(std::string);
+        std::vector<Type *> return_type;
 
-        void checkIfTypeExist(std::string);
+        bool checkIfNameExist(std::string);
+
+        bool checkIfTypeExist(std::string);
 
         //Go into loop/switch
         void goDeeper(bool, bool);
@@ -74,13 +50,26 @@ namespace AST {
 
         Type *getTypeByTypeName(std::string);
 
-        Type *getTypeByVarName(std::string);
+        ItemInNameSpace *getInfByVarName(std::string);
 
-        Type *addType(std::string, std::unique_ptr<Type> &&);
+        Type *addType(std::unique_ptr<Type> &&);
 
-        void addIntoNameSpace(std::string, Type *);
+        Type *addAliasType(std::string, Type *);
+
+        void addIntoNameSpace(std::string, Type *, bool);
 
         Type *getPointer(Type *);
+
+        Type *addForLater(std::unique_ptr<Type> &&);
+
+        void addFieldFillInLater(ASTType *, Type **);
+
+        void fillUpEmptyField();
+
+        void transFromTmpTypes();
+
+        inline static std::vector<std::string> base_types = {"int8", "int32", "int", "int64", "bool", "float"};
+
 
         bool isInt(const Type *);
 
@@ -90,29 +79,81 @@ namespace AST {
 
         bool isBool(const Type *);
 
-        void addForLater(std::string, ASTType *, UnNamedStruct *);
-
-        void fillLaterStack();
-
-        inline static std::vector<std::string> base_types = {"int8", "int32", "int64", "bool", "float"};
-
     private:
 
-        struct fullFillLater {
-            std::string name;
+        std::vector<std::unique_ptr<Type>> existItems;
 
-            ASTType *type;
+        std::vector<std::map<std::string, ItemInNameSpace>> nameSpace;
 
-            UnNamedStruct *struc;
+        std::vector<std::map<std::string, Type *>> typeSpace;
 
-        };
-
-        std::vector<fullFillLater> unfinishedDecl;
+        std::map<Type *, PointerType *> pointers;
 
         std::stack<bool> pr_loop_status;
         std::stack<bool> pr_switch_status;
 
-        int count_for_tmp_types = 0;
+        std::vector<std::unique_ptr<Type>> notYetFinishedTypes;
+
+        std::vector<std::pair<ASTType *, Type **>> notYetFinishedFields;
+
+        std::map<Type *, std::vector<Type **>> linksToType;
+
+//
+//        std::vector<ItemInNameSpace> name_space;
+//
+//        std::vector<ItemInTypeSpace> type_space;
+//
+//        std::map<Type *, PointerType *> pointers;
+//
+//        bool in_loop = false;
+//        bool in_switch = false;
+//        int level = 0;
+//        std::vector<Type *> return_type;
+//
+
+//
+//        void checkIfNameExist(std::string);
+//
+//        void checkIfTypeExist(std::string);
+//
+//        //Go into loop/switch
+//        void goDeeper(bool, bool);
+//
+//        void goUp();
+//
+//        Type *getTypeByTypeName(std::string);
+//
+//        Type *getTypeByVarName(std::string);
+//
+//        Type *addType(std::string, std::unique_ptr<Type> &&);
+//
+//        void addIntoNameSpace(std::string, Type *);
+//
+//        Type *getPointer(Type *);
+//
+
+//
+//        void addForLater(std::string, ASTType *, UnNamedStruct *);
+//
+//        void fillLaterStack();
+//
+
+//
+//    private:
+//
+//        struct fullFillLater {
+//            std::string name;
+//
+//            ASTType *type;
+//
+//            UnNamedStruct *struc;
+//
+//        };
+//
+//        std::vector<fullFillLater> unfinishedDecl;
+//
+//
+//        int count_for_tmp_types = 0;
 
 
     };
@@ -131,6 +172,8 @@ namespace AST {
         virtual bool isConst();
 
         virtual Type *checker(Context &) = 0;
+
+        Type *typeOfNode = nullptr;
 
     private:
         int line;
@@ -372,23 +415,18 @@ namespace AST {
         bool is_const = false;
     };
 
+    class ASTDeclaration;
+
     struct dispatchedDecl {
         std::string name;
-        ASTExpression *expression;
-        ASTType *type;
+
+        ASTDeclaration *decl;
 
         std::set<std::string> depends;
 
-        bool is_type_decl;
-
-        bool is_const;
-
-        dispatchedDecl(std::string new_name = "", ASTExpression *expr = nullptr, ASTType *new_type = nullptr,
-                       std::set<std::string> &&depend = {}, bool flag_type = false, bool flag_const = false) : name(
-                new_name), expression(expr), type(new_type), depends(depend), is_type_decl(flag_type), is_const(
-                flag_const) {}
-
-        void declare(Context &);
+        dispatchedDecl(std::string new_name = "", ASTDeclaration *new_decl = nullptr,
+                       std::set<std::string> &&depend = {}) : name(
+                new_name), decl(new_decl), depends(depend) {}
     };
 
 

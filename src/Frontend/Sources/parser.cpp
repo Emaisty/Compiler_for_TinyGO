@@ -16,11 +16,13 @@ Parser::Parser(char *str) {
     cur_tok = lexer.gettok();
 }
 
-bool Parser::parse() {
+std::unique_ptr<AST::Program> Parser::parse() {
+
+    auto program = std::make_unique<AST::Program>();
     matchAndGoNext(tok_package);
 
     match(tok_identifier);
-    program.setName(lexer.identifierStr());
+    program->setName(lexer.identifierStr());
 
     cur_tok = lexer.gettok();
 
@@ -29,7 +31,7 @@ bool Parser::parse() {
             // function
             case tok_func: {
                 auto tmp = parseFunction();
-                program.addFunction(std::move(tmp));
+                program->addFunction(std::move(tmp));
                 break;
             }
                 // declaration
@@ -37,7 +39,7 @@ bool Parser::parse() {
             case tok_type: {
                 matchAndGoNext(tok_type);
                 for (auto &i: parseDeclarationBlock(std::bind(&Parser::parseTypeDeclarationLine, this)))
-                    program.addTypeDecl(std::move(i));
+                    program->addTypeDecl(std::move(i));
                 if (!checkForSeparator())
                     throw std::invalid_argument("ERROR. No separator after declaration");
                 break;
@@ -45,7 +47,7 @@ bool Parser::parse() {
             case tok_const: {
                 matchAndGoNext(tok_type);
                 for (auto &i: parseDeclarationBlock(std::bind(&Parser::parseConstDeclarationLine, this)))
-                    program.addVarDecl(std::move(i));
+                    program->addVarDecl(std::move(i));
                 if (!checkForSeparator())
                     throw std::invalid_argument("ERROR. No separator after declaration");
                 break;
@@ -53,19 +55,17 @@ bool Parser::parse() {
             case tok_var: {
                 matchAndGoNext(tok_type);
                 for (auto &i: parseDeclarationBlock(std::bind(&Parser::parseVarDeclarationLine, this)))
-                    program.addVarDecl(std::move(i));
+                    program->addVarDecl(std::move(i));
                 if (!checkForSeparator())
                     throw std::invalid_argument("ERROR. No separator after declaration");
                 break;
             }
             default:
-                return false;
+                return nullptr;
         }
 
     }
-//    program.checker();
-    return true;
-
+    return program;
 }
 
 void Parser::printIR(std::ostream &os) {
@@ -826,7 +826,7 @@ std::unique_ptr<AST::Function> Parser::parseFunction() {
         match(tok_identifier);
         auto name_of_struct = lexer.identifierStr();
         matchAndGoNext(tok_identifier);
-        res->setMethod(name_of_struct,parseType());
+        res->setMethod(name_of_struct, parseType());
         matchAndGoNext(tok_clbr);
     }
 

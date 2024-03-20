@@ -47,51 +47,24 @@ private:
 class StructType : public Type {
 public:
 
-    virtual void addNewField(std::string, Type *) = 0;
-
-    virtual Type *getField(std::string) const = 0;
-
-private:
-
-
-};
-
-class UnNamedStruct : public StructType {
-public:
-
     bool canConvertToThisType(const Type *other) const override;
 
     bool compareSignatures(const Type *other) const override;
 
-    void addNewField(std::string, Type *) override;
+    void addNewField(std::string, Type *) ;
 
-    Type *getField(std::string) const override;
+    Type *getField(std::string) const;
+
+    Type** getDoubleLinkToField(std::string);
 
     bool nameAlreadyExists(std::string);
 
 private:
 
     std::vector<std::pair<std::string, Type *>> fields;
+
+
 };
-
-class NamedStructure : public StructType {
-public:
-    NamedStructure(std::string new_name, UnNamedStruct *new_type) : name(new_name), base_struct(new_type) {}
-
-    bool canConvertToThisType(const Type *other) const override;
-
-    void addNewField(std::string, Type *) override;
-
-    Type *getField(std::string) const override;
-
-    UnNamedStruct *base_struct;
-
-private:
-    std::string name;
-
-    std::vector<std::pair<std::string, Type *>> methods;
-};
-
 
 class PointerType : public Type {
 public:
@@ -128,22 +101,36 @@ private:
     Type *return_type;
 };
 
+//class NamedType : public Type {
+//public:
+//
+//    NamedType(std::string, Type*);
+//
+//    bool canConvertToThisType(const Type *other) const override;
+//
+//    bool compareSignatures(const Type *other) const override;
+//
+//private:
+//    std::string name;
+//    Type *type;
+//};
 
-// this class created only for times, when func returns more than 1 type at the same time
-class SeqType : public Type {
-public:
 
-    bool canConvertToThisType(const Type *other) const override;
-
-    bool compareSignatures(const Type *other) const override;
-
-    void addType(Type*);
-
-    std::vector<Type*> getTypes();
-
-private:
-
-    std::vector<Type*> types;
-};
+//// this class created only for times, when func returns more than 1 type at the same time
+//class SeqType : public Type {
+//public:
+//
+//    bool canConvertToThisType(const Type *other) const override;
+//
+//    bool compareSignatures(const Type *other) const override;
+//
+//    void addType(Type *);
+//
+//    std::vector<Type *> getTypes();
+//
+//private:
+//
+//    std::vector<Type *> types;
+//};
 
 #endif //COMPILER_TYPES_H

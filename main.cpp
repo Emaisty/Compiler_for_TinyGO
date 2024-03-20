@@ -5,8 +5,12 @@
 int main() {
 
     Parser p("../main.go");
-    if (!p.parse())
+    auto root = p.parse();
+    if (!root)
         return 0;
+
+    AST::Context ctx;
+    root->checker(ctx);
 
 //    p.printIR(std::cout);
 
