@@ -1,82 +1,63 @@
 #include "AST.h"
 
-std::shared_ptr<IR::IRType> AST::ASTTypeNull::generateIR() {
-    return std::make_shared<IR::IRTypeNull>();
+void AST::ASTTypeDeclaration::generateIR(ContextForIR &ctx) {
+
 }
 
-std::shared_ptr<IR::IRType> AST::ASTTypeInt::generateIR() {
-    return std::make_shared<IR::IRTypeInt>(bits);
-}
+void AST::ASTVarDeclaration::generateIR(ContextForIR &ctx) {
+    if (!ctx.topFunc) {
+        auto globAlloca = std::make_unique<IR::IRGlobal>();
 
-std::shared_ptr<IR::IRType> AST::ASTTypeFloat::generateIR() {
-    return std::make_shared<IR::IRTypeFloat>();
-}
-
-std::shared_ptr<IR::IRType> AST::ASTTypeBool::generateIR() {
-    return std::make_shared<IR::IRTypeInt>(1);
-}
-
-std::shared_ptr<IR::IRType> AST::ASTTypePointer::generateIR() {
-    return std::make_shared<IR::IRTypePointer>(type->generateIR());
-}
-
-std::shared_ptr<IR::IRType> AST::ASTTypeStruct::generateIR() {
-    auto res = std::make_shared<IR::IRTypeStruct>();
-    for (auto &i: fileds) {
-        res->addFiled(i.second->generateIR());
+        return;
     }
-    return res;
+    auto block = std::make_unique<IR::IRBlock>();
+
+
+    ctx.topFunc->addDecl(std::move(block));
+    return nullptr;
 }
 
-std::shared_ptr<IR::IRType> AST::ASTTypeNamed::generateIR() {
+void AST::ASTConstDeclaration::generateIR(ContextForIR &ctx) {
+    if (!ctx.topFunc) {
+        auto globAlloca = std::make_unique<IR::IRGlobal>();
+
+        return globAlloca;
+    }
+    auto block = std::make_unique<IR::IRBlock>();
+
+
+    ctx.topFunc->addDecl(std::move(block));
+    return nullptr;
+}
+
+
+
+void AST::ASTIf::generateIR(ContextForIR &ctx) {
 
 }
 
-std::shared_ptr<IR::IRGlobalDecl> AST::ASTTypeDeclaration::generateIRGlobal() const {
-    auto res = std::make_shared<IR::IRGlobalTypeDecl>();
-    res->addName(name);
-    res->addType(type->generateIR());
+void AST::ASTFor::generateIR(ContextForIR &ctx) {
 
-    return res;
 }
 
-std::shared_ptr<IR::IRGlobalDecl> AST::ASTVarDeclaration::generateIRGlobal() const {
-    auto res = std::make_shared<IR::IRGlobalVarDecl>();
-    res->addName(name);
-    res->addType(type->generateIR());
-    // TODO value
+void AST::ASTAssign::generateIR(ContextForIR &ctx) {
+    auto store = std::make_unique<IR::IRStore>();
 
-    return res;
+    return;
 }
 
-std::shared_ptr<IR::IRGlobalDecl> AST::ASTConstDeclaration::generateIRGlobal() const {
-    auto res = std::make_shared<IR::IRGlobalVarDecl>();
-    res->addName(name);
-    res->addType(type->generateIR());
-    // TODO value
+void AST::Function::generateIR(ContextForIR &ctx) {
 
-    return res;
 }
 
-std::shared_ptr<IR::IRFunc> AST::Function::generateFunc() {
-    auto res = std::make_shared<IR::IRFunc>();
-    res->addName(name);
-    res->addReturn(return_type->generateIR());
-    for (auto &i: params)
-        res->addArg(i.second->generateIR());
+void AST::Program::generateIR(ContextForIR &ctx) {
+    auto program = std::make_unique<IR::IRProgram>();
 
-    return res;
-}
-
-std::unique_ptr<IR::IRProgram> AST::Program::generateIR() {
-    auto res = std::make_unique<IR::IRProgram>();
-
-    for (auto &i: declarations)
-        res->addDecl(i->generateIRGlobal());
+    for (auto &i: varDeclarations)
+        program->addLine(i->generateIR(ctx));
 
     for (auto &i: functions)
-        res->addFunc(i->generateFunc());
+        program->addLine(i->generateIR(ctx));
 
-    return std::move(res);
+    return program;
 }
-
