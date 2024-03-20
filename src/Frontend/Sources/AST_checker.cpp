@@ -160,7 +160,8 @@ bool AST::ASTNode::isConst() {
 }
 
 Type *AST::ASTTypePointer::checker(Context &ctx) {
-    return ctx.getPointer(type->checker(ctx));
+    typeOfNode = ctx.getPointer(type->checker(ctx));
+    return typeOfNode;
 }
 
 std::set<std::string> AST::ASTTypePointer::getDependencies() {
@@ -180,8 +181,8 @@ Type *AST::ASTTypeStruct::checker(Context &ctx) {
                 throw e;
         }
     }
-
-    return ctx.addType(std::move(res));
+    typeOfNode = ctx.addType(std::move(res));
+    return typeOfNode;
 }
 
 std::set<std::string> AST::ASTTypeStruct::getDependencies() {
@@ -192,9 +193,9 @@ std::set<std::string> AST::ASTTypeStruct::getDependencies() {
 }
 
 Type *AST::ASTTypeNamed::checker(Context &ctx) {
-    auto res = ctx.getTypeByTypeName(name);
-    if (res)
-        return res;
+    typeOfNode = ctx.getTypeByTypeName(name);
+    if (typeOfNode)
+        return typeOfNode;
     throw std::invalid_argument("ERROR. Unknown type.");
 }
 
@@ -422,6 +423,8 @@ bool AST::ASTVar::isConst() {
 
 Type *AST::ASTVar::checker(AST::Context &ctx) {
 
+    if (!ctx.checkIfNameExist(name))
+        throw std::invalid_argument("ERROR. Unknown name (" + name + ") for a variable");
     auto var = ctx.getInfByVarName(name);
     is_const = var->is_const;
 
@@ -431,6 +434,30 @@ Type *AST::ASTVar::checker(AST::Context &ctx) {
 
 std::set<std::string> AST::ASTVar::getVarNames() {
     return {name};
+}
+
+void AST::dispatchedDecl::declareVars(Context &ctx) {
+
+    if (ctx.checkIfNameExist(name))
+        throw std::invalid_argument("ERROR. Such name (" + name + ") for var already exists.");
+
+    if (type && !type->typeOfNode)
+        type->checker(ctx);
+
+    if (!type) {
+        ctx.addIntoNameSpace(name, expr->checker(ctx), const_var);
+        return;
+    }
+
+    if (expr) {
+        auto type_of_expr = expr->checker(ctx);
+        if (!type->typeOfNode->canConvertToThisType(type_of_expr))
+            throw std::invalid_argument("ERROR. Type of var and type of expression different.");
+    }
+
+    ctx.addIntoNameSpace(name, type->typeOfNode, const_var);
+
+
 }
 
 std::vector<AST::dispatchedDecl> AST::ASTTypeDeclaration::globalPreInit() {
@@ -452,12 +479,40 @@ std::vector<AST::dispatchedDecl> AST::ASTVarDeclaration::globalPreInit() {
         throw std::invalid_argument("ERROR. Assignment number mismatch.");
 
     for (int i = 0; i < name.size(); ++i)
-        res.emplace_back(name[i], this, value[i]->getVarNames());
+        res.emplace_back(name[i], this, value.size() > 0 ? value[i]->getVarNames() : std::set<std::string>(),
+                         value.size() > 0 ? value[i].get() : nullptr, type.get());
+
 
     return res;
 }
 
 Type *AST::ASTVarDeclaration::checker(Context &ctx) {
+    if (type && !type->typeOfNode)
+        type->checker(ctx);
+
+    if (name.size() != value.size() && value.size() != 0)
+        throw std::invalid_argument("ERROR. Assignment number mismatch.");
+
+    for (auto i = 0; i < name.size(); ++i) {
+
+        if (ctx.checkIfNameExist(name[i]))
+            throw std::invalid_argument("ERROR. Such name (" + name[i] + ") for var already exists.");
+
+        if (!type) {
+            ctx.addIntoNameSpace(name[i], value[i]->checker(ctx));
+            continue;
+        }
+
+        if (!value.empty()) {
+            auto type_of_expr = value[i]->checker(ctx);
+            if (!type->typeOfNode->canConvertToThisType(type_of_expr))
+                throw std::invalid_argument("ERROR. Type of var and type of expression different.");
+        }
+
+        ctx.addIntoNameSpace(name[i], type->typeOfNode);
+
+    }
+
 
     return nullptr;
 }
@@ -469,18 +524,38 @@ std::vector<AST::dispatchedDecl> AST::ASTConstDeclaration::globalPreInit() {
         throw std::invalid_argument("ERROR. Assignment number mismatch.");
 
     for (int i = 0; i < name.size(); ++i)
-        res.emplace_back(name[i], this, value[i]->getVarNames());
+        res.emplace_back(name[i], this, value[i]->getVarNames(), value[i].get(), type.get(), true);
 
     return res;
 }
 
 Type *AST::ASTConstDeclaration::checker(Context &ctx) {
-    for (int i = 0; i < name.size(); ++i) {
-        ctx.checkIfNameExist(name[i]);
-        if (!value[i]->isConst())
-            throw std::invalid_argument("ERROR. Not constable expression is tried to passed to const var.");
+    if (type && !type->typeOfNode)
+        type->checker(ctx);
+
+    if (name.size() != value.size())
+        throw std::invalid_argument("ERROR. Assignment number mismatch.");
+
+    for (auto i = 0; i < name.size(); ++i) {
+
+        if (ctx.checkIfNameExist(name[i]))
+            throw std::invalid_argument("ERROR. Such name (" + name[i] + ") for var already exists.");
+
+        if (!type) {
+            ctx.addIntoNameSpace(name[i], value[i]->checker(ctx), true);
+            continue;
+        }
+
+        auto type_of_expr = value[i]->checker(ctx);
+        if (!type->typeOfNode->canConvertToThisType(type_of_expr))
+            throw std::invalid_argument("ERROR. Type of var and type of expression different.");
+
+
+        ctx.addIntoNameSpace(name[i], type->typeOfNode, true);
 
     }
+
+
     return nullptr;
 }
 
@@ -529,7 +604,7 @@ Type *AST::ASTSwitch::checker(Context &ctx) {
 }
 
 Type *AST::ASTIf::checker(Context &ctx) {
-    auto type_of_clause = if_clause->checker(ctx);
+    auto type_of_clause = expr->checker(ctx);
     if (!ctx.getTypeByTypeName("bool")->canConvertToThisType(type_of_clause))
         throw std::invalid_argument("ERROR. If clause cannot be converted to bool");
 
@@ -642,7 +717,7 @@ Type *AST::Program::checker(Context &ctx) {
             for (long long j = i + 1; j < declarations.size(); ++j)
                 if (i != j && declarations[i].name == declarations[j].name)
                     throw std::invalid_argument(
-                            "ERROR. Name " + declarations[i].name + " used twice during declaration.");
+                            "ERROR. Name " + declarations[i].name + " used twice during declaration of the types.");
 
         // sort types in an order
         auto q = topSort(declarations);
@@ -663,6 +738,7 @@ Type *AST::Program::checker(Context &ctx) {
 
     }
 
+    // declare
     for (auto &i: functions)
         i->globalPreInit(ctx);
 
@@ -676,7 +752,7 @@ Type *AST::Program::checker(Context &ctx) {
         auto q = topSort(declarations);
 
         while (!q.empty()) {
-//            q.front().declare(ctx);
+            q.front().declareVars(ctx);
             q.pop();
         }
     }

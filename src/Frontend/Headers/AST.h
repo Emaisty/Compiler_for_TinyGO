@@ -419,14 +419,21 @@ namespace AST {
 
     struct dispatchedDecl {
         std::string name;
-
         ASTDeclaration *decl;
-
         std::set<std::string> depends;
 
+        ASTExpression *expr;
+
+        ASTType *type;
+
+        bool const_var;
+
         dispatchedDecl(std::string new_name = "", ASTDeclaration *new_decl = nullptr,
-                       std::set<std::string> &&depend = {}) : name(
-                new_name), decl(new_decl), depends(depend) {}
+                       std::set<std::string> &&depend = {}, ASTExpression *new_expr = nullptr,
+                       ASTType *new_type = nullptr, bool is_const = false) : name(
+                new_name), decl(new_decl), depends(depend), expr(new_expr), type(new_type), const_var(is_const) {}
+
+        void declareVars(Context &);
     };
 
 
@@ -448,7 +455,7 @@ namespace AST {
         std::vector<std::unique_ptr<ASTExpression>> value;
         std::unique_ptr<ASTType> type;
 
-
+        std::vector<std::unique_ptr<ASTDeclaration>> dispatchedDeclarations;
     };
 
 

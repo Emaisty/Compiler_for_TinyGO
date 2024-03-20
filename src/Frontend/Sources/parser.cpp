@@ -45,7 +45,7 @@ std::unique_ptr<AST::Program> Parser::parse() {
                 break;
             }
             case tok_const: {
-                matchAndGoNext(tok_type);
+                matchAndGoNext(tok_const);
                 for (auto &i: parseDeclarationBlock(std::bind(&Parser::parseConstDeclarationLine, this)))
                     program->addVarDecl(std::move(i));
                 if (!checkForSeparator())
@@ -53,7 +53,7 @@ std::unique_ptr<AST::Program> Parser::parse() {
                 break;
             }
             case tok_var: {
-                matchAndGoNext(tok_type);
+                matchAndGoNext(tok_var);
                 for (auto &i: parseDeclarationBlock(std::bind(&Parser::parseVarDeclarationLine, this)))
                     program->addVarDecl(std::move(i));
                 if (!checkForSeparator())
