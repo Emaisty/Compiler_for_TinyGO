@@ -175,7 +175,7 @@ namespace AST {
 
         Type *typeOfNode = nullptr;
 
-        virtual std::unique_ptr<IR::IRLine> generateIR(IR::Context&) = 0;
+        virtual std::unique_ptr<IR::IRLine> generateIR(IR::Context &) = 0;
 
     private:
         int line;
@@ -252,6 +252,8 @@ namespace AST {
 
         virtual std::set<std::string> getVarNames() = 0;
 
+        virtual IR::IRLine* getPointerToIt(IR::Context &) = 0;
+
     private:
     };
 
@@ -277,6 +279,10 @@ namespace AST {
 
         std::set<std::string> getVarNames() override;
 
+        std::unique_ptr<IR::IRLine> generateIR(IR::Context &) override;
+
+        IR::IRLine* getPointerToIt(IR::Context &) override;
+
     private:
         std::unique_ptr<ASTExpression> left, right;
         Operator op;
@@ -298,6 +304,10 @@ namespace AST {
 
         std::set<std::string> getVarNames() override;
 
+        std::unique_ptr<IR::IRLine> generateIR(IR::Context &) override;
+
+        IR::IRLine* getPointerToIt(IR::Context &) override;
+
     private:
         Operator op;
         std::unique_ptr<ASTExpression> value;
@@ -311,6 +321,10 @@ namespace AST {
         Type *checker(Context &) override;
 
         std::set<std::string> getVarNames() override;
+
+        std::unique_ptr<IR::IRLine> generateIR(IR::Context &) override;
+
+        IR::IRLine* getPointerToIt(IR::Context &) override;
 
     private:
         std::unique_ptr<ASTExpression> name;
@@ -327,6 +341,10 @@ namespace AST {
         Type *checker(Context &) override;
 
         std::set<std::string> getVarNames() override;
+
+        std::unique_ptr<IR::IRLine> generateIR(IR::Context &) override;
+
+        IR::IRLine* getPointerToIt(IR::Context &) override;
 
     private:
         std::unique_ptr<ASTExpression> name;
@@ -346,6 +364,10 @@ namespace AST {
 
         std::set<std::string> getVarNames() override;
 
+        std::unique_ptr<IR::IRLine> generateIR(IR::Context &) override;
+
+        IR::IRLine* getPointerToIt(IR::Context &) override;
+
     private:
         long long int value = 0;
     };
@@ -360,6 +382,10 @@ namespace AST {
         Type *checker(Context &) override;
 
         std::set<std::string> getVarNames() override;
+
+        std::unique_ptr<IR::IRLine> generateIR(IR::Context &) override;
+
+        IR::IRLine* getPointerToIt(IR::Context &) override;
 
     private:
         double value = 0;
@@ -376,6 +402,10 @@ namespace AST {
 
         std::set<std::string> getVarNames() override;
 
+        std::unique_ptr<IR::IRLine> generateIR(IR::Context &) override;
+
+        IR::IRLine* getPointerToIt(IR::Context &) override;
+
     private:
         bool value = false;
     };
@@ -391,6 +421,10 @@ namespace AST {
         Type *checker(Context &) override;
 
         std::set<std::string> getVarNames() override;
+
+        std::unique_ptr<IR::IRLine> generateIR(IR::Context &) override;
+
+        IR::IRLine* getPointerToIt(IR::Context &) override;
 
     private:
         std::unique_ptr<ASTType> type;
@@ -411,6 +445,10 @@ namespace AST {
         Type *checker(Context &) override;
 
         std::set<std::string> getVarNames() override;
+
+        std::unique_ptr<IR::IRLine> generateIR(IR::Context &) override;
+
+        IR::IRLine* getPointerToIt(IR::Context &) override;
 
     private:
         std::string name;
@@ -470,7 +508,7 @@ namespace AST {
 
         Type *checker(Context &) override;
 
-        std::unique_ptr<IR::IRLine> generateIR(IR::Context&) override;
+        std::unique_ptr<IR::IRLine> generateIR(IR::Context &) override;
 
     private:
     };
@@ -483,7 +521,7 @@ namespace AST {
 
         Type *checker(Context &) override;
 
-        std::unique_ptr<IR::IRLine> generateIR(IR::Context&) override;
+        std::unique_ptr<IR::IRLine> generateIR(IR::Context &) override;
 
     private:
 
@@ -498,7 +536,7 @@ namespace AST {
 
         Type *checker(Context &) override;
 
-        std::unique_ptr<IR::IRLine> generateIR(IR::Context&) override;
+        std::unique_ptr<IR::IRLine> generateIR(IR::Context &) override;
 
     private:
     };
@@ -512,6 +550,8 @@ namespace AST {
 
         Type *checker(Context &) override;
 
+        std::unique_ptr<IR::IRLine> generateIR(IR::Context &) override;
+
     private:
         std::vector<std::unique_ptr<AST::Statement>> statements;
     };
@@ -523,6 +563,8 @@ namespace AST {
 
         Type *checker(Context &) override;
 
+        std::unique_ptr<IR::IRLine> generateIR(IR::Context &) override;
+
     private:
 
     };
@@ -533,6 +575,8 @@ namespace AST {
         ASTContinue() = default;
 
         Type *checker(Context &) override;
+
+        std::unique_ptr<IR::IRLine> generateIR(IR::Context &) override;
 
     private:
 
@@ -546,6 +590,8 @@ namespace AST {
         void addReturnValue(std::unique_ptr<ASTExpression> &&);
 
         Type *checker(Context &) override;
+
+        std::unique_ptr<IR::IRLine> generateIR(IR::Context &) override;
 
     private:
         std::vector<std::unique_ptr<AST::ASTExpression>> return_value;
@@ -561,6 +607,8 @@ namespace AST {
         void addCase(std::unique_ptr<ASTExpression> &&, std::unique_ptr<AST::ASTBlock> &&);
 
         Type *checker(Context &) override;
+
+        std::unique_ptr<IR::IRLine> generateIR(IR::Context &) override;
 
     private:
         std::unique_ptr<ASTExpression> expr;
@@ -582,6 +630,8 @@ namespace AST {
 
         Type *checker(Context &) override;
 
+        std::unique_ptr<IR::IRLine> generateIR(IR::Context &) override;
+
     private:
         std::unique_ptr<AST::ASTExpression> expr;
 
@@ -602,6 +652,8 @@ namespace AST {
         void addBody(std::unique_ptr<AST::ASTBlock> &&);
 
         Type *checker(Context &) override;
+
+        std::unique_ptr<IR::IRLine> generateIR(IR::Context &) override;
 
     private:
         std::vector<std::unique_ptr<AST::Statement>> init_clause, iterate_clause;
@@ -625,7 +677,7 @@ namespace AST {
 
         Type *checker(Context &) override;
 
-        std::unique_ptr<IR::IRLine> generateIR(IR::Context&) override;
+        std::unique_ptr<IR::IRLine> generateIR(IR::Context &) override;
 
     private:
 
@@ -652,7 +704,7 @@ namespace AST {
 
         void globalPreInit(Context &);
 
-        std::unique_ptr<IR::IRLine> generateIR(IR::Context&) override;
+        std::unique_ptr<IR::IRLine> generateIR(IR::Context &) override;
 
     private:
         std::string name;
@@ -689,7 +741,7 @@ namespace AST {
 
         std::queue<dispatchedDecl> topSort(std::vector<dispatchedDecl>);
 
-        std::unique_ptr<IR::IRLine> generateIR(IR::Context&) override;
+        std::unique_ptr<IR::IRLine> generateIR(IR::Context &) override;
 
     private:
         std::string name;

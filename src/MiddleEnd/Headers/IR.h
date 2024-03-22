@@ -22,6 +22,21 @@ namespace IR {
 
     struct Context {
         bool Global = true;
+
+        IRLine *cont_label;
+
+        IRLine *break_label;
+
+
+
+    };
+
+    class IRArithOp : public IRLine {
+    public:
+        void addChildren(std::unique_ptr<IR::IRLine> &&, std::unique_ptr<IR::IRLine> &&);
+
+    private:
+        std::unique_ptr<IRLine> left, right;
     };
 
     class IRIntValue : public IRLine {
@@ -54,7 +69,16 @@ namespace IR {
 
     class IRStore : public IRLine {
     public:
+
+        void addValue(std::unique_ptr<IRLine> &&);
+
+        void setLink(IRLine *);
+
     private:
+
+        std::unique_ptr<IRLine> value;
+
+        IRLine *var_to_store;
 
     };
 
@@ -94,9 +118,24 @@ namespace IR {
 
     class IRBranch : public IRLine {
     public:
+
+        void addCond(std::unique_ptr<IRLine> &&);
+
+        void addBrTaken(IRLine *);
+
+        void addBrNTaken(IRLine *);
+
     private:
         std::unique_ptr<IRLine> result;
-        IRLine *brT, brNT;
+        IRLine *brT, *brNT;
+    };
+
+    class IRRet : public IRLine {
+    public:
+        void addRetVal(std::unique_ptr<IRLine> &&);
+
+    private:
+        std::unique_ptr<IRLine> res;
     };
 
     class IRFunc : public IRLine {
