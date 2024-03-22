@@ -178,7 +178,7 @@ void AST::Function::setMethod(std::string new_name, std::unique_ptr<ASTType> &&n
 }
 
 void AST::Function::addReturn(std::unique_ptr<AST::ASTType> &&new_return) {
-    return_type = std::move(new_return);
+    return_type.emplace_back(std::move(new_return));
 }
 
 void AST::Function::setBody(std::unique_ptr<AST::ASTBlock> &&new_body) {

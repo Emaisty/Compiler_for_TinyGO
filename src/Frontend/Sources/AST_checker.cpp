@@ -19,9 +19,8 @@ AST::Context::Context() {
 }
 
 bool AST::Context::checkIfNameExist(std::string name) {
-    for (long long i = nameSpace.size() - 1; i >= 0; i--)
-        if (nameSpace[i].find(name) != nameSpace[i].end())
-            return true;
+    if (nameSpace.back().find(name) != nameSpace.back().end())
+        return true;
     return false;
 }
 

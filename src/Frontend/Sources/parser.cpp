@@ -353,7 +353,7 @@ std::unique_ptr<AST::ASTExpression> Parser::E1_PRIME(std::unique_ptr<AST::ASTExp
     switch (cur_tok) {
         case tok_opbr: {
             cur_tok = lexer.gettok();
-            auto arg = parseExpressionList();
+            auto arg = parseExpressionListOrNone();
             matchAndGoNext(tok_clbr);
             return E1_PRIME(std::make_unique<AST::ASTFunctionCall>(std::move(left), arg));
         }

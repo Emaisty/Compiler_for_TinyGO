@@ -4,7 +4,8 @@
 #include <iostream>
 #include <vector>
 #include <string>
-#include "IRTypes.h"
+
+#include "types.h"
 
 
 namespace IR {
@@ -16,6 +17,11 @@ namespace IR {
 
     private:
         std::vector<IRLine *> uses;
+    };
+
+
+    struct Context {
+        bool Global = true;
     };
 
     class IRIntValue : public IRLine {
@@ -54,16 +60,21 @@ namespace IR {
 
     class IRAlloca : public IRLine {
     public:
+
+        void addType(Type *);
+
     private:
-        std::unique_ptr<IRType> type;
+        Type *type;
     };
 
     class IRGlobal : public IRLine {
     public:
-        void addValue(std::unique_ptr<IRLine>)
+        void addValue(std::unique_ptr<IRLine> &&);
+
+        void addType(Type *);
 
     private:
-        std::unique_ptr<IRType> type;
+        Type *type;
         std::unique_ptr<IRLine> value;
     };
 
@@ -91,14 +102,17 @@ namespace IR {
     class IRFunc : public IRLine {
     public:
 
-        void addDecl(std::unique_ptr<IRLine> &&);
+        void addReturnType(Type *);
+
+        void addTypeOfArg(Type *);
 
         void addBody(std::unique_ptr<IRLine> &&);
 
     private:
-        std::unique_ptr<>;
 
-        std::vector<std::unique_ptr<IRLine>> decls;
+        Type *return_type;
+
+        std::vector<Type *> type_of_args;
         std::unique_ptr<IRLine> body;
     };
 

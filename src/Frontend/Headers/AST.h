@@ -175,6 +175,8 @@ namespace AST {
 
         Type *typeOfNode = nullptr;
 
+        virtual std::unique_ptr<IR::IRLine> generateIR(IR::Context&) = 0;
+
     private:
         int line;
     };
@@ -183,6 +185,7 @@ namespace AST {
     public:
 
         virtual std::set<std::string> getDependencies() = 0;
+
 
     protected:
     };
@@ -467,6 +470,8 @@ namespace AST {
 
         Type *checker(Context &) override;
 
+        std::unique_ptr<IR::IRLine> generateIR(IR::Context&) override;
+
     private:
     };
 
@@ -477,6 +482,8 @@ namespace AST {
         std::vector<dispatchedDecl> globalPreInit() override;
 
         Type *checker(Context &) override;
+
+        std::unique_ptr<IR::IRLine> generateIR(IR::Context&) override;
 
     private:
 
@@ -490,6 +497,8 @@ namespace AST {
         std::vector<dispatchedDecl> globalPreInit() override;
 
         Type *checker(Context &) override;
+
+        std::unique_ptr<IR::IRLine> generateIR(IR::Context&) override;
 
     private:
     };
@@ -616,6 +625,8 @@ namespace AST {
 
         Type *checker(Context &) override;
 
+        std::unique_ptr<IR::IRLine> generateIR(IR::Context&) override;
+
     private:
 
         std::vector<std::unique_ptr<AST::ASTExpression>> variable, value;
@@ -640,6 +651,8 @@ namespace AST {
         Type *checker(Context &) override;
 
         void globalPreInit(Context &);
+
+        std::unique_ptr<IR::IRLine> generateIR(IR::Context&) override;
 
     private:
         std::string name;
@@ -675,6 +688,8 @@ namespace AST {
         Type *checker(Context &) override;
 
         std::queue<dispatchedDecl> topSort(std::vector<dispatchedDecl>);
+
+        std::unique_ptr<IR::IRLine> generateIR(IR::Context&) override;
 
     private:
         std::string name;

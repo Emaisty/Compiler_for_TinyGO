@@ -1,17 +1,17 @@
-#include "types.h"
+#include "../Headers/types.h"
 
 bool Type::compareSignatures(const Type *other) const {
     return this == other;
 }
 
 bool IntType::canConvertToThisType(const Type *other) const {
-    if (this == other || dynamic_cast<const FloatType *>(other))
+    if (dynamic_cast<const IntType *>(other) || dynamic_cast<const FloatType *>(other))
         return true;
     return false;
 }
 
 bool BoolType::canConvertToThisType(const Type *other) const {
-    if (dynamic_cast<const BoolType *>(other))
+    if (this == other)
         return true;
     return false;
 }
@@ -24,12 +24,19 @@ bool FloatType::canConvertToThisType(const Type *other) const {
 
 
 bool StructType::canConvertToThisType(const Type *other) const {
+    if (!dynamic_cast<const StructType *>(other))
+        return false;
+    auto another_struct = dynamic_cast<const StructType *>(other);
 
-    // TODO
-    if (this == other)
-        return true;
+    if (this->fields.size() != another_struct->fields.size())
+        return false;
 
-    return false;
+    for (auto i = 0; i < fields.size(); ++i)
+        if (fields[i].first != another_struct->fields[i].first ||
+            !fields[i].second->canConvertToThisType(another_struct->fields[i].second))
+            return false;
+
+    return true;
 }
 
 bool StructType::compareSignatures(const Type *other) const {
@@ -39,7 +46,7 @@ bool StructType::compareSignatures(const Type *other) const {
             return false;
 
         for (auto i = 0; i < fields.size(); ++i)
-            if (fields[i].first != other_struct->fields[0].first || fields[i].second != other_struct->fields[0].second)
+            if (fields[i].first != other_struct->fields[i].first || fields[i].second != other_struct->fields[i].second)
                 return false;
 
 
@@ -88,27 +95,48 @@ Type *PointerType::getBase() {
 }
 
 bool FunctionType::canConvertToThisType(const Type *other) const {
-    //TODO IDK
+    if (this == other)
+        return true;
+    return false;
 }
 
 bool FunctionType::compareSignatures(const Type *other) const {
+    if (!dynamic_cast<const FunctionType *>(other))
+        return false;
+    auto other_func = dynamic_cast<const FunctionType *>(other);
 
+    if (!return_type->canConvertToThisType(other_func->return_type))
+        return false;
+
+    if (args.size() != other_func->args.size())
+        return false;
+    for (auto i = 0; i < args.size(); ++i)
+        if (!args[i]->canConvertToThisType(other_func->args[i]))
+            return false;
+
+    return true;
 }
 
-bool FunctionType::compareArgs(const std::vector<Type *> &) {
+bool FunctionType::compareArgs(const std::vector<Type *> &other_args) {
+    if (args.size() != other_args.size())
+        return false;
+    for (auto i = 0; i < args.size(); ++i)
+        if (!args[i]->canConvertToThisType(other_args[i]))
+            return false;
 
+    return true;
 }
 
 Type *FunctionType::getReturn() {
-
+    return return_type;
 }
 
-void FunctionType::setReturn(Type *) {
-
+void FunctionType::setReturn(Type *new_type) {
+    return_type = new_type;
 }
 
-void FunctionType::addParam(Type *) {
-
+void FunctionType::addParam(Type *new_type) {
+    args.emplace_back(new_type);
 }
 
 //NamedType::NamedType(std::string new_name, Type *new_type) {
