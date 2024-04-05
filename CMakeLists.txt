@@ -13,7 +13,6 @@ set(COMMON_HEADERS src/Common/Headers)
 set(COMMON_SOURCES src/Common/Sources)
 
 include_directories(${COMMON_HEADERS})
-
 include_directories(${FRONDEND_HEADERS})
 include_directories(${MIDDLEEND_HEADERS})
 
@@ -25,10 +24,10 @@ set(
         ${FRONDEND_SOURCES}/lexer.cpp
         ${FRONDEND_SOURCES}/AST_parser.cpp
         ${FRONDEND_SOURCES}/AST_checker.cpp
-#        ${FRONDEND_SOURCES}/AST_IR.cpp
+        ${FRONDEND_SOURCES}/AST_IR.cpp
         ${FRONDEND_SOURCES}/parser.cpp
 
-#        ${MIDDLEEND_SOURCES}/IR.cpp
+        ${MIDDLEEND_SOURCES}/IR.cpp
 
         main.cpp)
 add_executable(compiler ${SOURCE_FILES})

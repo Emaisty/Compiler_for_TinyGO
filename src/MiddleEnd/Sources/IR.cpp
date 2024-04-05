@@ -4,9 +4,34 @@ void IR::IRLine::addUse(IRLine *line) {
     uses.push_back(line);
 }
 
+
+void IR::Context::setNewVar(std::string new_name, IRLine *link) {
+    variables[new_name] = link;
+}
+
+IR::IRLine *IR::Context::getVar(std::string name) {
+    return variables[name];
+}
+
 void IR::IRArithOp::addChildren(std::unique_ptr<IR::IRLine> &&l, std::unique_ptr<IR::IRLine> &&r) {
     left = std::move(l);
     right = std::move(r);
+}
+
+void IR::IRArithOp::setType(Operator nop) {
+    op = nop;
+}
+
+IR::IRIntValue::IRIntValue(long long val) {
+    value = val;
+}
+
+IR::IRDoubleValue::IRDoubleValue(double val) {
+    value = val;
+}
+
+void IR::IRLoad::addLink(IRLine *link) {
+    from_whom_load = link;
 }
 
 void IR::IRStore::addValue(std::unique_ptr<IRLine> &&new_value) {

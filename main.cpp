@@ -12,7 +12,9 @@ int main() {
     AST::Context ctx;
     root->checker(ctx);
 
-//    p.printIR(std::cout);
+
+    IR::Context ctx1;
+    auto IR = root->generateIR(ctx1);
 
     return 0;
 }

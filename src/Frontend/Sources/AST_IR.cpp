@@ -1,9 +1,13 @@
 #include "AST.h"
 
+std::unique_ptr<IR::IRLine> AST::ASTType::generateIR(IR::Context &ctx) {
+    throw std::invalid_argument("!!!!!");
+}
+
 std::unique_ptr<IR::IRLine> AST::ASTBinaryOperator::generateIR(IR::Context &ctx) {
     auto res = std::make_unique<IR::IRArithOp>();
     res->addChildren(left->generateIR(ctx), right->generateIR(ctx));
-
+    res->setType(op);
     return res;
 }
 
@@ -12,10 +16,73 @@ IR::IRLine *AST::ASTBinaryOperator::getPointerToIt(IR::Context &ctx) {
 }
 
 std::unique_ptr<IR::IRLine> AST::ASTUnaryOperator::generateIR(IR::Context &ctx) {
+    switch (op) {
+        case NOT: {
 
+        }
+        case PLUS:
+            return value->generateIR(ctx);
+        case MINUS: {
+            auto res = std::make_unique<IR::IRArithOp>();
+            res->setType(IR::IRArithOp::MINUS);
+            if (dynamic_cast<IntType *>(value->typeOfNode)) {
+                res->addChildren(std::make_unique<IR::IRIntValue>(0), value->generateIR(ctx));
+                return res;
+            }
+            res->addChildren(std::make_unique<IR::IRDoubleValue>(0), value->generateIR(ctx));
+            return res;
+        }
+        case PREINC: {
+            auto res = std::make_unique<IR::IRArithOp>();
+            res->setType(IR::IRArithOp::PLUS);
+            if (dynamic_cast<IntType *>(value->typeOfNode)) {
+                res->addChildren(std::make_unique<IR::IRIntValue>(1), value->generateIR(ctx));
+                return res;
+            }
+            res->addChildren(std::make_unique<IR::IRDoubleValue>(1), value->generateIR(ctx));
+            return res;
+        }
+        case PREDEC: {
+            auto res = std::make_unique<IR::IRArithOp>();
+            res->setType(IR::IRArithOp::MINUS);
+            if (dynamic_cast<IntType *>(value->typeOfNode)) {
+                res->addChildren(std::make_unique<IR::IRIntValue>(1), value->generateIR(ctx));
+                return res;
+            }
+            res->addChildren(std::make_unique<IR::IRDoubleValue>(1), value->generateIR(ctx));
+            return res;
+        }
+        case POSTINC: {
+            auto res = std::make_unique<IR::IRArithOp>();
+            res->setType(IR::IRArithOp::MINUS);
+            if (dynamic_cast<IntType *>(value->typeOfNode)) {
+                res->addChildren(std::make_unique<IR::IRIntValue>(1), value->generateIR(ctx));
+                return res;
+            }
+            res->addChildren(std::make_unique<IR::IRDoubleValue>(1), value->generateIR(ctx));
+            return res;
+        }
+        case POSTDEC: {
+
+        }
+        case REFER: {
+
+        }
+        case DEREFER: {
+
+        }
+    }
 }
 
 IR::IRLine *AST::ASTUnaryOperator::getPointerToIt(IR::Context &ctx) {
+
+}
+
+std::unique_ptr<IR::IRLine> AST::ASTFunctionCall::generateIR(IR::Context &ctx) {
+
+}
+
+IR::IRLine *AST::ASTFunctionCall::getPointerToIt(IR::Context &ctx) {
 
 }
 
@@ -28,7 +95,8 @@ IR::IRLine *AST::ASTMemberAccess::getPointerToIt(IR::Context &ctx) {
 }
 
 std::unique_ptr<IR::IRLine> AST::ASTIntNumber::generateIR(IR::Context &ctx) {
-
+    auto res = std::make_unique<IR::IRIntValue>(value);
+    return res;
 }
 
 IR::IRLine *AST::ASTIntNumber::getPointerToIt(IR::Context &ctx) {
@@ -36,7 +104,8 @@ IR::IRLine *AST::ASTIntNumber::getPointerToIt(IR::Context &ctx) {
 }
 
 std::unique_ptr<IR::IRLine> AST::ASTFloatNumber::generateIR(IR::Context &ctx) {
-
+    auto res = std::make_unique<IR::IRIntValue>(value);
+    return res;
 }
 
 IR::IRLine *AST::ASTFloatNumber::getPointerToIt(IR::Context &ctx) {
@@ -60,11 +129,13 @@ IR::IRLine *AST::ASTStruct::getPointerToIt(IR::Context &ctx) {
 }
 
 std::unique_ptr<IR::IRLine> AST::ASTVar::generateIR(IR::Context &ctx) {
-
+    auto res = std::make_unique<IR::IRLoad>();
+    res->addLink(ctx.getVar(name));
+    return res;
 }
 
 IR::IRLine *AST::ASTVar::getPointerToIt(IR::Context &ctx) {
-
+    return ctx.getVar(name);
 }
 
 std::unique_ptr<IR::IRLine> AST::ASTTypeDeclaration::generateIR(IR::Context &ctx) {
@@ -82,7 +153,7 @@ std::unique_ptr<IR::IRLine> AST::ASTVarDeclaration::generateIR(IR::Context &ctx)
             else
                 single_decl->addType(value[i]->typeOfNode);
             // TODO value
-
+            ctx.setNewVar(name[i], single_decl.get());
             res->addLine(std::move(single_decl));
         } else {
             auto tmp_block = std::make_unique<IR::IRBlock>();
@@ -92,13 +163,14 @@ std::unique_ptr<IR::IRLine> AST::ASTVarDeclaration::generateIR(IR::Context &ctx)
 
             declare->addType(type_of_alloca);
 
-            if (value[i]) {
+            if (!value.empty() && value[i]) {
                 fill_value->addValue(value[i]->generateIR(ctx));
             }
             // TODO fill with default
 
             fill_value->setLink(declare.get());
 
+            ctx.setNewVar(name[i], declare.get());
             tmp_block->addLine(std::move(declare));
             tmp_block->addLine(std::move(fill_value));
 
@@ -121,6 +193,7 @@ std::unique_ptr<IR::IRLine> AST::ASTConstDeclaration::generateIR(IR::Context &ct
                 single_decl->addType(value[i]->typeOfNode);
             // TODO value
 
+            ctx.setNewVar(name[i], single_decl.get());
             res->addLine(std::move(single_decl));
         } else {
             auto tmp_block = std::make_unique<IR::IRBlock>();
@@ -137,6 +210,7 @@ std::unique_ptr<IR::IRLine> AST::ASTConstDeclaration::generateIR(IR::Context &ct
 
             fill_value->setLink(declare.get());
 
+            ctx.setNewVar(name[i], declare.get());
             tmp_block->addLine(std::move(declare));
             tmp_block->addLine(std::move(fill_value));
 
@@ -170,7 +244,9 @@ std::unique_ptr<IR::IRLine> AST::ASTContinue::generateIR(IR::Context &ctx) {
 
 std::unique_ptr<IR::IRLine> AST::ASTReturn::generateIR(IR::Context &ctx) {
     auto res = std::make_unique<IR::IRRet>();
-    res->addRetVal(this->return_value[0]->generateIR(ctx));
+    if (!return_value.empty())
+        res->addRetVal(this->return_value[0]->generateIR(ctx));
+
 
     return res;
 }
@@ -267,8 +343,48 @@ std::unique_ptr<IR::IRLine> AST::ASTAssign::generateIR(IR::Context &ctx) {
         auto val = value[i]->generateIR(ctx);
 
         auto store = std::make_unique<IR::IRStore>();
-        store->addValue(std::move(val));
-        // TODO where to store
+        store->setLink(variable[i]->getPointerToIt(ctx));
+        switch (type) {
+            case ASSIGN:
+                store->addValue(std::move(val));
+                break;
+            case PLUSASSIGN: {
+                auto value = std::make_unique<IR::IRArithOp>();
+                value->setType(IR::IRArithOp::PLUS);
+                value->addChildren(variable[i]->generateIR(ctx), std::move(val));
+                store->addValue(std::move(value));
+                break;
+            }
+            case MINUSASSIGN: {
+                auto value = std::make_unique<IR::IRArithOp>();
+                value->setType(IR::IRArithOp::MINUS);
+                value->addChildren(variable[i]->generateIR(ctx), std::move(val));
+                store->addValue(std::move(value));
+                break;
+            }
+            case MULTASSIGN: {
+                auto value = std::make_unique<IR::IRArithOp>();
+                value->setType(IR::IRArithOp::MUL);
+                value->addChildren(variable[i]->generateIR(ctx), std::move(val));
+                store->addValue(std::move(value));
+                break;
+            }
+            case DIVASSIGN: {
+                auto value = std::make_unique<IR::IRArithOp>();
+                value->setType(IR::IRArithOp::DIV);
+                value->addChildren(variable[i]->generateIR(ctx), std::move(val));
+                store->addValue(std::move(value));
+                break;
+            }
+            case MODASSIGN: {
+                auto value = std::make_unique<IR::IRArithOp>();
+                value->setType(IR::IRArithOp::MOD);
+                value->addChildren(variable[i]->generateIR(ctx), std::move(val));
+                store->addValue(std::move(value));
+                break;
+            }
+
+        }
 
         res->addLine(std::move(store));
     }
@@ -279,7 +395,8 @@ std::unique_ptr<IR::IRLine> AST::ASTAssign::generateIR(IR::Context &ctx) {
 
 std::unique_ptr<IR::IRLine> AST::Function::generateIR(IR::Context &ctx) {
     auto res = std::make_unique<IR::IRFunc>();
-    res->addReturnType(return_type[0]->typeOfNode);
+    if (!return_type.empty())
+        res->addReturnType(return_type[0]->typeOfNode);
 
     for (auto &i: params)
         res->addTypeOfArg(i.second->typeOfNode);
@@ -295,6 +412,7 @@ std::unique_ptr<IR::IRLine> AST::Program::generateIR(IR::Context &ctx) {
     for (auto &i: varDeclarations)
         program->addLine(i->generateIR(ctx));
 
+    ctx.Global = false;
 
     for (auto &i: functions)
         program->addLine(i->generateIR(ctx));

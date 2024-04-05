@@ -133,7 +133,7 @@ std::unique_ptr<AST::ASTExpression> Parser::E11_PRIME(std::unique_ptr<AST::ASTEx
 
         auto right = E10();
         return E11_PRIME(std::make_unique<AST::ASTBinaryOperator>(std::move(left), std::move(right),
-                                                                  AST::ASTBinaryOperator::OR));
+                                                                  IR::IRArithOp::Operator::OR));
     }
 
     return left;
@@ -149,7 +149,7 @@ std::unique_ptr<AST::ASTExpression> Parser::E10_PRIME(std::unique_ptr<AST::ASTEx
 
         auto right = E9();
         return E10_PRIME(std::make_unique<AST::ASTBinaryOperator>(std::move(left), std::move(right),
-                                                                  AST::ASTBinaryOperator::AND));
+                                                                  IR::IRArithOp::Operator::AND));
     }
 
     return left;
@@ -165,7 +165,7 @@ std::unique_ptr<AST::ASTExpression> Parser::E9_PRIME(std::unique_ptr<AST::ASTExp
 
         auto right = E8();
         return E9_PRIME(std::make_unique<AST::ASTBinaryOperator>(std::move(left), std::move(right),
-                                                                 AST::ASTBinaryOperator::BINOR));
+                                                                 IR::IRArithOp::Operator::BINOR));
     }
 
     return left;
@@ -181,7 +181,7 @@ std::unique_ptr<AST::ASTExpression> Parser::E8_PRIME(std::unique_ptr<AST::ASTExp
 
         auto right = E7();
         return E8_PRIME(std::make_unique<AST::ASTBinaryOperator>(std::move(left), std::move(right),
-                                                                 AST::ASTBinaryOperator::BINAND));
+                                                                 IR::IRArithOp::Operator::BINAND));
     }
 
     return left;
@@ -198,14 +198,14 @@ std::unique_ptr<AST::ASTExpression> Parser::E7_PRIME(std::unique_ptr<AST::ASTExp
 
             auto right = E6();
             return E7_PRIME(std::make_unique<AST::ASTBinaryOperator>(std::move(left), std::move(right),
-                                                                     AST::ASTBinaryOperator::EQ));
+                                                                     IR::IRArithOp::Operator::EQ));
         }
         case tok_ne: {
             cur_tok = lexer.gettok();
 
             auto right = E6();
             return E7_PRIME(std::make_unique<AST::ASTBinaryOperator>(std::move(left), std::move(right),
-                                                                     AST::ASTBinaryOperator::NE));
+                                                                     IR::IRArithOp::Operator::NE));
         }
         default:
             return left;
@@ -223,28 +223,28 @@ std::unique_ptr<AST::ASTExpression> Parser::E6_PRIME(std::unique_ptr<AST::ASTExp
 
             auto right = E5();
             return E6_PRIME(std::make_unique<AST::ASTBinaryOperator>(std::move(left), std::move(right),
-                                                                     AST::ASTBinaryOperator::GT));
+                                                                     IR::IRArithOp::Operator::GT));
         }
         case tok_ge: {
             cur_tok = lexer.gettok();
 
             auto right = E5();
             return E6_PRIME(std::make_unique<AST::ASTBinaryOperator>(std::move(left), std::move(right),
-                                                                     AST::ASTBinaryOperator::GE));
+                                                                     IR::IRArithOp::Operator::GE));
         }
         case tok_lt: {
             cur_tok = lexer.gettok();
 
             auto right = E5();
             return E6_PRIME(std::make_unique<AST::ASTBinaryOperator>(std::move(left), std::move(right),
-                                                                     AST::ASTBinaryOperator::LT));
+                                                                     IR::IRArithOp::Operator::LT));
         }
         case tok_le: {
             cur_tok = lexer.gettok();
 
             auto right = E5();
             return E6_PRIME(std::make_unique<AST::ASTBinaryOperator>(std::move(left), std::move(right),
-                                                                     AST::ASTBinaryOperator::LE));
+                                                                     IR::IRArithOp::Operator::LE));
         }
         default:
             return left;
@@ -262,14 +262,14 @@ std::unique_ptr<AST::ASTExpression> Parser::E5_PRIME(std::unique_ptr<AST::ASTExp
 
             auto right = E4();
             return E5_PRIME(std::make_unique<AST::ASTBinaryOperator>(std::move(left), std::move(right),
-                                                                     AST::ASTBinaryOperator::PLUS));
+                                                                     IR::IRArithOp::Operator::PLUS));
         }
         case tok_minus: {
             cur_tok = lexer.gettok();
 
             auto right = E4();
             return E5_PRIME(std::make_unique<AST::ASTBinaryOperator>(std::move(left), std::move(right),
-                                                                     AST::ASTBinaryOperator::MINUS));
+                                                                     IR::IRArithOp::Operator::MINUS));
         }
         default:
             return left;
@@ -287,21 +287,21 @@ std::unique_ptr<AST::ASTExpression> Parser::E4_PRIME(std::unique_ptr<AST::ASTExp
 
             auto right = E2();
             return E4_PRIME(std::make_unique<AST::ASTBinaryOperator>(std::move(left), std::move(right),
-                                                                     AST::ASTBinaryOperator::MUL));
+                                                                     IR::IRArithOp::Operator::MUL));
         }
         case tok_div: {
             cur_tok = lexer.gettok();
 
             auto right = E2();
             return E4_PRIME(std::make_unique<AST::ASTBinaryOperator>(std::move(left), std::move(right),
-                                                                     AST::ASTBinaryOperator::DIV));
+                                                                     IR::IRArithOp::Operator::DIV));
         }
         case tok_mod: {
             cur_tok = lexer.gettok();
 
             auto right = E2();
             return E4_PRIME(std::make_unique<AST::ASTBinaryOperator>(std::move(left), std::move(right),
-                                                                     AST::ASTBinaryOperator::MOD));
+                                                                     IR::IRArithOp::Operator::MOD));
         }
         default:
             return left;

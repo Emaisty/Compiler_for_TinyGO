@@ -186,6 +186,8 @@ namespace AST {
 
         virtual std::set<std::string> getDependencies() = 0;
 
+        std::unique_ptr<IR::IRLine> generateIR(IR::Context &) override;
+
 
     protected:
     };
@@ -266,12 +268,8 @@ namespace AST {
     class ASTBinaryOperator : public ASTExpression {
     public:
 
-        enum Operator {
-            OR, AND, BINOR, BINAND, PLUS, MINUS, MUL, DIV, MOD, EQ, NE, GT, GE, LT, LE
-        };
-
         ASTBinaryOperator(std::unique_ptr<ASTExpression> &&, std::unique_ptr<ASTExpression> &&,
-                          Operator new_op = PLUS);
+                          IR::IRArithOp::Operator new_op = IR::IRArithOp::Operator::PLUS);
 
         bool isConst() override;
 
@@ -285,7 +283,7 @@ namespace AST {
 
     private:
         std::unique_ptr<ASTExpression> left, right;
-        Operator op;
+        IR::IRArithOp::Operator op;
     };
 
     class ASTUnaryOperator : public ASTExpression {

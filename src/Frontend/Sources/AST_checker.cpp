@@ -214,17 +214,20 @@ bool AST::ASTBinaryOperator::isConst() {
 Type *AST::ASTBinaryOperator::checker(AST::Context &ctx) {
     auto LType = left->checker(ctx);
     auto RType = right->checker(ctx);
-    if ((op == BINAND || op == BINOR || op == MOD) && ctx.isInt(LType) && ctx.isInt(RType))
+    if ((op == IR::IRArithOp::Operator::BINAND || op == IR::IRArithOp::Operator::BINOR ||
+         op == IR::IRArithOp::Operator::MOD) && ctx.isInt(LType) && ctx.isInt(RType))
         typeOfNode = ctx.greaterInt(LType, RType);
 
-    if ((op == LT || op == LE || op == GT || op == GE) &&
+    if ((op == IR::IRArithOp::Operator::LT || op == IR::IRArithOp::Operator::LE || op == IR::IRArithOp::Operator::GT ||
+         op == IR::IRArithOp::Operator::GE) &&
         (ctx.isInt(LType) || ctx.isFloat(LType)) && (ctx.isInt(RType) || ctx.isFloat(RType)))
         typeOfNode = ctx.getTypeByTypeName("bool");
 
-    if ((op == EQ || op == NE) && LType->canConvertToThisType(RType))
+    if ((op == IR::IRArithOp::Operator::EQ || op == IR::IRArithOp::Operator::NE) && LType->canConvertToThisType(RType))
         typeOfNode = ctx.getTypeByTypeName("bool");
 
-    if ((op == PLUS || op == MINUS || op == MUL || op == DIV) &&
+    if ((op == IR::IRArithOp::Operator::PLUS || op == IR::IRArithOp::Operator::MINUS ||
+         op == IR::IRArithOp::Operator::MUL || op == IR::IRArithOp::Operator::DIV) &&
         (ctx.isInt(LType) || ctx.isFloat(LType)) && (ctx.isInt(RType) || ctx.isFloat(RType))) {
 
         if (ctx.isInt(LType) && ctx.isInt(RType))
@@ -233,7 +236,8 @@ Type *AST::ASTBinaryOperator::checker(AST::Context &ctx) {
 
     }
 
-    if ((op == AND || op == OR) && ctx.isBool(LType) && ctx.isBool(RType))
+    if ((op == IR::IRArithOp::Operator::AND || op == IR::IRArithOp::Operator::OR) && ctx.isBool(LType) &&
+        ctx.isBool(RType))
         typeOfNode = ctx.getTypeByTypeName("bool");
 
     if (!typeOfNode)
@@ -249,7 +253,7 @@ std::set<std::string> AST::ASTBinaryOperator::getVarNames() {
 }
 
 bool AST::ASTUnaryOperator::hasAddress() {
-    if (op == DEREFER || op == REFER)
+    if (op == REFER)
         return true;
     return false;
 }
@@ -422,9 +426,10 @@ bool AST::ASTVar::isConst() {
 
 Type *AST::ASTVar::checker(AST::Context &ctx) {
 
-    if (!ctx.checkIfNameExist(name))
-        throw std::invalid_argument("ERROR. Unknown name (" + name + ") for a variable");
+
     auto var = ctx.getInfByVarName(name);
+    if (!var)
+        throw std::invalid_argument("ERROR. Unknown name (" + name + ") for a variable");
     is_const = var->is_const;
 
     typeOfNode = var->type;
@@ -658,9 +663,11 @@ Type *AST::Function::checker(Context &ctx) {
         for (auto &j: i.first)
             ctx.addIntoNameSpace(j, i.second->checker(ctx));
 
+    ctx.return_type.clear();
 
     for (auto &i: return_type)
         ctx.return_type.emplace_back(i->checker(ctx));
+
 
     body->checker(ctx);
 
