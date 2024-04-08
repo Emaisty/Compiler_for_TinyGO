@@ -88,6 +88,8 @@ namespace AST {
 
         bool typeGreater(Type *, Type *);
 
+        IR::Context createIRContext();
+
     private:
 
         std::vector<std::unique_ptr<Type>> existItems;

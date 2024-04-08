@@ -1,7 +1,13 @@
 #include "AST.h"
 
+IR::Context AST::Context::createIRContext() {
+    IR::Context ctx;
+
+    return ctx;
+}
+
 std::unique_ptr<IR::IRLine> AST::ASTType::generateIR(IR::Context &ctx) {
-    throw std::invalid_argument("!!!!!");
+    throw std::invalid_argument("Never should happen.");
 }
 
 std::unique_ptr<IR::IRLine> AST::ASTBinaryOperator::generateIR(IR::Context &ctx) {
@@ -18,7 +24,7 @@ IR::IRLine *AST::ASTBinaryOperator::getPointerToIt(IR::Context &ctx) {
 std::unique_ptr<IR::IRLine> AST::ASTUnaryOperator::generateIR(IR::Context &ctx) {
     switch (op) {
         case NOT: {
-
+            // TODO
         }
         case PLUS:
             return value->generateIR(ctx);
@@ -54,7 +60,7 @@ std::unique_ptr<IR::IRLine> AST::ASTUnaryOperator::generateIR(IR::Context &ctx) 
         }
         case POSTINC: {
             auto res = std::make_unique<IR::IRArithOp>();
-            res->setType(IR::IRArithOp::MINUS);
+            res->setType(IR::IRArithOp::PLUS);
             if (dynamic_cast<IntType *>(value->typeOfNode)) {
                 res->addChildren(std::make_unique<IR::IRIntValue>(1), value->generateIR(ctx));
                 return res;
@@ -69,7 +75,8 @@ std::unique_ptr<IR::IRLine> AST::ASTUnaryOperator::generateIR(IR::Context &ctx) 
 
         }
         case DEREFER: {
-
+            auto res = std::make_unique<IR::IRLoad>();
+            res->add
         }
     }
 }
@@ -425,4 +432,15 @@ std::unique_ptr<IR::IRLine> AST::Program::generateIR(IR::Context &ctx) {
 
 
     return program;
+}
+
+std::unique_ptr<IR::IRLine> AST::ASTCast::generateIR(IR::Context &ctx) {
+    auto res = std::make_unique<IR::IRCast>();
+    res->addExpr(expr->generateIR(ctx));
+    res->addTypeTo(cast_to);
+    return res;
+}
+
+IR::IRLine *AST::ASTCast::getPointerToIt(IR::Context &) {
+
 }

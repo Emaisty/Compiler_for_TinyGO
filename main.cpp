@@ -12,9 +12,9 @@ int main() {
     AST::Context ctx;
     root->checker(ctx);
 
+    auto IRctx = ctx.createIRContext();
 
-    IR::Context ctx1;
-    auto IR = root->generateIR(ctx1);
+    auto IR = root->generateIR(IRctx);
 
     return 0;
 }

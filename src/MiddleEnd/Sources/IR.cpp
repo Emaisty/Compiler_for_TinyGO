@@ -22,16 +22,40 @@ void IR::IRArithOp::setType(Operator nop) {
     op = nop;
 }
 
+void IR::IRArithOp::print(std::ostream &, PrintHelper &) {
+
+}
+
 IR::IRIntValue::IRIntValue(long long val) {
     value = val;
+}
+
+void IR::IRIntValue::print(std::ostream &, PrintHelper &) {
+
 }
 
 IR::IRDoubleValue::IRDoubleValue(double val) {
     value = val;
 }
 
+void IR::IRDoubleValue::print(std::ostream &, PrintHelper &) {
+
+}
+
+void IR::IRNullValue::print(std::ostream &, PrintHelper &) {
+
+}
+
+void IR::IRLabel::print(std::ostream &, PrintHelper &) {
+
+}
+
 void IR::IRLoad::addLink(IRLine *link) {
     from_whom_load = link;
+}
+
+void IR::IRLoad::print(std::ostream &, PrintHelper &) {
+
 }
 
 void IR::IRStore::addValue(std::unique_ptr<IRLine> &&new_value) {
@@ -43,8 +67,16 @@ void IR::IRStore::setLink(IRLine *link) {
     var_to_store = link;
 }
 
+void IR::IRStore::print(std::ostream &, PrintHelper &) {
+
+}
+
 void IR::IRAlloca::addType(Type *new_type) {
     type = new_type;
+}
+
+void IR::IRAlloca::print(std::ostream &, PrintHelper &) {
+
 }
 
 void IR::IRGlobal::addValue(std::unique_ptr<IRLine> &&new_value) {
@@ -56,8 +88,20 @@ void IR::IRGlobal::addType(Type *new_type) {
     type = new_type;
 }
 
+void IR::IRGlobal::print(std::ostream &, PrintHelper &) {
+
+}
+
 void IR::IRBlock::addLine(std::unique_ptr<IRLine> &&new_command) {
     block.emplace_back(std::move(new_command));
+}
+
+void IR::IRBlock::print(std::ostream &, PrintHelper &) {
+
+}
+
+void IR::IRCMP::print(std::ostream &, PrintHelper &) {
+
 }
 
 void IR::IRBranch::addCond(std::unique_ptr<IRLine> &&new_cond) {
@@ -72,8 +116,32 @@ void IR::IRBranch::addBrNTaken(IRLine *link) {
     brNT = link;
 }
 
+void IR::IRBranch::print(std::ostream &, PrintHelper &) {
+
+}
+
 void IR::IRRet::addRetVal(std::unique_ptr<IRLine> &&new_ret) {
     res = std::move(new_ret);
+}
+
+void IR::IRRet::print(std::ostream &, PrintHelper &) {
+
+}
+
+void IR::IRCall::print(std::ostream &, PrintHelper &) {
+
+}
+
+void IR::IRCast::addExpr(std::unique_ptr<IRLine> &&new_expr) {
+    expr = std::move(new_expr);
+}
+
+void IR::IRCast::addTypeTo(Type *new_type) {
+    to = new_type;
+}
+
+void IR::IRCast::print(std::ostream &, PrintHelper &) {
+
 }
 
 void IR::IRFunc::addReturnType(Type *new_type) {
@@ -89,7 +157,7 @@ void IR::IRFunc::addBody(std::unique_ptr<IRLine> &&new_body) {
 }
 
 void IR::IRFunc::print(std::ostream &oss, PrintHelper &helper) {
-    this->;
+
 }
 
 void IR::IRProgram::addLine(std::unique_ptr<IRLine> &&new_command) {

@@ -11,43 +11,60 @@
 
 namespace IR {
 
-    class PrintHelper {
-
-    };
-
-    class IRLine {
+    class Value {
     public:
-        IRLine() = default;
+        Value() = default;
 
-        virtual ~IRLine() = default;
+        virtual ~Value() = default;
 
-        void addUse(IRLine *);
+        void addUse(Value *);
 
         virtual void print(std::ostream &, PrintHelper &) = 0;
 
     private:
-        std::vector<IRLine *> uses;
+        std::vector<Value *> uses;
     };
 
 
     struct Context {
         bool Global = true;
 
-        IRLine *cont_label;
+        Value *cont_label;
 
-        IRLine *break_label;
+        Value *break_label;
 
-        void setNewVar(std::string, IRLine *);
+        void addFunction();
 
-        IRLine *getVar(std::string);
+        void addVariable();
 
     private:
 
-        std::map<std::string, IRLine *> variables;
+
 
     };
 
-    class IRArithOp : public IRLine {
+    class Const : public Value {
+    public:
+    private:
+    };
+
+    class IntConst : public Const {
+    public:
+    private:
+    };
+
+    class DoubleConst : public Const {
+    public:
+    private:
+    };
+
+    class Instruction : public Value {
+    public:
+    private:
+    };
+
+
+    class IRArithOp : public Instruction {
     public:
         void addChildren(std::unique_ptr<IR::IRLine> &&, std::unique_ptr<IR::IRLine> &&);
 
@@ -63,45 +80,18 @@ namespace IR {
 
         Operator op;
 
-        std::unique_ptr<IRLine> left, right;
+        Value *left, *right;
     };
 
-    class IRIntValue : public IRLine {
-    public:
-        IRIntValue(long long = 0);
 
-        void print(std::ostream &, PrintHelper &) override;
-
-    private:
-        long long value;
-    };
-
-    class IRDoubleValue : public IRLine {
-    public:
-        IRDoubleValue(double = 0);
-
-        void print(std::ostream &, PrintHelper &) override;
-
-    private:
-        double value;
-    };
-
-    class IRNullValue : public IRLine {
+    class IRLabel : public Instruction {
     public:
         void print(std::ostream &, PrintHelper &) override;
 
     private:
     };
 
-    class IRLabel : public IRLine {
-    public:
-        void print(std::ostream &, PrintHelper &) override;
-
-    private:
-        std::string name;
-    };
-
-    class IRLoad : public IRLine {
+    class IRLoad : public Instruction {
     public:
         void addLink(IRLine *);
 
@@ -111,7 +101,7 @@ namespace IR {
         IRLine *from_whom_load;
     };
 
-    class IRStore : public IRLine {
+    class IRStore : public Instruction {
     public:
         void addValue(std::unique_ptr<IRLine> &&);
 
@@ -125,7 +115,7 @@ namespace IR {
         IRLine *var_to_store;
     };
 
-    class IRAlloca : public IRLine {
+    class IRAlloca : public Instruction {
     public:
         void addType(Type *);
 
@@ -135,7 +125,7 @@ namespace IR {
         Type *type;
     };
 
-    class IRGlobal : public IRLine {
+    class IRGlobal : public Instruction {
     public:
         void addValue(std::unique_ptr<IRLine> &&);
 
@@ -148,7 +138,7 @@ namespace IR {
         std::unique_ptr<IRLine> value;
     };
 
-    class IRBlock : public IRLine {
+    class IRBlock : public Instruction {
     public:
         void addLine(std::unique_ptr<IRLine> &&);
 
@@ -158,7 +148,7 @@ namespace IR {
         std::vector<std::unique_ptr<IRLine>> block;
     };
 
-    class IRCMP : public IRLine {
+    class IRCMP : public Instruction {
     public:
         void print(std::ostream &, PrintHelper &) override;
 
@@ -166,7 +156,7 @@ namespace IR {
 
     };
 
-    class IRBranch : public IRLine {
+    class IRBranch : public Instruction {
     public:
         void addCond(std::unique_ptr<IRLine> &&);
 
@@ -177,11 +167,11 @@ namespace IR {
         void print(std::ostream &, PrintHelper &) override;
 
     private:
-        std::unique_ptr<IRLine> result;
+        IRLine *result;
         IRLine *brT, *brNT;
     };
 
-    class IRRet : public IRLine {
+    class IRRet : public Instruction {
     public:
         void addRetVal(std::unique_ptr<IRLine> &&);
 
@@ -191,17 +181,40 @@ namespace IR {
         std::unique_ptr<IRLine> res;
     };
 
-    class IRCall : public IRLine {
+    class IRCall : public Instruction {
     public:
         void addRetVal(std::unique_ptr<IRLine> &&);
 
         void print(std::ostream &, PrintHelper &) override;
 
     private:
-        std::unique_ptr<IRLine>;
+        IRLine *function;
+
+
     };
 
-    class IRFunc : public IRLine {
+    class IRCast : public Instruction {
+    public:
+        void addExpr(IRLine *);
+
+        void addTypeTo(Type *);
+
+        void print(std::ostream &, PrintHelper &) override;
+
+    private:
+        IRLine *expr;
+        Type *to;
+    };
+
+    class IRFuncArg : public Value {
+    public:
+
+    private:
+        Type *type;
+
+    };
+
+    class IRFunc : public Value {
     public:
         void addReturnType(Type *);
 
@@ -215,18 +228,21 @@ namespace IR {
 
         Type *return_type;
 
-        std::vector<std::pair<Type *, std::string>> type_of_args;
+        std::vector<std::unique_ptr<IRFuncArg>> arguments;
+
         std::unique_ptr<IRLine> body;
     };
 
-    class IRProgram : public IRLine {
+    class IRProgram : public Value {
     public:
         void addLine(std::unique_ptr<IRLine> &&);
 
         void print(std::ostream &, PrintHelper &) override;
 
     private:
-        std::vector<std::unique_ptr<IRLine>> IRLines;
+        std::vector<std::unique_ptr<IRGlobal>> globalDecl;
+
+        std::vector<std::unique_ptr<IRFunc>> functions;
     };
 
 }

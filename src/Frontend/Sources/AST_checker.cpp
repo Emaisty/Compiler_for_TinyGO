@@ -293,7 +293,7 @@ std::set<std::string> AST::ASTBinaryOperator::getVarNames() {
 }
 
 bool AST::ASTUnaryOperator::hasAddress() {
-    if (op == REFER)
+    if (op == DEREFER)
         return true;
     return false;
 }
@@ -845,4 +845,12 @@ void AST::ASTCast::setChild(std::unique_ptr<AST::ASTExpression> &&new_expr) {
 void AST::ASTCast::setTypeCastTo(Type *new_type) {
     cast_to = new_type;
     typeOfNode = new_type;
+}
+
+Type *AST::ASTCast::checker(Context &ctx) {
+    throw std::invalid_argument("Never should be it.");
+}
+
+std::set<std::string> AST::ASTCast::getVarNames() {
+
 }
