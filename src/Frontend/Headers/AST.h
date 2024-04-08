@@ -18,6 +18,8 @@ namespace AST {
 
     class ASTType;
 
+    class ASTExpression;
+
     struct ItemInNameSpace {
 
         ItemInNameSpace(Type *new_type = nullptr, bool new_is_const = false) :
@@ -78,6 +80,13 @@ namespace AST {
         bool isFloat(const Type *);
 
         bool isBool(const Type *);
+
+        std::unique_ptr<ASTExpression> convertTypeTo(std::unique_ptr<ASTExpression> &&, Type *);
+
+        std::pair<std::unique_ptr<ASTExpression>, std::unique_ptr<ASTExpression>>
+        convertTypesEq(std::unique_ptr<ASTExpression> &&, std::unique_ptr<ASTExpression> &&);
+
+        bool typeGreater(Type *, Type *);
 
     private:
 
@@ -254,7 +263,7 @@ namespace AST {
 
         virtual std::set<std::string> getVarNames() = 0;
 
-        virtual IR::IRLine* getPointerToIt(IR::Context &) = 0;
+        virtual IR::IRLine *getPointerToIt(IR::Context &) = 0;
 
     private:
     };
@@ -279,7 +288,7 @@ namespace AST {
 
         std::unique_ptr<IR::IRLine> generateIR(IR::Context &) override;
 
-        IR::IRLine* getPointerToIt(IR::Context &) override;
+        IR::IRLine *getPointerToIt(IR::Context &) override;
 
     private:
         std::unique_ptr<ASTExpression> left, right;
@@ -304,7 +313,7 @@ namespace AST {
 
         std::unique_ptr<IR::IRLine> generateIR(IR::Context &) override;
 
-        IR::IRLine* getPointerToIt(IR::Context &) override;
+        IR::IRLine *getPointerToIt(IR::Context &) override;
 
     private:
         Operator op;
@@ -322,7 +331,7 @@ namespace AST {
 
         std::unique_ptr<IR::IRLine> generateIR(IR::Context &) override;
 
-        IR::IRLine* getPointerToIt(IR::Context &) override;
+        IR::IRLine *getPointerToIt(IR::Context &) override;
 
     private:
         std::unique_ptr<ASTExpression> name;
@@ -342,7 +351,7 @@ namespace AST {
 
         std::unique_ptr<IR::IRLine> generateIR(IR::Context &) override;
 
-        IR::IRLine* getPointerToIt(IR::Context &) override;
+        IR::IRLine *getPointerToIt(IR::Context &) override;
 
     private:
         std::unique_ptr<ASTExpression> name;
@@ -364,7 +373,7 @@ namespace AST {
 
         std::unique_ptr<IR::IRLine> generateIR(IR::Context &) override;
 
-        IR::IRLine* getPointerToIt(IR::Context &) override;
+        IR::IRLine *getPointerToIt(IR::Context &) override;
 
     private:
         long long int value = 0;
@@ -383,7 +392,7 @@ namespace AST {
 
         std::unique_ptr<IR::IRLine> generateIR(IR::Context &) override;
 
-        IR::IRLine* getPointerToIt(IR::Context &) override;
+        IR::IRLine *getPointerToIt(IR::Context &) override;
 
     private:
         double value = 0;
@@ -402,7 +411,7 @@ namespace AST {
 
         std::unique_ptr<IR::IRLine> generateIR(IR::Context &) override;
 
-        IR::IRLine* getPointerToIt(IR::Context &) override;
+        IR::IRLine *getPointerToIt(IR::Context &) override;
 
     private:
         bool value = false;
@@ -422,7 +431,7 @@ namespace AST {
 
         std::unique_ptr<IR::IRLine> generateIR(IR::Context &) override;
 
-        IR::IRLine* getPointerToIt(IR::Context &) override;
+        IR::IRLine *getPointerToIt(IR::Context &) override;
 
     private:
         std::unique_ptr<ASTType> type;
@@ -446,7 +455,7 @@ namespace AST {
 
         std::unique_ptr<IR::IRLine> generateIR(IR::Context &) override;
 
-        IR::IRLine* getPointerToIt(IR::Context &) override;
+        IR::IRLine *getPointerToIt(IR::Context &) override;
 
     private:
         std::string name;
@@ -746,6 +755,26 @@ namespace AST {
         std::vector<std::unique_ptr<ASTDeclaration>> typeDeclarations;
         std::vector<std::unique_ptr<ASTDeclaration>> varDeclarations;
         std::vector<std::unique_ptr<Function>> functions;
+    };
+
+
+    class ASTCast : public ASTExpression {
+    public:
+        Type *checker(Context &) override;
+
+        std::unique_ptr<IR::IRLine> generateIR(IR::Context &) override;
+
+        std::set<std::string> getVarNames() override;
+
+        IR::IRLine *getPointerToIt(IR::Context &) override;
+
+        void setChild(std::unique_ptr<AST::ASTExpression> &&);
+
+        void setTypeCastTo(Type *);
+
+    private:
+        std::unique_ptr<AST::ASTExpression> expr;
+        Type *cast_to;
     };
 
 }

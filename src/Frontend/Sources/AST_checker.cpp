@@ -14,7 +14,6 @@ AST::Context::Context() {
             addAliasType(i, addType(std::make_unique<BoolType>()));
         if (i == "float")
             addAliasType(i, addType(std::make_unique<FloatType>()));
-
     }
 }
 
@@ -150,6 +149,43 @@ bool AST::Context::isBool(const Type *other) {
     return false;
 }
 
+std::unique_ptr<AST::ASTExpression>
+AST::Context::convertTypeTo(std::unique_ptr<ASTExpression> &&from, Type *to) {
+    if (from->typeOfNode == to)
+        return from;
+    auto cast = std::make_unique<AST::ASTCast>();
+    cast->setChild(std::move(from));
+    cast->setTypeCastTo(to);
+    return cast;
+}
+
+std::pair<std::unique_ptr<AST::ASTExpression>, std::unique_ptr<AST::ASTExpression>>
+AST::Context::convertTypesEq(std::unique_ptr<ASTExpression> &&left, std::unique_ptr<ASTExpression> &&right) {
+    if (left->typeOfNode == right->typeOfNode)
+        return std::make_pair(std::move(left), std::move(right));
+
+    if (typeGreater(left->typeOfNode, right->typeOfNode)) {
+        auto new_left = std::make_unique<AST::ASTCast>();
+        new_left->setChild(std::move(left));
+        new_left->setTypeCastTo(right->typeOfNode);
+        return std::make_pair(std::move(new_left), std::move(right));
+    }
+
+    auto new_right = std::make_unique<AST::ASTCast>();
+    new_right->setChild(std::move(right));
+    new_right->setTypeCastTo(left->typeOfNode);
+    return std::make_pair(std::move(left), std::move(new_right));
+}
+
+bool AST::Context::typeGreater(Type *l_type, Type *r_type) {
+    int l_level = -1, r_level = -1;
+    static const std::vector<std::string> types_name = {"float", "int64", "int32", "int8"};
+    for (auto i = 4; i >= 1; --i)
+        if (getTypeByTypeName(types_name[4 - i]) == l_type)
+            l_level = i;
+    return l_level > r_level;
+}
+
 bool AST::ASTNode::hasAddress() {
     return false;
 }
@@ -243,6 +279,10 @@ Type *AST::ASTBinaryOperator::checker(AST::Context &ctx) {
     if (!typeOfNode)
         throw std::invalid_argument("ERROR. Not allowed operation above types.");
 
+    auto new_exprs = ctx.convertTypesEq(std::move(left), std::move(right));
+    left = std::move(new_exprs.first);
+    right = std::move(new_exprs.second);
+
     return typeOfNode;
 }
 
@@ -306,6 +346,7 @@ Type *AST::ASTFunctionCall::checker(AST::Context &ctx) {
     std::vector<Type *> args;
     for (auto &i: arg)
         args.emplace_back(i->checker(ctx));
+    // TODO convert args
 
     if (!func_type->compareArgs(args))
         throw std::invalid_argument("ERROR. Mismatch in types between passed argument type and expected type.");
@@ -647,6 +688,8 @@ Type *AST::ASTAssign::checker(Context &ctx) {
         auto val_type = value[i]->checker(ctx);
         if (!var_type || !val_type || !var_type->canConvertToThisType(val_type))
             throw std::invalid_argument("ERROR. Var and assigned value not the same types");
+
+        value[i] = ctx.convertTypeTo(std::move(value[i]), variable[i]->typeOfNode);
     }
 
     return nullptr;
@@ -793,4 +836,13 @@ std::queue<AST::dispatchedDecl> AST::Program::topSort(std::vector<dispatchedDecl
 
 
     return res;
+}
+
+void AST::ASTCast::setChild(std::unique_ptr<AST::ASTExpression> &&new_expr) {
+    expr = std::move(new_expr);
+}
+
+void AST::ASTCast::setTypeCastTo(Type *new_type) {
+    cast_to = new_type;
+    typeOfNode = new_type;
 }

@@ -11,12 +11,19 @@
 
 namespace IR {
 
+    class PrintHelper {
+
+    };
+
     class IRLine {
     public:
+        IRLine() = default;
+
+        virtual ~IRLine() = default;
 
         void addUse(IRLine *);
 
-        virtual void test() = 0;
+        virtual void print(std::ostream &, PrintHelper &) = 0;
 
     private:
         std::vector<IRLine *> uses;
@@ -44,7 +51,7 @@ namespace IR {
     public:
         void addChildren(std::unique_ptr<IR::IRLine> &&, std::unique_ptr<IR::IRLine> &&);
 
-        void test() override {};
+        void print(std::ostream &, PrintHelper &) override;
 
         enum Operator {
             OR, AND, BINOR, BINAND, PLUS, MINUS, MUL, DIV, MOD, EQ, NE, GT, GE, LT, LE
@@ -63,7 +70,7 @@ namespace IR {
     public:
         IRIntValue(long long = 0);
 
-        void test() override {};
+        void print(std::ostream &, PrintHelper &) override;
 
     private:
         long long value;
@@ -73,7 +80,7 @@ namespace IR {
     public:
         IRDoubleValue(double = 0);
 
-        void test() override {};
+        void print(std::ostream &, PrintHelper &) override;
 
     private:
         double value;
@@ -81,14 +88,14 @@ namespace IR {
 
     class IRNullValue : public IRLine {
     public:
-        void test() override {};
+        void print(std::ostream &, PrintHelper &) override;
 
     private:
     };
 
     class IRLabel : public IRLine {
     public:
-        void test() override {};
+        void print(std::ostream &, PrintHelper &) override;
 
     private:
         std::string name;
@@ -98,7 +105,7 @@ namespace IR {
     public:
         void addLink(IRLine *);
 
-        void test() override {};
+        void print(std::ostream &, PrintHelper &) override;
 
     private:
         IRLine *from_whom_load;
@@ -110,7 +117,7 @@ namespace IR {
 
         void setLink(IRLine *);
 
-        void test() override {};
+        void print(std::ostream &, PrintHelper &) override;
 
     private:
         std::unique_ptr<IRLine> value;
@@ -122,7 +129,7 @@ namespace IR {
     public:
         void addType(Type *);
 
-        void test() override {};
+        void print(std::ostream &, PrintHelper &) override;
 
     private:
         Type *type;
@@ -134,7 +141,7 @@ namespace IR {
 
         void addType(Type *);
 
-        void test() override {};
+        void print(std::ostream &, PrintHelper &) override;
 
     private:
         Type *type;
@@ -145,7 +152,7 @@ namespace IR {
     public:
         void addLine(std::unique_ptr<IRLine> &&);
 
-        void test() override {};
+        void print(std::ostream &, PrintHelper &) override;
 
     private:
         std::vector<std::unique_ptr<IRLine>> block;
@@ -153,7 +160,7 @@ namespace IR {
 
     class IRCMP : public IRLine {
     public:
-        void test() override {};
+        void print(std::ostream &, PrintHelper &) override;
 
     private:
 
@@ -167,7 +174,7 @@ namespace IR {
 
         void addBrNTaken(IRLine *);
 
-        void test() override {};
+        void print(std::ostream &, PrintHelper &) override;
 
     private:
         std::unique_ptr<IRLine> result;
@@ -178,7 +185,7 @@ namespace IR {
     public:
         void addRetVal(std::unique_ptr<IRLine> &&);
 
-        void test() override {};
+        void print(std::ostream &, PrintHelper &) override;
 
     private:
         std::unique_ptr<IRLine> res;
@@ -188,7 +195,7 @@ namespace IR {
     public:
         void addRetVal(std::unique_ptr<IRLine> &&);
 
-        void test() override {};
+        void print(std::ostream &, PrintHelper &) override;
 
     private:
         std::unique_ptr<IRLine>;
@@ -198,17 +205,17 @@ namespace IR {
     public:
         void addReturnType(Type *);
 
-        void addTypeOfArg(Type *);
+        void addTypeOfArg(Type *, std::string);
 
         void addBody(std::unique_ptr<IRLine> &&);
 
-        void test() override {};
+        void print(std::ostream &, PrintHelper &) override;
 
     private:
 
         Type *return_type;
 
-        std::vector<Type *> type_of_args;
+        std::vector<std::pair<Type *, std::string>> type_of_args;
         std::unique_ptr<IRLine> body;
     };
 
@@ -216,7 +223,7 @@ namespace IR {
     public:
         void addLine(std::unique_ptr<IRLine> &&);
 
-        void test() override {};
+        void print(std::ostream &, PrintHelper &) override;
 
     private:
         std::vector<std::unique_ptr<IRLine>> IRLines;

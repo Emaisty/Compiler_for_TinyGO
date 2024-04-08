@@ -80,21 +80,23 @@ void IR::IRFunc::addReturnType(Type *new_type) {
     return_type = new_type;
 }
 
-void IR::IRFunc::addTypeOfArg(Type *new_type) {
-    type_of_args.emplace_back(new_type);
+void IR::IRFunc::addTypeOfArg(Type *new_type, std::string name) {
+    type_of_args.emplace_back(new_type, name);
 }
 
 void IR::IRFunc::addBody(std::unique_ptr<IRLine> &&new_body) {
     body = std::move(new_body);
 }
 
+void IR::IRFunc::print(std::ostream &oss, PrintHelper &helper) {
+    this->;
+}
+
 void IR::IRProgram::addLine(std::unique_ptr<IRLine> &&new_command) {
     IRLines.emplace_back(std::move(new_command));
 }
 
-
-
-
-
-
-
+void IR::IRProgram::print(std::ostream &oss, PrintHelper &helper) {
+    for (auto &i: IRLines)
+        i->print(oss, helper);
+}

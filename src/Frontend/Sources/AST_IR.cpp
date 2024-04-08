@@ -399,7 +399,13 @@ std::unique_ptr<IR::IRLine> AST::Function::generateIR(IR::Context &ctx) {
         res->addReturnType(return_type[0]->typeOfNode);
 
     for (auto &i: params)
-        res->addTypeOfArg(i.second->typeOfNode);
+        for (auto &j: i.first)
+            res->addTypeOfArg(i.second->typeOfNode, j);
+
+    // allocate for arguments
+    {
+
+    }
 
     res->addBody(body->generateIR(ctx));
 
