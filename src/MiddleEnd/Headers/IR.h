@@ -5,6 +5,7 @@
 #include <vector>
 #include <string>
 #include <map>
+#include <stack>
 
 #include "types.h"
 
@@ -19,27 +20,35 @@ namespace IR {
 
         void addUse(Value *);
 
-        virtual void print(std::ostream &, PrintHelper &) = 0;
+        virtual void print(std::ostream &) = 0;
+
+        long long inner_number;
 
     private:
         std::vector<Value *> uses;
     };
 
+    class IRFunc;
 
     struct Context {
         bool Global = true;
 
-        Value *cont_label;
+        std::stack<Value *> cont_label;
 
-        Value *break_label;
+        std::stack<Value *> break_label;
 
-        void addFunction();
+        void addFunction(std::string, IRFunc *);
 
-        void addVariable();
+        IRFunc *getFunction(std::string);
+
+        void addVariable(std::string, Value *);
+
+        Value *getVariable(std::string);
+
+        void setBuilder(std::vector<std::unique_ptr<Value>> *);
 
     private:
-
-
+        std::vector<std::unique_ptr<Value>> *where_put;
 
     };
 
@@ -50,12 +59,22 @@ namespace IR {
 
     class IntConst : public Const {
     public:
+        IntConst(long long new_value = 0) : value(new_value) {}
+
+        void print(std::ostream &) override;
+
     private:
+        long long value = 0;
     };
 
     class DoubleConst : public Const {
     public:
+        DoubleConst(double new_value = 0) : value(new_value) {}
+
+        void print(std::ostream &) override;
+
     private:
+        double value = 0;
     };
 
     class Instruction : public Value {
@@ -66,15 +85,15 @@ namespace IR {
 
     class IRArithOp : public Instruction {
     public:
-        void addChildren(std::unique_ptr<IR::IRLine> &&, std::unique_ptr<IR::IRLine> &&);
-
-        void print(std::ostream &, PrintHelper &) override;
-
         enum Operator {
             OR, AND, BINOR, BINAND, PLUS, MINUS, MUL, DIV, MOD, EQ, NE, GT, GE, LT, LE
         };
 
+        void addChildren(Value *, Value *);
+
         void setType(Operator);
+
+        void print(std::ostream &) override;
 
     private:
 
@@ -86,40 +105,40 @@ namespace IR {
 
     class IRLabel : public Instruction {
     public:
-        void print(std::ostream &, PrintHelper &) override;
+        void print(std::ostream &) override;
 
     private:
     };
 
     class IRLoad : public Instruction {
     public:
-        void addLink(IRLine *);
+        void addLoadFrom(Value *);
 
-        void print(std::ostream &, PrintHelper &) override;
+        void print(std::ostream &) override;
 
     private:
-        IRLine *from_whom_load;
+        Value *where;
     };
 
     class IRStore : public Instruction {
     public:
-        void addValue(std::unique_ptr<IRLine> &&);
+        void addStoreWhere(Value *);
 
-        void setLink(IRLine *);
+        void addStoreWhat(Value *);
 
-        void print(std::ostream &, PrintHelper &) override;
+        void print(std::ostream &) override;
 
     private:
-        std::unique_ptr<IRLine> value;
+        Value *where;
 
-        IRLine *var_to_store;
+        Value *what;
     };
 
     class IRAlloca : public Instruction {
     public:
         void addType(Type *);
 
-        void print(std::ostream &, PrintHelper &) override;
+        void print(std::ostream &) override;
 
     private:
         Type *type;
@@ -127,87 +146,75 @@ namespace IR {
 
     class IRGlobal : public Instruction {
     public:
-        void addValue(std::unique_ptr<IRLine> &&);
+        void addValue(Value *);
 
         void addType(Type *);
 
-        void print(std::ostream &, PrintHelper &) override;
+        void print(std::ostream &) override;
 
     private:
         Type *type;
-        std::unique_ptr<IRLine> value;
-    };
-
-    class IRBlock : public Instruction {
-    public:
-        void addLine(std::unique_ptr<IRLine> &&);
-
-        void print(std::ostream &, PrintHelper &) override;
-
-    private:
-        std::vector<std::unique_ptr<IRLine>> block;
-    };
-
-    class IRCMP : public Instruction {
-    public:
-        void print(std::ostream &, PrintHelper &) override;
-
-    private:
-
+        Value *value;
     };
 
     class IRBranch : public Instruction {
     public:
-        void addCond(std::unique_ptr<IRLine> &&);
+        void addCond(Value *);
 
-        void addBrTaken(IRLine *);
+        void addBrTaken(Value *);
 
-        void addBrNTaken(IRLine *);
+        void addBrNTaken(Value *);
 
-        void print(std::ostream &, PrintHelper &) override;
+        void print(std::ostream &) override;
 
     private:
-        IRLine *result;
-        IRLine *brT, *brNT;
+        Value *result;
+        Value *brT, *brNT;
     };
 
     class IRRet : public Instruction {
     public:
-        void addRetVal(std::unique_ptr<IRLine> &&);
+        void addRetVal(Value *);
 
-        void print(std::ostream &, PrintHelper &) override;
+        void print(std::ostream &) override;
 
     private:
-        std::unique_ptr<IRLine> res;
+        Value *res;
     };
 
     class IRCall : public Instruction {
     public:
-        void addRetVal(std::unique_ptr<IRLine> &&);
+        void addLinkToFunc(Value *);
 
-        void print(std::ostream &, PrintHelper &) override;
+        void addArg(Value *);
+
+        void print(std::ostream &) override;
 
     private:
-        IRLine *function;
+        Value *function;
 
+        std::vector<Value *> arguments;
 
     };
 
     class IRCast : public Instruction {
     public:
-        void addExpr(IRLine *);
+        void addExpr(Value *);
 
         void addTypeTo(Type *);
 
-        void print(std::ostream &, PrintHelper &) override;
+        void print(std::ostream &) override;
 
     private:
-        IRLine *expr;
+        Value *expr;
         Type *to;
     };
 
     class IRFuncArg : public Value {
     public:
+        void addType(Type *);
+
+        void print(std::ostream &) override;
 
     private:
         Type *type;
@@ -218,31 +225,39 @@ namespace IR {
     public:
         void addReturnType(Type *);
 
-        void addTypeOfArg(Type *, std::string);
+        void addArg(std::unique_ptr<IRFuncArg> &&);
 
-        void addBody(std::unique_ptr<IRLine> &&);
+        void addInstToBody(std::unique_ptr<Value> &&);
 
-        void print(std::ostream &, PrintHelper &) override;
+        void setName(std::string);
+
+        std::string getName();
+
+        void print(std::ostream &) override;
 
     private:
-
         Type *return_type;
+
+        std::string name;
 
         std::vector<std::unique_ptr<IRFuncArg>> arguments;
 
-        std::unique_ptr<IRLine> body;
+        std::vector<std::unique_ptr<Value>> body;
+
     };
 
     class IRProgram : public Value {
     public:
-        void addLine(std::unique_ptr<IRLine> &&);
+        void addGlobDecl(std::unique_ptr<Value> &&);
 
-        void print(std::ostream &, PrintHelper &) override;
+        void addFunc(std::unique_ptr<Value> &&);
+
+        void print(std::ostream &) override;
 
     private:
-        std::vector<std::unique_ptr<IRGlobal>> globalDecl;
+        std::vector<std::unique_ptr<Value>> globalDecl;
 
-        std::vector<std::unique_ptr<IRFunc>> functions;
+        std::vector<std::unique_ptr<Value>> functions;
     };
 
 }

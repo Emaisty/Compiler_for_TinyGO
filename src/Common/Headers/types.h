@@ -5,6 +5,7 @@
 #include <vector>
 #include <string>
 
+
 class Type {
 public:
 
@@ -13,6 +14,8 @@ public:
 
     //requires to not duplicate structures
     virtual bool compareSignatures(const Type *other) const;
+
+    virtual std::string toString() = 0;
 
 private:
 };
@@ -24,6 +27,8 @@ public:
 
     bool canConvertToThisType(const Type *other) const override;
 
+    std::string toString() override;
+
 private:
     int bits;
 };
@@ -33,6 +38,8 @@ public:
 
     bool canConvertToThisType(const Type *other) const override;
 
+    std::string toString() override;
+
 private:
 };
 
@@ -40,6 +47,8 @@ class FloatType : public Type {
 public:
 
     bool canConvertToThisType(const Type *other) const override;
+
+    std::string toString() override;
 
 private:
 };
@@ -59,10 +68,10 @@ public:
 
     bool nameAlreadyExists(std::string);
 
+    std::string toString() override;
+
 private:
-
     std::vector<std::pair<std::string, Type *>> fields;
-
 
 };
 
@@ -74,6 +83,8 @@ public:
     PointerType(Type *new_base) : base_type(new_base) {}
 
     Type *getBase();
+
+    std::string toString() override;
 
 private:
     Type *base_type;
@@ -93,6 +104,8 @@ public:
     void setReturn(Type *);
 
     void addParam(Type *);
+
+    std::string toString() override;
 
 private:
 

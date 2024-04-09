@@ -6,19 +6,15 @@ IR::Context AST::Context::createIRContext() {
     return ctx;
 }
 
-std::unique_ptr<IR::IRLine> AST::ASTType::generateIR(IR::Context &ctx) {
+std::unique_ptr<IR::Value> AST::ASTType::generateIR(IR::Context &ctx) {
     throw std::invalid_argument("Never should happen.");
 }
 
-std::unique_ptr<IR::IRLine> AST::ASTBinaryOperator::generateIR(IR::Context &ctx) {
+std::unique_ptr<IR::Value> AST::ASTBinaryOperator::generateIR(IR::Context &ctx) {
     auto res = std::make_unique<IR::IRArithOp>();
     res->addChildren(left->generateIR(ctx), right->generateIR(ctx));
     res->setType(op);
     return res;
-}
-
-IR::IRLine *AST::ASTBinaryOperator::getPointerToIt(IR::Context &ctx) {
-    throw std::invalid_argument("Never should happen.");
 }
 
 std::unique_ptr<IR::IRLine> AST::ASTUnaryOperator::generateIR(IR::Context &ctx) {
@@ -81,19 +77,11 @@ std::unique_ptr<IR::IRLine> AST::ASTUnaryOperator::generateIR(IR::Context &ctx) 
     }
 }
 
-IR::IRLine *AST::ASTUnaryOperator::getPointerToIt(IR::Context &ctx) {
+std::unique_ptr<IR::Value> AST::ASTFunctionCall::generateIR(IR::Context &ctx) {
 
 }
 
-std::unique_ptr<IR::IRLine> AST::ASTFunctionCall::generateIR(IR::Context &ctx) {
-
-}
-
-IR::IRLine *AST::ASTFunctionCall::getPointerToIt(IR::Context &ctx) {
-
-}
-
-std::unique_ptr<IR::IRLine> AST::ASTMemberAccess::generateIR(IR::Context &ctx) {
+std::unique_ptr<IR::Value> AST::ASTMemberAccess::generateIR(IR::Context &ctx) {
 
 }
 

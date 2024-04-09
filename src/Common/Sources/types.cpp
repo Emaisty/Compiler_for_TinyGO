@@ -1,4 +1,4 @@
-#include "../Headers/types.h"
+#include "types.h"
 
 bool Type::compareSignatures(const Type *other) const {
     return this == other;
@@ -10,16 +10,28 @@ bool IntType::canConvertToThisType(const Type *other) const {
     return false;
 }
 
+std::string IntType::toString() {
+    return "i" + std::to_string(bits);
+}
+
 bool BoolType::canConvertToThisType(const Type *other) const {
     if (this == other)
         return true;
     return false;
 }
 
+std::string BoolType::toString() {
+    return "i1";
+}
+
 bool FloatType::canConvertToThisType(const Type *other) const {
     if (dynamic_cast<const IntType *>(other) || this == other)
         return true;
     return false;
+}
+
+std::string FloatType::toString() {
+    return "float";
 }
 
 
@@ -83,6 +95,10 @@ bool StructType::nameAlreadyExists(std::string name) {
     return false;
 }
 
+std::string StructType::toString() {
+    // TODO later
+}
+
 
 bool PointerType::canConvertToThisType(const Type *other) const {
     if (dynamic_cast<const PointerType *>(other) && dynamic_cast<const PointerType *>(other)->base_type == base_type)
@@ -92,6 +108,10 @@ bool PointerType::canConvertToThisType(const Type *other) const {
 
 Type *PointerType::getBase() {
     return base_type;
+}
+
+std::string PointerType::toString() {
+    return "ptr";
 }
 
 bool FunctionType::canConvertToThisType(const Type *other) const {

@@ -72,18 +72,18 @@ Type *AST::Context::addType(std::unique_ptr<Type> &&new_type) {
             return i.get();
 
     existItems.emplace_back(std::move(new_type));
-    return existItems[existItems.size() - 1].get();
+    return existItems.back().get();
 }
 
 Type *AST::Context::addAliasType(std::string new_name, Type *new_type) {
-    typeSpace[typeSpace.size() - 1][new_name] = new_type;
+    typeSpace.back()[new_name] = new_type;
     return new_type;
 }
 
 void AST::Context::addIntoNameSpace(std::string new_name, Type *new_type, bool is_const = false) {
     if (checkIfNameExist(new_name))
         throw std::invalid_argument("ERROR. Var with such name (" + new_name + ") already exists.");
-    nameSpace[nameSpace.size() - 1][new_name] = ItemInNameSpace(new_type, is_const);
+    nameSpace.back()[new_name] = ItemInNameSpace(new_type, is_const);
 }
 
 Type *AST::Context::getPointer(Type *base_type) {
@@ -101,7 +101,7 @@ Type *AST::Context::addForLater(std::unique_ptr<Type> &&new_tmp_type) {
     linksToType[new_tmp_type.get()] = std::vector<Type **>();
     this->notYetFinishedTypes.emplace_back(std::move(new_tmp_type));
 
-    return notYetFinishedTypes[notYetFinishedTypes.size() - 1].get();
+    return notYetFinishedTypes.back().get();
 }
 
 void AST::Context::addFieldFillInLater(ASTType *type_node, Type **type) {
