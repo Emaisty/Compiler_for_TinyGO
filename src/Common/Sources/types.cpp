@@ -125,7 +125,10 @@ bool FunctionType::compareSignatures(const Type *other) const {
         return false;
     auto other_func = dynamic_cast<const FunctionType *>(other);
 
-    if (!return_type->canConvertToThisType(other_func->return_type))
+    if ((other_func->return_type && !return_type) || (!other_func->return_type && return_type))
+        return false;
+
+    if (return_type && !return_type->canConvertToThisType(other_func->return_type))
         return false;
 
     if (args.size() != other_func->args.size())
@@ -157,6 +160,10 @@ void FunctionType::setReturn(Type *new_type) {
 
 void FunctionType::addParam(Type *new_type) {
     args.emplace_back(new_type);
+}
+
+std::string FunctionType::toString() {
+
 }
 
 //NamedType::NamedType(std::string new_name, Type *new_type) {

@@ -186,7 +186,7 @@ namespace AST {
 
         Type *typeOfNode = nullptr;
 
-        virtual std::unique_ptr<IR::Value> generateIR(IR::Context &) = 0;
+        virtual IR::Value * generateIR(IR::Context &) = 0;
 
     private:
         int line;
@@ -197,7 +197,7 @@ namespace AST {
 
         virtual std::set<std::string> getDependencies() = 0;
 
-        std::unique_ptr<IR::Value> generateIR(IR::Context &) override;
+        IR::Value * generateIR(IR::Context &) override;
 
 
     protected:
@@ -286,7 +286,7 @@ namespace AST {
 
         std::set<std::string> getVarNames() override;
 
-        std::unique_ptr<IR::Value> generateIR(IR::Context &) override;
+        IR::Value * generateIR(IR::Context &) override;
 
 
     private:
@@ -310,7 +310,7 @@ namespace AST {
 
         std::set<std::string> getVarNames() override;
 
-        std::unique_ptr<IR::Value> generateIR(IR::Context &) override;
+        IR::Value * generateIR(IR::Context &) override;
 
 
     private:
@@ -327,7 +327,7 @@ namespace AST {
 
         std::set<std::string> getVarNames() override;
 
-        std::unique_ptr<IR::Value> generateIR(IR::Context &) override;
+        IR::Value * generateIR(IR::Context &) override;
 
 
     private:
@@ -346,7 +346,7 @@ namespace AST {
 
         std::set<std::string> getVarNames() override;
 
-        std::unique_ptr<IR::Value> generateIR(IR::Context &) override;
+        IR::Value * generateIR(IR::Context &) override;
 
 
     private:
@@ -367,7 +367,7 @@ namespace AST {
 
         std::set<std::string> getVarNames() override;
 
-        std::unique_ptr<IR::Value> generateIR(IR::Context &) override;
+        IR::Value * generateIR(IR::Context &) override;
 
 
     private:
@@ -385,7 +385,7 @@ namespace AST {
 
         std::set<std::string> getVarNames() override;
 
-        std::unique_ptr<IR::Value> generateIR(IR::Context &) override;
+        IR::Value * generateIR(IR::Context &) override;
 
 
     private:
@@ -403,7 +403,7 @@ namespace AST {
 
         std::set<std::string> getVarNames() override;
 
-        std::unique_ptr<IR::Value> generateIR(IR::Context &) override;
+        IR::Value * generateIR(IR::Context &) override;
 
 
     private:
@@ -422,7 +422,7 @@ namespace AST {
 
         std::set<std::string> getVarNames() override;
 
-        std::unique_ptr<IR::Value> generateIR(IR::Context &) override;
+        IR::Value * generateIR(IR::Context &) override;
 
 
     private:
@@ -445,7 +445,7 @@ namespace AST {
 
         std::set<std::string> getVarNames() override;
 
-        std::unique_ptr<IR::Value> generateIR(IR::Context &) override;
+        IR::Value * generateIR(IR::Context &) override;
 
 
     private:
@@ -506,7 +506,7 @@ namespace AST {
 
         Type *checker(Context &) override;
 
-        std::unique_ptr<IR::Value> generateIR(IR::Context &) override;
+        IR::Value * generateIR(IR::Context &) override;
 
     private:
     };
@@ -519,7 +519,7 @@ namespace AST {
 
         Type *checker(Context &) override;
 
-        std::unique_ptr<IR::Value> generateIR(IR::Context &) override;
+        IR::Value * generateIR(IR::Context &) override;
 
     private:
 
@@ -534,7 +534,7 @@ namespace AST {
 
         Type *checker(Context &) override;
 
-        std::unique_ptr<IR::Value> generateIR(IR::Context &) override;
+        IR::Value * generateIR(IR::Context &) override;
 
     private:
     };
@@ -548,7 +548,7 @@ namespace AST {
 
         Type *checker(Context &) override;
 
-        std::unique_ptr<IR::Value> generateIR(IR::Context &) override;
+        IR::Value * generateIR(IR::Context &) override;
 
     private:
         std::vector<std::unique_ptr<AST::Statement>> statements;
@@ -561,7 +561,7 @@ namespace AST {
 
         Type *checker(Context &) override;
 
-        std::unique_ptr<IR::Value> generateIR(IR::Context &) override;
+        IR::Value * generateIR(IR::Context &) override;
 
     private:
 
@@ -574,7 +574,7 @@ namespace AST {
 
         Type *checker(Context &) override;
 
-        std::unique_ptr<IR::Value> generateIR(IR::Context &) override;
+        IR::Value * generateIR(IR::Context &) override;
 
     private:
 
@@ -589,7 +589,7 @@ namespace AST {
 
         Type *checker(Context &) override;
 
-        std::unique_ptr<IR::Value> generateIR(IR::Context &) override;
+        IR::Value * generateIR(IR::Context &) override;
 
     private:
         std::vector<std::unique_ptr<AST::ASTExpression>> return_value;
@@ -606,7 +606,7 @@ namespace AST {
 
         Type *checker(Context &) override;
 
-        std::unique_ptr<IR::Value> generateIR(IR::Context &) override;
+        IR::Value * generateIR(IR::Context &) override;
 
     private:
         std::unique_ptr<ASTExpression> expr;
@@ -628,7 +628,7 @@ namespace AST {
 
         Type *checker(Context &) override;
 
-        std::unique_ptr<IR::Value> generateIR(IR::Context &) override;
+        IR::Value * generateIR(IR::Context &) override;
 
     private:
         std::unique_ptr<AST::ASTExpression> expr;
@@ -651,7 +651,7 @@ namespace AST {
 
         Type *checker(Context &) override;
 
-        std::unique_ptr<IR::Value> generateIR(IR::Context &) override;
+        IR::Value * generateIR(IR::Context &) override;
 
     private:
         std::vector<std::unique_ptr<AST::Statement>> init_clause, iterate_clause;
@@ -675,7 +675,7 @@ namespace AST {
 
         Type *checker(Context &) override;
 
-        std::unique_ptr<IR::Value> generateIR(IR::Context &) override;
+        IR::Value * generateIR(IR::Context &) override;
 
     private:
 
@@ -702,7 +702,7 @@ namespace AST {
 
         void globalPreInit(Context &);
 
-        std::unique_ptr<IR::Value> generateIR(IR::Context &) override;
+        IR::Value * generateIR(IR::Context &) override;
 
     private:
         std::string name;
@@ -739,7 +739,7 @@ namespace AST {
 
         std::queue<dispatchedDecl> topSort(std::vector<dispatchedDecl>);
 
-        std::unique_ptr<IR::Value> generateIR(IR::Context &) override;
+        IR::Value * generateIR(IR::Context &) override;
 
     private:
         std::string name;
@@ -753,7 +753,7 @@ namespace AST {
     public:
         Type *checker(Context &) override;
 
-        std::unique_ptr<IR::Value> generateIR(IR::Context &) override;
+        IR::Value * generateIR(IR::Context &) override;
 
         std::set<std::string> getVarNames() override;
 

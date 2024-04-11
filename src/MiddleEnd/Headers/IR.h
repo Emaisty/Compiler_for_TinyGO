@@ -14,7 +14,7 @@ namespace IR {
 
     class Value {
     public:
-        Value() = default;
+        Value(long long &);
 
         virtual ~Value() = default;
 
@@ -30,12 +30,28 @@ namespace IR {
 
     class IRFunc;
 
+    class IRProgram;
+
     struct Context {
+        Context();
+
         bool Global = true;
 
-        std::stack<Value *> cont_label;
+        std::unique_ptr<IRProgram> program;
 
-        std::stack<Value *> break_label;
+        long long counter = 0;
+
+        void goDeeper();
+
+        void goUp();
+
+        void addContinueLabel(Value *);
+
+        Value *getContinueLabel();
+
+        void addBreakLabel(Value *);
+
+        Value *getBreakLabel();
 
         void addFunction(std::string, IRFunc *);
 
@@ -47,19 +63,34 @@ namespace IR {
 
         void setBuilder(std::vector<std::unique_ptr<Value>> *);
 
+        Value *buildInstruction(std::unique_ptr<Value> &&);
+
+        void deleteLastRow();
+
     private:
         std::vector<std::unique_ptr<Value>> *where_put;
+
+        std::stack<Value *> cont_label;
+
+        std::stack<Value *> break_label;
+
+        std::vector<std::map<std::string, IRFunc *>> functions;
+
+        std::vector<std::map<std::string, Value *>> variables;
 
     };
 
     class Const : public Value {
     public:
+        using Value::Value;
     private:
     };
 
     class IntConst : public Const {
     public:
-        IntConst(long long new_value = 0) : value(new_value) {}
+        using Const::Const;
+
+        void addValue(long long);
 
         void print(std::ostream &) override;
 
@@ -69,7 +100,9 @@ namespace IR {
 
     class DoubleConst : public Const {
     public:
-        DoubleConst(double new_value = 0) : value(new_value) {}
+        using Const::Const;
+
+        void addValue(double);
 
         void print(std::ostream &) override;
 
@@ -77,21 +110,55 @@ namespace IR {
         double value = 0;
     };
 
+    class Nullptr : public Const {
+    public:
+    private:
+    };
+
+    class StructValue : public Const {
+    public:
+    private:
+    };
+
     class Instruction : public Value {
     public:
+        using Value::Value;
     private:
     };
 
 
     class IRArithOp : public Instruction {
     public:
+        using Instruction::Instruction;
+
         enum Operator {
-            OR, AND, BINOR, BINAND, PLUS, MINUS, MUL, DIV, MOD, EQ, NE, GT, GE, LT, LE
+            OR, AND, BINOR, BINAND, PLUS, MINUS, MUL, DIV, MOD, EQ, NE, GT, GE, LT, LE, XOR
+        };
+
+        inline static const std::map<Operator, std::string> operator_to_str = {
+                {Operator::OR, "OR"},
+                {Operator::AND, "AND"},
+                {Operator::BINOR, "BIN OR"},
+                {Operator::BINAND, "BIN AND"},
+                {Operator::PLUS, "ADDITION"},
+                {Operator::MINUS, "SUBTRACT."},
+                {Operator::MUL, "MULTIPLICATION"},
+                {Operator::DIV, "DIVISION"},
+                {Operator::MOD, "MODULUS"},
+                {Operator::EQ, "CMPR for equality"},
+                {Operator::NE, "CMPR for not equality"},
+                {Operator::GT, "CMPR for greater than"},
+                {Operator::GE, "CMPR for greater or equal"},
+                {Operator::LT, "CMPR for lower than"},
+                {Operator::LE, "CMPR for lower or equal"},
+                {Operator::XOR, "XOR"},
         };
 
         void addChildren(Value *, Value *);
 
-        void setType(Operator);
+        void setTypeOfOperation(Operator);
+
+        void setTypeOfResult(Type *);
 
         void print(std::ostream &) override;
 
@@ -100,11 +167,15 @@ namespace IR {
         Operator op;
 
         Value *left, *right;
+
+        Type *result_type;
     };
 
 
     class IRLabel : public Instruction {
     public:
+        using Instruction::Instruction;
+
         void print(std::ostream &) override;
 
     private:
@@ -112,7 +183,11 @@ namespace IR {
 
     class IRLoad : public Instruction {
     public:
+        using Instruction::Instruction;
+
         void addLoadFrom(Value *);
+
+        Value *getPointer();
 
         void print(std::ostream &) override;
 
@@ -122,6 +197,8 @@ namespace IR {
 
     class IRStore : public Instruction {
     public:
+        using Instruction::Instruction;
+
         void addStoreWhere(Value *);
 
         void addStoreWhat(Value *);
@@ -136,6 +213,8 @@ namespace IR {
 
     class IRAlloca : public Instruction {
     public:
+        using Instruction::Instruction;
+
         void addType(Type *);
 
         void print(std::ostream &) override;
@@ -146,6 +225,8 @@ namespace IR {
 
     class IRGlobal : public Instruction {
     public:
+        using Instruction::Instruction;
+
         void addValue(Value *);
 
         void addType(Type *);
@@ -159,6 +240,8 @@ namespace IR {
 
     class IRBranch : public Instruction {
     public:
+        using Instruction::Instruction;
+
         void addCond(Value *);
 
         void addBrTaken(Value *);
@@ -174,6 +257,8 @@ namespace IR {
 
     class IRRet : public Instruction {
     public:
+        using Instruction::Instruction;
+
         void addRetVal(Value *);
 
         void print(std::ostream &) override;
@@ -184,6 +269,8 @@ namespace IR {
 
     class IRCall : public Instruction {
     public:
+        using Instruction::Instruction;
+
         void addLinkToFunc(Value *);
 
         void addArg(Value *);
@@ -199,6 +286,8 @@ namespace IR {
 
     class IRCast : public Instruction {
     public:
+        using Instruction::Instruction;
+
         void addExpr(Value *);
 
         void addTypeTo(Type *);
@@ -212,6 +301,8 @@ namespace IR {
 
     class IRFuncArg : public Value {
     public:
+        using Value::Value;
+
         void addType(Type *);
 
         void print(std::ostream &) override;
@@ -223,6 +314,8 @@ namespace IR {
 
     class IRFunc : public Value {
     public:
+        using Value::Value;
+
         void addReturnType(Type *);
 
         void addArg(std::unique_ptr<IRFuncArg> &&);
@@ -232,6 +325,8 @@ namespace IR {
         void setName(std::string);
 
         std::string getName();
+
+        std::vector<std::unique_ptr<Value>> *getLinkToBody();
 
         void print(std::ostream &) override;
 
@@ -248,6 +343,8 @@ namespace IR {
 
     class IRProgram : public Value {
     public:
+        using Value::Value;
+
         void addGlobDecl(std::unique_ptr<Value> &&);
 
         void addFunc(std::unique_ptr<Value> &&);
@@ -258,6 +355,18 @@ namespace IR {
         std::vector<std::unique_ptr<Value>> globalDecl;
 
         std::vector<std::unique_ptr<Value>> functions;
+    };
+
+    class IRComment : public Instruction {
+    public:
+        using Instruction::Instruction;
+
+        IRComment *addText(std::string);
+
+        void print(std::ostream &) override;
+
+    private:
+        std::string comment;
     };
 
 }

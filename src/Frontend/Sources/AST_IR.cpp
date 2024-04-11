@@ -6,429 +6,477 @@ IR::Context AST::Context::createIRContext() {
     return ctx;
 }
 
-std::unique_ptr<IR::Value> AST::ASTType::generateIR(IR::Context &ctx) {
+IR::Value *AST::ASTType::generateIR(IR::Context &ctx) {
     throw std::invalid_argument("Never should happen.");
 }
 
-std::unique_ptr<IR::Value> AST::ASTBinaryOperator::generateIR(IR::Context &ctx) {
-    auto res = std::make_unique<IR::IRArithOp>();
-    res->addChildren(left->generateIR(ctx), right->generateIR(ctx));
-    res->setType(op);
-    return res;
+IR::Value *AST::ASTBinaryOperator::generateIR(IR::Context &ctx) {
+    auto left_pointer = left->generateIR(ctx);
+    auto right_pointer = right->generateIR(ctx);
+    auto res = std::make_unique<IR::IRArithOp>(ctx.counter);
+
+    res->setTypeOfOperation(op);
+    res->addChildren(left_pointer, right_pointer);
+    res->setTypeOfResult(typeOfNode);
+
+    return ctx.buildInstruction(std::move(res));
 }
 
-std::unique_ptr<IR::IRLine> AST::ASTUnaryOperator::generateIR(IR::Context &ctx) {
+IR::Value *AST::ASTUnaryOperator::generateIR(IR::Context &ctx) {
     switch (op) {
         case NOT: {
-            // TODO
+            auto one = std::make_unique<IR::IntConst>(ctx.counter);
+            one->addValue(1);
+            auto one_pointer = ctx.buildInstruction(std::move(one));
+            auto value_pointer = value->generateIR(ctx);
+            auto res = std::make_unique<IR::IRArithOp>(ctx.counter);
+
+            res->setTypeOfOperation(IR::IRArithOp::XOR);
+            res->addChildren(one_pointer, value_pointer);
+            res->setTypeOfResult(value->typeOfNode);
+
+            return ctx.buildInstruction(std::move(res));
         }
         case PLUS:
             return value->generateIR(ctx);
-        case MINUS: {
-            auto res = std::make_unique<IR::IRArithOp>();
-            res->setType(IR::IRArithOp::MINUS);
-            if (dynamic_cast<IntType *>(value->typeOfNode)) {
-                res->addChildren(std::make_unique<IR::IRIntValue>(0), value->generateIR(ctx));
-                return res;
-            }
-            res->addChildren(std::make_unique<IR::IRDoubleValue>(0), value->generateIR(ctx));
-            return res;
-        }
-        case PREINC: {
-            auto res = std::make_unique<IR::IRArithOp>();
-            res->setType(IR::IRArithOp::PLUS);
-            if (dynamic_cast<IntType *>(value->typeOfNode)) {
-                res->addChildren(std::make_unique<IR::IRIntValue>(1), value->generateIR(ctx));
-                return res;
-            }
-            res->addChildren(std::make_unique<IR::IRDoubleValue>(1), value->generateIR(ctx));
-            return res;
-        }
-        case PREDEC: {
-            auto res = std::make_unique<IR::IRArithOp>();
-            res->setType(IR::IRArithOp::MINUS);
-            if (dynamic_cast<IntType *>(value->typeOfNode)) {
-                res->addChildren(std::make_unique<IR::IRIntValue>(1), value->generateIR(ctx));
-                return res;
-            }
-            res->addChildren(std::make_unique<IR::IRDoubleValue>(1), value->generateIR(ctx));
-            return res;
-        }
-        case POSTINC: {
-            auto res = std::make_unique<IR::IRArithOp>();
-            res->setType(IR::IRArithOp::PLUS);
-            if (dynamic_cast<IntType *>(value->typeOfNode)) {
-                res->addChildren(std::make_unique<IR::IRIntValue>(1), value->generateIR(ctx));
-                return res;
-            }
-            res->addChildren(std::make_unique<IR::IRDoubleValue>(1), value->generateIR(ctx));
-            return res;
-        }
-        case POSTDEC: {
 
+        case MINUS: {
+            IR::Value *zero;
+            if (dynamic_cast<FloatType *>(value->typeOfNode))
+                zero = ctx.buildInstruction(std::make_unique<IR::DoubleConst>(ctx.counter));
+            else
+                zero = ctx.buildInstruction(std::make_unique<IR::IntConst>(ctx.counter));
+            auto value_pointer = value->generateIR(ctx);
+            auto res = std::make_unique<IR::IRArithOp>(ctx.counter);
+
+            res->setTypeOfOperation(IR::IRArithOp::MINUS);
+            res->addChildren(zero, value_pointer);
+            res->setTypeOfResult(value->typeOfNode);
+
+            return ctx.buildInstruction(std::move(res));
+        }
+        case PREINC:
+        case PREDEC:
+        case POSTINC:
+        case POSTDEC: {
+            auto value_pointer = value->generateIR(ctx);
+            IR::Value *one_pointer;
+            if (dynamic_cast<FloatType *>(value->typeOfNode)) {
+                auto one = std::make_unique<IR::DoubleConst>(ctx.counter);
+                one->addValue(1);
+                one_pointer = ctx.buildInstruction(std::move(one));
+            } else {
+                auto one = std::make_unique<IR::IntConst>(ctx.counter);
+                one->addValue(1);
+                one_pointer = ctx.buildInstruction(std::move(one));
+            }
+
+            auto res = std::make_unique<IR::IRArithOp>(ctx.counter);
+            if (op == PREINC || op == POSTINC)
+                res->setTypeOfOperation(IR::IRArithOp::PLUS);
+            else
+                res->setTypeOfOperation(IR::IRArithOp::MINUS);
+            res->addChildren(value_pointer, one_pointer);
+            res->setTypeOfResult(value->typeOfNode);
+
+            auto val = ctx.buildInstruction(std::move(res));
+
+            auto store = std::make_unique<IR::IRStore>(ctx.counter);
+
+            // TODO Is it true??
+            auto variable = dynamic_cast<IR::IRLoad *>(value_pointer);
+
+            store->addStoreWhat(val);
+            store->addStoreWhere(variable->getPointer());
+
+            ctx.buildInstruction(std::move(store));
+            if (op == PREINC || op == PREDEC)
+                return val;
+            else
+                return value_pointer;
         }
         case REFER: {
 
         }
         case DEREFER: {
-            auto res = std::make_unique<IR::IRLoad>();
-            res->add
+
         }
     }
 }
 
-std::unique_ptr<IR::Value> AST::ASTFunctionCall::generateIR(IR::Context &ctx) {
+IR::Value *AST::ASTFunctionCall::generateIR(IR::Context &ctx) {
+    std::vector<IR::Value *> arguments;
+    for (auto &i: arg)
+        arguments.emplace_back(i->generateIR(ctx));
+
+    auto res = std::make_unique<IR::IRCall>(ctx.counter);
+
 
 }
 
-std::unique_ptr<IR::Value> AST::ASTMemberAccess::generateIR(IR::Context &ctx) {
+IR::Value *AST::ASTMemberAccess::generateIR(IR::Context &ctx) {
 
 }
 
-IR::IRLine *AST::ASTMemberAccess::getPointerToIt(IR::Context &ctx) {
+IR::Value *AST::ASTIntNumber::generateIR(IR::Context &ctx) {
+    auto res = std::make_unique<IR::IntConst>(ctx.counter);
+    res->addValue(value);
+
+    return ctx.buildInstruction(std::move(res));
+}
+
+IR::Value *AST::ASTFloatNumber::generateIR(IR::Context &ctx) {
+    auto res = std::make_unique<IR::DoubleConst>(ctx.counter);
+    res->addValue(value);
+
+    return ctx.buildInstruction(std::move(res));
+}
+
+IR::Value *AST::ASTBoolNumber::generateIR(IR::Context &ctx) {
+    auto res = std::make_unique<IR::IntConst>(ctx.counter);
+    res->addValue(value ? 1 : 0);
+
+    return ctx.buildInstruction(std::move(res));
+}
+
+IR::Value *AST::ASTStruct::generateIR(IR::Context &ctx) {
 
 }
 
-std::unique_ptr<IR::IRLine> AST::ASTIntNumber::generateIR(IR::Context &ctx) {
-    auto res = std::make_unique<IR::IRIntValue>(value);
-    return res;
+IR::Value *AST::ASTVar::generateIR(IR::Context &ctx) {
+    auto res = std::make_unique<IR::IRLoad>(ctx.counter);
+    res->addLoadFrom(ctx.getVariable(name));
+
+    return ctx.buildInstruction(std::move(res));
 }
 
-IR::IRLine *AST::ASTIntNumber::getPointerToIt(IR::Context &ctx) {
-    throw std::invalid_argument("Never should happen.");
-}
-
-std::unique_ptr<IR::IRLine> AST::ASTFloatNumber::generateIR(IR::Context &ctx) {
-    auto res = std::make_unique<IR::IRIntValue>(value);
-    return res;
-}
-
-IR::IRLine *AST::ASTFloatNumber::getPointerToIt(IR::Context &ctx) {
-    throw std::invalid_argument("Never should happen.");
-}
-
-std::unique_ptr<IR::IRLine> AST::ASTBoolNumber::generateIR(IR::Context &ctx) {
-
-}
-
-IR::IRLine *AST::ASTBoolNumber::getPointerToIt(IR::Context &ctx) {
-    throw std::invalid_argument("Never should happen.");
-}
-
-std::unique_ptr<IR::IRLine> AST::ASTStruct::generateIR(IR::Context &ctx) {
-
-}
-
-IR::IRLine *AST::ASTStruct::getPointerToIt(IR::Context &ctx) {
-    throw std::invalid_argument("Never should happen.");
-}
-
-std::unique_ptr<IR::IRLine> AST::ASTVar::generateIR(IR::Context &ctx) {
-    auto res = std::make_unique<IR::IRLoad>();
-    res->addLink(ctx.getVar(name));
-    return res;
-}
-
-IR::IRLine *AST::ASTVar::getPointerToIt(IR::Context &ctx) {
-    return ctx.getVar(name);
-}
-
-std::unique_ptr<IR::IRLine> AST::ASTTypeDeclaration::generateIR(IR::Context &ctx) {
+IR::Value *AST::ASTTypeDeclaration::generateIR(IR::Context &ctx) {
     return nullptr;
 }
 
-std::unique_ptr<IR::IRLine> AST::ASTVarDeclaration::generateIR(IR::Context &ctx) {
-    auto res = std::make_unique<IR::IRBlock>();
+IR::Value *AST::ASTVarDeclaration::generateIR(IR::Context &ctx) {
+    if (ctx.Global) {
+        // TODO value later
+        for (auto i = 0; i < name.size(); ++i) {
+            auto res = std::make_unique<IR::IRGlobal>(ctx.counter);
 
-    for (auto i = 0; i < name.size(); ++i) {
-        if (ctx.Global) {
-            auto single_decl = std::make_unique<IR::IRGlobal>();
             if (type)
-                single_decl->addType(type->typeOfNode);
+                res->addType(type->typeOfNode);
             else
-                single_decl->addType(value[i]->typeOfNode);
-            // TODO value
-            ctx.setNewVar(name[i], single_decl.get());
-            res->addLine(std::move(single_decl));
-        } else {
-            auto tmp_block = std::make_unique<IR::IRBlock>();
-            auto declare = std::make_unique<IR::IRAlloca>();
-            auto fill_value = std::make_unique<IR::IRStore>();
-            Type *type_of_alloca = type ? type->typeOfNode : value[i]->typeOfNode;
+                res->addType(value[i]->typeOfNode);
 
-            declare->addType(type_of_alloca);
+            ctx.addVariable(name[i], res.get());
+            ctx.program->addGlobDecl(std::move(res));
+        }
+        return nullptr;
+    }
+    for (auto i = 0; i < name.size(); ++i) {
+        auto res = std::make_unique<IR::IRAlloca>(ctx.counter);
 
-            if (!value.empty() && value[i]) {
-                fill_value->addValue(value[i]->generateIR(ctx));
-            }
-            // TODO fill with default
+        if (type)
+            res->addType(type->typeOfNode);
+        else
+            res->addType(value[i]->typeOfNode);
 
-            fill_value->setLink(declare.get());
-
-            ctx.setNewVar(name[i], declare.get());
-            tmp_block->addLine(std::move(declare));
-            tmp_block->addLine(std::move(fill_value));
-
-            res->addLine(std::move(tmp_block));
+        ctx.addVariable(name[i], res.get());
+        ctx.buildInstruction(std::move(res));
+        if (!value.empty() && value[i]) {
+            auto val_pointer = value[i]->generateIR(ctx);
+            auto store = std::make_unique<IR::IRStore>(ctx.counter);
+            store->addStoreWhat(val_pointer);
+            store->addStoreWhere(ctx.getVariable(name[i]));
+            ctx.buildInstruction(std::move(store));
         }
     }
-
-    return res;
+    return nullptr;
 }
 
-std::unique_ptr<IR::IRLine> AST::ASTConstDeclaration::generateIR(IR::Context &ctx) {
-    auto res = std::make_unique<IR::IRBlock>();
+IR::Value *AST::ASTConstDeclaration::generateIR(IR::Context &ctx) {
+    if (ctx.Global) {
+        // TODO value later
+        for (auto i = 0; i < name.size(); ++i) {
+            auto res = std::make_unique<IR::IRGlobal>(ctx.counter);
 
-    for (auto i = 0; i < name.size(); ++i) {
-        if (ctx.Global) {
-            auto single_decl = std::make_unique<IR::IRGlobal>();
             if (type)
-                single_decl->addType(type->typeOfNode);
+                res->addType(type->typeOfNode);
             else
-                single_decl->addType(value[i]->typeOfNode);
-            // TODO value
+                res->addType(value[i]->typeOfNode);
 
-            ctx.setNewVar(name[i], single_decl.get());
-            res->addLine(std::move(single_decl));
-        } else {
-            auto tmp_block = std::make_unique<IR::IRBlock>();
-            auto declare = std::make_unique<IR::IRAlloca>();
-            auto fill_value = std::make_unique<IR::IRStore>();
-            Type *type_of_alloca = type ? type->typeOfNode : value[i]->typeOfNode;
-
-            declare->addType(type_of_alloca);
-
-            if (value[i]) {
-                fill_value->addValue(value[i]->generateIR(ctx));
-            }
-            // TODO fill with default
-
-            fill_value->setLink(declare.get());
-
-            ctx.setNewVar(name[i], declare.get());
-            tmp_block->addLine(std::move(declare));
-            tmp_block->addLine(std::move(fill_value));
-
-            res->addLine(std::move(tmp_block));
+            ctx.addVariable(name[i], res.get());
+            ctx.program->addGlobDecl(std::move(res));
         }
+        return nullptr;
     }
+    // TODO values later
+    for (auto i = 0; i < name.size(); ++i) {
+        auto res = std::make_unique<IR::IRAlloca>(ctx.counter);
 
-    return res;
+        if (type)
+            res->addType(type->typeOfNode);
+        else
+            res->addType(value[i]->typeOfNode);
+
+        ctx.addVariable(name[i], res.get());
+        ctx.buildInstruction(std::move(res));
+    }
+    return nullptr;
 }
 
-std::unique_ptr<IR::IRLine> AST::ASTBlock::generateIR(IR::Context &ctx) {
-    auto res = std::make_unique<IR::IRBlock>();
+IR::Value *AST::ASTBlock::generateIR(IR::Context &ctx) {
+    ctx.goDeeper();
     for (auto &i: statements)
-        res->addLine(i->generateIR(ctx));
-    return res;
+        i->generateIR(ctx);
+    ctx.goUp();
+
+    return nullptr;
 }
 
-std::unique_ptr<IR::IRLine> AST::ASTBreak::generateIR(IR::Context &ctx) {
-    auto res = std::make_unique<IR::IRBranch>();
-    res->addBrTaken(ctx.break_label);
+IR::Value *AST::ASTBreak::generateIR(IR::Context &ctx) {
+    auto res = std::make_unique<IR::IRBranch>(ctx.counter);
 
-    return res;
+    res->addBrTaken(ctx.getBreakLabel());
+
+    ctx.buildInstruction(std::move(res));
+    return nullptr;
 }
 
-std::unique_ptr<IR::IRLine> AST::ASTContinue::generateIR(IR::Context &ctx) {
-    auto res = std::make_unique<IR::IRBranch>();
-    res->addBrTaken(ctx.cont_label);
+IR::Value *AST::ASTContinue::generateIR(IR::Context &ctx) {
+    auto res = std::make_unique<IR::IRBranch>(ctx.counter);
 
-    return res;
+    res->addBrTaken(ctx.getContinueLabel());
+
+    ctx.buildInstruction(std::move(res));
+    return nullptr;
 }
 
-std::unique_ptr<IR::IRLine> AST::ASTReturn::generateIR(IR::Context &ctx) {
-    auto res = std::make_unique<IR::IRRet>();
+IR::Value *AST::ASTReturn::generateIR(IR::Context &ctx) {
+    auto res = std::make_unique<IR::IRRet>(ctx.counter);
+
     if (!return_value.empty())
         res->addRetVal(this->return_value[0]->generateIR(ctx));
 
-
-    return res;
+    ctx.buildInstruction(std::move(res));
+    return nullptr;
 }
 
-std::unique_ptr<IR::IRLine> AST::ASTSwitch::generateIR(IR::Context &ctx) {
-    // TODO
+IR::Value *AST::ASTSwitch::generateIR(IR::Context &ctx) {
+
 }
 
-std::unique_ptr<IR::IRLine> AST::ASTIf::generateIR(IR::Context &ctx) {
+IR::Value *AST::ASTIf::generateIR(IR::Context &ctx) {
+    auto condition_pointer = expr->generateIR(ctx);
+
+    auto ifTrue_label = std::make_unique<IR::IRLabel>(ctx.counter);
+    auto ifFalse_label = std::make_unique<IR::IRLabel>(ctx.counter);
+    auto end_label = std::make_unique<IR::IRLabel>(ctx.counter);
+
+    auto condition_jmp = std::make_unique<IR::IRBranch>(ctx.counter);
+    condition_jmp->addCond(condition_pointer);
+    condition_jmp->addBrTaken(ifTrue_label.get());
+    if (else_clause)
+        condition_jmp->addBrNTaken(ifFalse_label.get());
+    else
+        condition_jmp->addBrNTaken(end_label.get());
+
+
+    ctx.buildInstruction(std::move(condition_jmp));
+    ctx.buildInstruction(std::move(ifTrue_label));
+
+    ctx.goDeeper();
+    ctx.addBreakLabel(end_label.get());
+    if_clause->generateIR(ctx);
+    ctx.goUp();
+
+    auto jump_from_if = std::make_unique<IR::IRBranch>(ctx.counter);
+    jump_from_if->addBrTaken(end_label.get());
+    ctx.buildInstruction(std::move(jump_from_if));
+
     if (else_clause) {
-        auto res = std::make_unique<IR::IRBlock>();
-        auto if_label = std::make_unique<IR::IRLabel>();
-        auto else_label = std::make_unique<IR::IRLabel>();
-        auto end_label = std::make_unique<IR::IRLabel>();
+        ctx.buildInstruction(std::move(ifFalse_label));
 
-        auto br = std::make_unique<IR::IRBranch>();
-        br->addCond(expr->generateIR(ctx));
-        br->addBrTaken(if_label.get());
-        br->addBrNTaken(else_label.get());
+        ctx.goDeeper();
+        else_clause->generateIR(ctx);
+        ctx.goUp();
 
-        auto brEndIf = std::make_unique<IR::IRBranch>();
-        brEndIf->addBrTaken(end_label.get());
-
-        res->addLine(std::move(br));
-        res->addLine(std::move(if_label));
-        res->addLine(std::move(if_clause->generateIR(ctx)));
-        res->addLine(std::move(brEndIf));
-        res->addLine(std::move(else_label));
-        res->addLine(std::move(else_clause->generateIR(ctx)));
-        res->addLine(std::move(end_label));
-        return res;
+        auto jump_from_else = std::make_unique<IR::IRBranch>(ctx.counter);
+        jump_from_else->addBrTaken(end_label.get());
+        ctx.buildInstruction(std::move(jump_from_else));
     }
-    auto res = std::make_unique<IR::IRBlock>();
-    auto if_label = std::make_unique<IR::IRLabel>();
-    auto end_label = std::make_unique<IR::IRLabel>();
+    ctx.buildInstruction(std::move(end_label));
 
-    auto br = std::make_unique<IR::IRBranch>();
-    br->addCond(expr->generateIR(ctx));
-    br->addBrTaken(if_label.get());
-    br->addBrNTaken(end_label.get());
-
-    res->addLine(std::move(br));
-    res->addLine(std::move(if_label));
-    res->addLine(std::move(if_clause->generateIR(ctx)));
-    res->addLine(std::move(end_label));
-    return res;
+    return nullptr;
 }
 
-std::unique_ptr<IR::IRLine> AST::ASTFor::generateIR(IR::Context &ctx) {
-    auto res = std::make_unique<IR::IRBlock>();
-
-    auto init_stage = std::make_unique<IR::IRBlock>();
+IR::Value *AST::ASTFor::generateIR(IR::Context &ctx) {
+    ctx.goDeeper();
     for (auto &i: init_clause)
-        init_stage->addLine(i->generateIR(ctx));
+        i->generateIR(ctx);
 
+    auto begin_loop_label = std::make_unique<IR::IRLabel>(ctx.counter);
+    auto jmp_to_begin = std::make_unique<IR::IRBranch>(ctx.counter);
+    jmp_to_begin->addBrTaken(begin_loop_label.get());
+    ctx.buildInstruction(std::move(jmp_to_begin));
 
-    auto start_for_label = std::make_unique<IR::IRLabel>();
-    auto body_for_label = std::make_unique<IR::IRLabel>();
-    auto iter_clause_label = std::make_unique<IR::IRLabel>();
-    auto end_for_label = std::make_unique<IR::IRLabel>();
+    auto begin_loop_label_pointer = ctx.buildInstruction(std::move(begin_loop_label));
 
-    ctx.break_label = end_for_label.get();
-    ctx.cont_label = iter_clause_label.get();
+    auto val = if_clause->generateIR(ctx);
 
-    auto cond_stage = std::make_unique<IR::IRBranch>();
-    cond_stage->addCond(if_clause->generateIR(ctx));
-    cond_stage->addBrTaken(body_for_label.get());
-    cond_stage->addBrNTaken(end_for_label.get());
+    auto jmp_condition = std::make_unique<IR::IRBranch>(ctx.counter);
 
-    auto body_clause = body->generateIR(ctx);
+    auto begin_loop_body_label = std::make_unique<IR::IRLabel>(ctx.counter);
+    auto end_loop_label = std::make_unique<IR::IRLabel>(ctx.counter);
+    auto begin_loop_post_label = std::make_unique<IR::IRLabel>(ctx.counter);
 
-    auto iter_clause = std::make_unique<IR::IRBlock>();
+    jmp_condition->addCond(val);
+    jmp_condition->addBrTaken(begin_loop_body_label.get());
+    jmp_condition->addBrNTaken(end_loop_label.get());
+
+    ctx.buildInstruction(std::move(jmp_condition));
+
+    ctx.buildInstruction(std::move(begin_loop_body_label));
+    ctx.addBreakLabel(end_loop_label.get());
+    ctx.addContinueLabel(begin_loop_post_label.get());
+
+    body->generateIR(ctx);
+
+    auto jmp_to_post = std::make_unique<IR::IRBranch>(ctx.counter);
+    jmp_to_post->addBrTaken(begin_loop_post_label.get());
+
+    ctx.buildInstruction(std::move(jmp_to_post));
+
+    ctx.buildInstruction(std::move(begin_loop_post_label));
+
     for (auto &i: iterate_clause)
-        iter_clause->addLine(i->generateIR(ctx));
-    auto tmp_branch = std::make_unique<IR::IRBranch>();
-    tmp_branch->addBrTaken(start_for_label.get());
-    iter_clause->addLine(std::move(tmp_branch));
+        i->generateIR(ctx);
 
-    res->addLine(std::move(init_stage));
-    res->addLine(std::move(start_for_label));
-    res->addLine(std::move(cond_stage));
-    res->addLine(std::move(body_for_label));
-    res->addLine(std::move(body_clause));
-    res->addLine(std::move(iter_clause_label));
-    res->addLine(std::move(iter_clause));
-    res->addLine(std::move(end_for_label));
+    auto jmp_to_condition = std::make_unique<IR::IRBranch>(ctx.counter);
+    jmp_to_condition->addBrTaken(begin_loop_label_pointer);
 
-    return res;
+    ctx.buildInstruction(std::move(jmp_to_condition));
+
+    ctx.buildInstruction(std::move(end_loop_label));
+
+    return nullptr;
 }
 
-std::unique_ptr<IR::IRLine> AST::ASTAssign::generateIR(IR::Context &ctx) {
-    auto res = std::make_unique<IR::IRBlock>();
+IR::Value *AST::ASTAssign::generateIR(IR::Context &ctx) {
     for (auto i = 0; i < value.size(); ++i) {
-        auto val = value[i]->generateIR(ctx);
-
-        auto store = std::make_unique<IR::IRStore>();
-        store->setLink(variable[i]->getPointerToIt(ctx));
+        auto value_pointer = value[i]->generateIR(ctx);
         switch (type) {
-            case ASSIGN:
-                store->addValue(std::move(val));
-                break;
-            case PLUSASSIGN: {
-                auto value = std::make_unique<IR::IRArithOp>();
-                value->setType(IR::IRArithOp::PLUS);
-                value->addChildren(variable[i]->generateIR(ctx), std::move(val));
-                store->addValue(std::move(value));
-                break;
+            case ASSIGN: {
+                auto res = std::make_unique<IR::IRStore>(ctx.counter);
+
+                res->addStoreWhat(value_pointer);
+                //TODO prove it. Maybe it does not work???
+                //Also check in case of function
+                auto loader = variable[i]->generateIR(ctx);
+                auto where_store = dynamic_cast<IR::IRLoad *>(loader)->getPointer();
+                res->addStoreWhere(where_store);
+                ctx.deleteLastRow();
+                ctx.buildInstruction(std::move(res));
             }
-            case MINUSASSIGN: {
-                auto value = std::make_unique<IR::IRArithOp>();
-                value->setType(IR::IRArithOp::MINUS);
-                value->addChildren(variable[i]->generateIR(ctx), std::move(val));
-                store->addValue(std::move(value));
-                break;
-            }
-            case MULTASSIGN: {
-                auto value = std::make_unique<IR::IRArithOp>();
-                value->setType(IR::IRArithOp::MUL);
-                value->addChildren(variable[i]->generateIR(ctx), std::move(val));
-                store->addValue(std::move(value));
-                break;
-            }
-            case DIVASSIGN: {
-                auto value = std::make_unique<IR::IRArithOp>();
-                value->setType(IR::IRArithOp::DIV);
-                value->addChildren(variable[i]->generateIR(ctx), std::move(val));
-                store->addValue(std::move(value));
-                break;
-            }
+            case PLUSASSIGN:
+            case MINUSASSIGN:
+            case MULTASSIGN:
+            case DIVASSIGN:
             case MODASSIGN: {
-                auto value = std::make_unique<IR::IRArithOp>();
-                value->setType(IR::IRArithOp::MOD);
-                value->addChildren(variable[i]->generateIR(ctx), std::move(val));
-                store->addValue(std::move(value));
-                break;
+                auto val_of_var = variable[i]->generateIR(ctx);
+                auto var_pointer = dynamic_cast<IR::IRLoad *>(val_of_var)->getPointer();
+                auto val = value[i]->generateIR(ctx);
+                auto result = std::make_unique<IR::IRArithOp>(ctx.counter);
+
+                if (type == PLUSASSIGN)
+                    result->setTypeOfOperation(IR::IRArithOp::PLUS);
+                if (type == MINUSASSIGN)
+                    result->setTypeOfOperation(IR::IRArithOp::MINUS);
+                if (type == MULTASSIGN)
+                    result->setTypeOfOperation(IR::IRArithOp::MUL);
+                if (type == DIVASSIGN)
+                    result->setTypeOfOperation(IR::IRArithOp::DIV);
+                if (type == MODASSIGN)
+                    result->setTypeOfOperation(IR::IRArithOp::MOD);
+                result->addChildren(val_of_var, val);
+                result->setTypeOfResult(variable[i]->typeOfNode);
+
+                auto new_val = ctx.buildInstruction(std::move(result));
+
+                auto store = std::make_unique<IR::IRStore>(ctx.counter);
+                store->addStoreWhere(var_pointer);
+                store->addStoreWhat(new_val);
+
+                ctx.buildInstruction(std::move(store));
             }
+
 
         }
 
-        res->addLine(std::move(store));
     }
-
-    return res;
+    return nullptr;
 }
 
 
-std::unique_ptr<IR::IRLine> AST::Function::generateIR(IR::Context &ctx) {
-    auto res = std::make_unique<IR::IRFunc>();
+IR::Value *AST::Function::generateIR(IR::Context &ctx) {
+    auto res = std::make_unique<IR::IRFunc>(ctx.counter);
     if (!return_type.empty())
         res->addReturnType(return_type[0]->typeOfNode);
 
-    for (auto &i: params)
-        for (auto &j: i.first)
-            res->addTypeOfArg(i.second->typeOfNode, j);
+    res->setName(name);
 
-    // allocate for arguments
-    {
+    ctx.goDeeper();
 
-    }
+    ctx.setBuilder(res->getLinkToBody());
 
-    res->addBody(body->generateIR(ctx));
+    // arguments
+    for (auto &[i, j]: params)
+        for (auto &var_name: i) {
+            auto argument = std::make_unique<IR::IRFuncArg>(ctx.counter);
+            argument->addType(j->typeOfNode);
+//            ctx.addVariable(var_name, argument.get());
+            auto alloca = std::make_unique<IR::IRAlloca>(ctx.counter);
+            alloca->addType(j->typeOfNode);
+            auto store = std::make_unique<IR::IRStore>(ctx.counter);
+            store->addStoreWhat(argument.get());
+            store->addStoreWhere(alloca.get());
 
-    return res;
+            ctx.addVariable(var_name, alloca.get());
+
+            ctx.buildInstruction(std::move(alloca));
+            ctx.buildInstruction(std::move(store));
+
+            res->addArg(std::move(argument));
+        }
+
+
+    body->generateIR(ctx);
+    ctx.program->addFunc(std::move(res));
+
+    ctx.goUp();
+
+    return nullptr;
 }
 
-std::unique_ptr<IR::IRLine> AST::Program::generateIR(IR::Context &ctx) {
-    auto program = std::make_unique<IR::IRProgram>();
+IR::Value *AST::Program::generateIR(IR::Context &ctx) {
+    ctx.program = std::make_unique<IR::IRProgram>(ctx.counter);
 
     for (auto &i: varDeclarations)
-        program->addLine(i->generateIR(ctx));
+        i->generateIR(ctx);
 
     ctx.Global = false;
 
     for (auto &i: functions)
-        program->addLine(i->generateIR(ctx));
+        i->generateIR(ctx);
 
-
-    return program;
+    return ctx.program.get();
 }
 
-std::unique_ptr<IR::IRLine> AST::ASTCast::generateIR(IR::Context &ctx) {
-    auto res = std::make_unique<IR::IRCast>();
-    res->addExpr(expr->generateIR(ctx));
-    res->addTypeTo(cast_to);
+IR::Value *AST::ASTCast::generateIR(IR::Context &ctx) {
+    auto value_pointer = expr->generateIR(ctx);
+    auto cast_node = std::make_unique<IR::IRCast>(ctx.counter);
+    cast_node->addTypeTo(cast_to);
+
+    cast_node->addExpr(value_pointer);
+
+    auto res = cast_node.get();
+    ctx.buildInstruction(std::move(cast_node));
     return res;
-}
-
-IR::IRLine *AST::ASTCast::getPointerToIt(IR::Context &) {
-
 }

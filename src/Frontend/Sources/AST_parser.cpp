@@ -29,7 +29,8 @@ AST::ASTType *AST::ASTTypeStruct::findField(std::string name) const {
 }
 
 AST::ASTBinaryOperator::ASTBinaryOperator(std::unique_ptr<AST::ASTExpression> &&new_left,
-                                          std::unique_ptr<AST::ASTExpression> &&new_right, IR::IRArithOp::Operator new_op) {
+                                          std::unique_ptr<AST::ASTExpression> &&new_right,
+                                          IR::IRArithOp::Operator new_op) {
     op = new_op;
     left = std::move(new_left);
     right = std::move(new_right);

@@ -689,9 +689,11 @@ std::vector<std::unique_ptr<AST::Statement>> Parser::parseStatement() {
             res.emplace_back(parseForLoop());
             break;
         case tok_break:
+            matchAndGoNext(tok_break);
             res.emplace_back(std::make_unique<AST::ASTBreak>());
             break;
         case tok_continue:
+            matchAndGoNext(tok_continue);
             res.emplace_back(std::make_unique<AST::ASTContinue>());
             break;
         case tok_return:

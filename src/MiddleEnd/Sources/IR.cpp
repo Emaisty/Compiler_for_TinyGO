@@ -1,31 +1,99 @@
 #include "IR.h"
 
+IR::Value::Value(long long &counter) {
+    inner_number = counter++;
+}
+
 void IR::Value::addUse(Value *use) {
     uses.emplace_back(use);
 }
 
-void IR::Context::addFunction(std::string, IRFunc *) {
-
+IR::Context::Context() {
+    goDeeper();
 }
 
-IR::IRFunc *IR::Context::getFunction(std::string) {
+void IR::Context::goDeeper() {
+    variables.emplace_back();
+    functions.emplace_back();
 
+    if (cont_label.empty() && break_label.empty()) {
+        cont_label.emplace();
+        break_label.emplace();
+    } else {
+        cont_label.emplace(cont_label.top());
+        break_label.emplace(break_label.top());
+    }
 }
 
-void IR::Context::addVariable(std::string, Value *) {
+void IR::Context::goUp() {
+    variables.erase(variables.end() - 1, variables.end());
+    functions.erase(functions.end() - 1, functions.end());
 
+    cont_label.pop();
+    break_label.pop();
 }
 
-IR::Value *IR::Context::getVariable(std::string) {
-
+void IR::Context::addContinueLabel(Value *new_label) {
+    cont_label.emplace(new_label);
 }
 
-void IR::Context::setBuilder(std::vector<std::unique_ptr<Value>> *) {
+IR::Value *IR::Context::getContinueLabel() {
+    return cont_label.top();
+}
 
+void IR::Context::addBreakLabel(Value *new_label) {
+    break_label.emplace(new_label);
+}
+
+IR::Value *IR::Context::getBreakLabel() {
+    return break_label.top();
+}
+
+void IR::Context::addFunction(std::string name, IRFunc *func) {
+    functions.back()[name] = func;
+}
+
+IR::IRFunc *IR::Context::getFunction(std::string name) {
+    for (auto i = functions.size() - 1; i >= 0; --i)
+        if (functions[i].find(name) != functions[i].end())
+            return functions[i][name];
+
+    // NEVER should happen
+}
+
+void IR::Context::addVariable(std::string name, Value *var) {
+    variables.back()[name] = var;
+}
+
+IR::Value *IR::Context::getVariable(std::string name) {
+    for (auto i = variables.size() - 1; i >= 0; --i)
+        if (variables[i].find(name) != variables[i].end())
+            return variables[i][name];
+}
+
+void IR::Context::setBuilder(std::vector<std::unique_ptr<Value>> *body_where_to_build) {
+    where_put = body_where_to_build;
+}
+
+IR::Value *IR::Context::buildInstruction(std::unique_ptr<Value> &&new_instruction) {
+    where_put->emplace_back(std::move(new_instruction));
+    return where_put->back().get();
+}
+
+void IR::Context::deleteLastRow() {
+    where_put->erase(where_put->end() - 1, where_put->end());
+}
+
+void IR::IntConst::addValue(long long val) {
+    value = val;
 }
 
 void IR::IntConst::print(std::ostream &oss) {
     oss << "   " << "%" << inner_number << " = create int constant " << value << std::endl;
+}
+
+void IR::DoubleConst::addValue(double val) {
+    value = val;
 }
 
 void IR::DoubleConst::print(std::ostream &oss) {
@@ -37,12 +105,20 @@ void IR::IRArithOp::addChildren(Value *n_left, Value *n_right) {
     right = n_right;
 }
 
-void IR::IRArithOp::setType(Operator new_operator) {
+void IR::IRArithOp::setTypeOfOperation(Operator new_operator) {
     op = new_operator;
 }
 
-void IR::IRArithOp::print(std::ostream &) {
+void IR::IRArithOp::setTypeOfResult(Type *new_type) {
+    result_type = new_type;
+}
 
+void IR::IRArithOp::print(std::ostream &oss) {
+    std::string name_of_operation = operator_to_str.find(op)->second;
+    if (dynamic_cast<FloatType *>(result_type))
+        name_of_operation = "f " + name_of_operation;
+    oss << "   " << "%" << inner_number << " = " << name_of_operation << " ; left: %" << left->inner_number
+        << " ; right: %" << right->inner_number << std::endl;
 }
 
 void IR::IRLabel::print(std::ostream &oss) {
@@ -53,8 +129,12 @@ void IR::IRLoad::addLoadFrom(Value *new_link) {
     where = new_link;
 }
 
+IR::Value *IR::IRLoad::getPointer() {
+    return where;
+}
+
 void IR::IRLoad::print(std::ostream &oss) {
-    oss << "   " << "%" << inner_number << " = load from:%" << where->inner_number;
+    oss << "   " << "%" << inner_number << " = load from:%" << where->inner_number << std::endl;
 }
 
 void IR::IRStore::addStoreWhere(Value *new_link) {
@@ -88,7 +168,8 @@ void IR::IRGlobal::addType(Type *new_type) {
 
 void IR::IRGlobal::print(std::ostream &oss) {
     // TODO basic value
-    oss << "%" << inner_number << " = global '" << type->toString() << "' ; value is ";
+    oss << "%" << inner_number << " = global '" << type->toString() << "' ; value is " << std::endl << std::endl
+        << std::endl;
 }
 
 void IR::IRBranch::addCond(Value *new_val) {
@@ -117,7 +198,10 @@ void IR::IRRet::addRetVal(Value *new_val) {
 }
 
 void IR::IRRet::print(std::ostream &oss) {
-    oss << "   " << "ret %" << res->inner_number << std::endl;
+    if (res)
+        oss << "   " << "ret %" << res->inner_number << std::endl;
+    else
+        oss << "   " << "ret 'nothing'" << std::endl;
 }
 
 void IR::IRCall::addLinkToFunc(Value *new_func) {
@@ -181,6 +265,10 @@ std::string IR::IRFunc::getName() {
     return name;
 }
 
+std::vector<std::unique_ptr<IR::Value>> *IR::IRFunc::getLinkToBody() {
+    return &body;
+}
+
 void IR::IRFunc::print(std::ostream &oss) {
     oss << "function %" << name << "; arguments: (";
     for (auto i = 0; i < arguments.size(); ++i) {
@@ -188,7 +276,14 @@ void IR::IRFunc::print(std::ostream &oss) {
         if (i != arguments.size() - 1)
             oss << ", ";
     }
-    oss << "); return: '" << return_type->toString() << "' {" << std::endl;
+    oss << "); return: '";
+
+    if (return_type)
+        oss << return_type->toString();
+    else
+        oss << "nothing";
+
+    oss << "' {" << std::endl;
     for (auto &i: body)
         i->print(oss);
     oss << "}" << std::endl << std::endl << std::endl;
@@ -210,3 +305,14 @@ void IR::IRProgram::print(std::ostream &oss) {
     for (auto &i: functions)
         i->print(oss);
 }
+
+IR::IRComment *IR::IRComment::addText(std::string new_text) {
+    comment = new_text;
+    return this;
+}
+
+
+void IR::IRComment::print(std::ostream &oss) {
+    oss << "// " << comment << std::endl;
+}
+

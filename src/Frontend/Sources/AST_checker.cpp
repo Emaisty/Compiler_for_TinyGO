@@ -268,7 +268,8 @@ Type *AST::ASTBinaryOperator::checker(AST::Context &ctx) {
 
         if (ctx.isInt(LType) && ctx.isInt(RType))
             typeOfNode = ctx.greaterInt(LType, RType);
-        typeOfNode = ctx.getTypeByTypeName("float");
+        else
+            typeOfNode = ctx.getTypeByTypeName("float");
 
     }
 
@@ -631,6 +632,17 @@ Type *AST::ASTReturn::checker(Context &ctx) {
     for (int i = 0; i < return_value.size(); ++i)
         if (!return_value[i]->checker(ctx)->canConvertToThisType(ctx.return_type[i]))
             throw std::invalid_argument("ERROR. Not matching return value");
+
+    for (auto i = 0; i < return_value.size(); ++i) {
+        if (return_value[i]->typeOfNode != ctx.return_type[i]) {
+            auto cast = std::make_unique<AST::ASTCast>();
+
+            cast->setTypeCastTo(ctx.return_type[i]);
+            cast->setChild(std::move(return_value[i]));
+
+            return_value[i] = std::move(cast);
+        }
+    }
 
     return nullptr;
 }
