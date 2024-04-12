@@ -71,17 +71,21 @@ IR::Value *IR::Context::getVariable(std::string name) {
             return variables[i][name];
 }
 
-void IR::Context::setBuilder(std::vector<std::unique_ptr<Value>> *body_where_to_build) {
-    where_put = body_where_to_build;
+void IR::Context::setFunction(IRFunc *linl_to_func) {
+    where_build = linl_to_func;
 }
 
 IR::Value *IR::Context::buildInstruction(std::unique_ptr<Value> &&new_instruction) {
-    where_put->emplace_back(std::move(new_instruction));
-    return where_put->back().get();
+    if (dynamic_cast<IR::IRAlloca *>(new_instruction.get())) {
+        where_build->addAlloca(std::move(new_instruction));
+        return nullptr;
+    }
+    where_build->addInstToBody(std::move(new_instruction));
+    return where_build->getLinkToBody()->back().get();
 }
 
 void IR::Context::deleteLastRow() {
-    where_put->erase(where_put->end() - 1, where_put->end());
+    where_build->getLinkToBody()->erase(where_build->getLinkToBody()->end() - 1, where_build->getLinkToBody()->end());
 }
 
 void IR::IntConst::addValue(long long val) {
@@ -253,6 +257,10 @@ void IR::IRFunc::addArg(std::unique_ptr<IRFuncArg> &&new_arg) {
     arguments.emplace_back(std::move(new_arg));
 }
 
+void IR::IRFunc::addAlloca(std::unique_ptr<Value> &&new_alloca) {
+    allocas.emplace_back(std::move(new_alloca));
+}
+
 void IR::IRFunc::addInstToBody(std::unique_ptr<Value> &&new_instruction) {
     body.emplace_back(std::move(new_instruction));
 }
@@ -284,6 +292,8 @@ void IR::IRFunc::print(std::ostream &oss) {
         oss << "nothing";
 
     oss << "' {" << std::endl;
+    for (auto &i: allocas)
+        i->print(oss);
     for (auto &i: body)
         i->print(oss);
     oss << "}" << std::endl << std::endl << std::endl;

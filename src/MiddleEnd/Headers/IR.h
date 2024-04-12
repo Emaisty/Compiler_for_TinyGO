@@ -61,14 +61,14 @@ namespace IR {
 
         Value *getVariable(std::string);
 
-        void setBuilder(std::vector<std::unique_ptr<Value>> *);
+        void setFunction(IRFunc *);
 
         Value *buildInstruction(std::unique_ptr<Value> &&);
 
         void deleteLastRow();
 
     private:
-        std::vector<std::unique_ptr<Value>> *where_put;
+        IR::IRFunc *where_build;
 
         std::stack<Value *> cont_label;
 
@@ -136,22 +136,22 @@ namespace IR {
         };
 
         inline static const std::map<Operator, std::string> operator_to_str = {
-                {Operator::OR, "OR"},
-                {Operator::AND, "AND"},
-                {Operator::BINOR, "BIN OR"},
+                {Operator::OR,     "OR"},
+                {Operator::AND,    "AND"},
+                {Operator::BINOR,  "BIN OR"},
                 {Operator::BINAND, "BIN AND"},
-                {Operator::PLUS, "ADDITION"},
-                {Operator::MINUS, "SUBTRACT."},
-                {Operator::MUL, "MULTIPLICATION"},
-                {Operator::DIV, "DIVISION"},
-                {Operator::MOD, "MODULUS"},
-                {Operator::EQ, "CMPR for equality"},
-                {Operator::NE, "CMPR for not equality"},
-                {Operator::GT, "CMPR for greater than"},
-                {Operator::GE, "CMPR for greater or equal"},
-                {Operator::LT, "CMPR for lower than"},
-                {Operator::LE, "CMPR for lower or equal"},
-                {Operator::XOR, "XOR"},
+                {Operator::PLUS,   "ADDITION"},
+                {Operator::MINUS,  "SUBTRACT."},
+                {Operator::MUL,    "MULTIPLICATION"},
+                {Operator::DIV,    "DIVISION"},
+                {Operator::MOD,    "MODULUS"},
+                {Operator::EQ,     "CMPR for equality"},
+                {Operator::NE,     "CMPR for not equality"},
+                {Operator::GT,     "CMPR for greater than"},
+                {Operator::GE,     "CMPR for greater or equal"},
+                {Operator::LT,     "CMPR for lower than"},
+                {Operator::LE,     "CMPR for lower or equal"},
+                {Operator::XOR,    "XOR"},
         };
 
         void addChildren(Value *, Value *);
@@ -320,6 +320,8 @@ namespace IR {
 
         void addArg(std::unique_ptr<IRFuncArg> &&);
 
+        void addAlloca(std::unique_ptr<Value> &&);
+
         void addInstToBody(std::unique_ptr<Value> &&);
 
         void setName(std::string);
@@ -336,6 +338,8 @@ namespace IR {
         std::string name;
 
         std::vector<std::unique_ptr<IRFuncArg>> arguments;
+
+        std::vector<std::unique_ptr<Value>> allocas;
 
         std::vector<std::unique_ptr<Value>> body;
 

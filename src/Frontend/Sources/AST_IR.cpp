@@ -283,7 +283,6 @@ IR::Value *AST::ASTIf::generateIR(IR::Context &ctx) {
     ctx.buildInstruction(std::move(ifTrue_label));
 
     ctx.goDeeper();
-    ctx.addBreakLabel(end_label.get());
     if_clause->generateIR(ctx);
     ctx.goUp();
 
@@ -361,11 +360,10 @@ IR::Value *AST::ASTFor::generateIR(IR::Context &ctx) {
 
 IR::Value *AST::ASTAssign::generateIR(IR::Context &ctx) {
     for (auto i = 0; i < value.size(); ++i) {
-        auto value_pointer = value[i]->generateIR(ctx);
         switch (type) {
             case ASSIGN: {
+                auto value_pointer = value[i]->generateIR(ctx);
                 auto res = std::make_unique<IR::IRStore>(ctx.counter);
-
                 res->addStoreWhat(value_pointer);
                 //TODO prove it. Maybe it does not work???
                 //Also check in case of function
@@ -424,7 +422,7 @@ IR::Value *AST::Function::generateIR(IR::Context &ctx) {
 
     ctx.goDeeper();
 
-    ctx.setBuilder(res->getLinkToBody());
+    ctx.setFunction(res.get());
 
     // arguments
     for (auto &[i, j]: params)
