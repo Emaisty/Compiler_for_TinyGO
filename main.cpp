@@ -13,10 +13,14 @@ int main() {
     root->checker(ctx);
 
     auto IRctx = ctx.createIRContext();
-
     auto IR = root->generateIR(IRctx);
 
     IR->print(std::cout);
+
+    auto T86ctx = IRctx.createT86Context();
+    IR->generateT86(T86ctx);
+
+    T86ctx.printProgramConsole();
 
     return 0;
 }

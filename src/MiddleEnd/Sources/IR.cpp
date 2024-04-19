@@ -12,6 +12,10 @@ IR::Context::Context() {
     goDeeper();
 }
 
+T86::Context IR::Context::createT86Context() {
+    return T86::Context();
+}
+
 void IR::Context::goDeeper() {
     variables.emplace_back();
     functions.emplace_back();

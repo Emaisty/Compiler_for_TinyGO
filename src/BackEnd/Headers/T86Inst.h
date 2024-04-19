@@ -7,6 +7,8 @@
 #include <map>
 #include <iostream>
 
+#include "magic_enum.hpp"
+
 #include "Operands.h"
 
 namespace T86 {

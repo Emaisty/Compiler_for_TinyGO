@@ -54,6 +54,8 @@ namespace IR {
 
         long long counter = 0;
 
+        T86::Context createT86Context();
+
         void goDeeper();
 
         void goUp();

@@ -11,6 +11,11 @@ T86::Instruction::Instruction(Opcode new_op, std::unique_ptr<Operand> &&new_l,
 }
 
 void T86::Instruction::print(std::ostream &oss) {
+    oss << magic_enum::enum_name(op) << ' ';
+    if (first)
+        oss << first->toString() << ' ';
+    if (second)
+        oss << ", " << second->toString() << ' ';
 }
 
 T86::Instruction *T86::T86Program::emplaceInstruction(Instruction &&inst) {
@@ -19,8 +24,11 @@ T86::Instruction *T86::T86Program::emplaceInstruction(Instruction &&inst) {
 }
 
 void T86::T86Program::print(std::ostream &oss) {
-    for (auto &i: program)
-        i.print(oss);
+    for (size_t i = 0; i < program.size(); ++i) {
+        oss << std::to_string(i) << ' ';
+        program[i].print(oss);
+        oss << std::endl;
+    }
 }
 
 std::size_t T86::T86Program::getNumberOfInstructions() {

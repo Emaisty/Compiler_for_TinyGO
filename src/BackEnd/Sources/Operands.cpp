@@ -25,7 +25,7 @@ std::string T86::Register::toString() {
     else if (register_number == IP)
         res = "IP";
     else
-        res = std::to_string(register_number);
+        res = 'R' + std::to_string(register_number);
 
     if (offset != 0)
         res += " + " + std::to_string(offset);
