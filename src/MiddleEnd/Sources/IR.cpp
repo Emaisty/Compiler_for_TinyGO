@@ -54,11 +54,11 @@ void IR::Context::addFunction(std::string name, IRFunc *func) {
 }
 
 IR::IRFunc *IR::Context::getFunction(std::string name) {
-    for (auto i = functions.size() - 1; i >= 0; --i)
+    for (int i = functions.size() - 1; i >= 0; --i)
         if (functions[i].find(name) != functions[i].end())
             return functions[i][name];
-
-    // NEVER should happen
+    // case that name is in var space
+    return nullptr;
 }
 
 void IR::Context::addVariable(std::string name, Value *var) {
@@ -66,9 +66,11 @@ void IR::Context::addVariable(std::string name, Value *var) {
 }
 
 IR::Value *IR::Context::getVariable(std::string name) {
-    for (auto i = variables.size() - 1; i >= 0; --i)
+    for (int i = variables.size() - 1; i >= 0; --i)
         if (variables[i].find(name) != variables[i].end())
             return variables[i][name];
+    // case that name is ref to function
+    return nullptr;
 }
 
 void IR::Context::setFunction(IRFunc *linl_to_func) {
@@ -88,6 +90,18 @@ void IR::Context::deleteLastRow() {
     where_build->getLinkToBody()->erase(where_build->getLinkToBody()->end() - 1, where_build->getLinkToBody()->end());
 }
 
+std::unique_ptr<IR::Const> IR::Context::getBasicValue(Type *type) {
+    long long nothing = 0;
+    if (dynamic_cast<IntType *>(type))
+        return std::make_unique<IR::IntConst>(nothing);
+    if (dynamic_cast<FloatType *>(type))
+        return std::make_unique<IR::DoubleConst>(nothing);
+    // TODO if struct
+    if (dynamic_cast<PointerType *>(type))
+        return std::make_unique<IR::Nullptr>(nothing);
+
+}
+
 void IR::IntConst::addValue(long long val) {
     value = val;
 }
@@ -96,12 +110,28 @@ void IR::IntConst::print(std::ostream &oss) {
     oss << "   " << "%" << inner_number << " = create int constant " << value << std::endl;
 }
 
+std::string IR::IntConst::toString() {
+    return std::to_string(value);
+}
+
 void IR::DoubleConst::addValue(double val) {
     value = val;
 }
 
 void IR::DoubleConst::print(std::ostream &oss) {
     oss << "   " << "%" << inner_number << " = create double constant " << value << std::endl;
+}
+
+std::string IR::DoubleConst::toString() {
+    return std::to_string(value);
+}
+
+void IR::Nullptr::print(std::ostream &oss) {
+    oss << "   " << "%" << inner_number << " = create nullptr" << std::endl;
+}
+
+std::string IR::Nullptr::toString() {
+    return "nullptr";
 }
 
 void IR::IRArithOp::addChildren(Value *n_left, Value *n_right) {
@@ -157,9 +187,18 @@ void IR::IRAlloca::addType(Type *new_type) {
     type = new_type;
 }
 
+void IR::IRAlloca::addBasicValue(std::unique_ptr<Const> &&new_value) {
+    basicValue = std::move(new_value);
+}
+
 void IR::IRAlloca::print(std::ostream &oss) {
     // TODO basic value
-    oss << "   " << "%" << inner_number << " = alloca '" << type->toString() << "'; value is " << std::endl;
+    oss << "   " << "%" << inner_number << " = alloca '" << type->toString() << "'; ";
+//    value is " << basicValue->toString()
+    if (basicValue)
+        oss << "default value is " << basicValue->toString() << std::endl;
+    else
+        oss << "no default is set, cause some value set by user" << std::endl;
 }
 
 void IR::IRGlobal::addValue(Value *n_value) {
@@ -243,6 +282,10 @@ void IR::IRCast::print(std::ostream &oss) {
 
 void IR::IRFuncArg::addType(Type *new_type) {
     type = new_type;
+}
+
+void IR::IRFuncArg::addOrder(int num) {
+    order_of_arg = num;
 }
 
 void IR::IRFuncArg::print(std::ostream &oss) {

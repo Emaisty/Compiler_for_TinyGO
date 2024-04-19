@@ -8,7 +8,7 @@
 #include <stack>
 
 #include "types.h"
-
+#include "T86Inst.h"
 
 namespace IR {
 
@@ -22,6 +22,10 @@ namespace IR {
 
         virtual void print(std::ostream &) = 0;
 
+        virtual void generateT86(T86::Context &) = 0;
+
+        virtual std::unique_ptr<T86::Operand> getOperand(T86::Context &);
+
         long long inner_number;
 
     private:
@@ -31,6 +35,15 @@ namespace IR {
     class IRFunc;
 
     class IRProgram;
+
+    class Const : public Value {
+    public:
+        using Value::Value;
+
+        virtual std::string toString() = 0;
+
+    private:
+    };
 
     struct Context {
         Context();
@@ -67,6 +80,8 @@ namespace IR {
 
         void deleteLastRow();
 
+        std::unique_ptr<Const> getBasicValue(Type *);
+
     private:
         IR::IRFunc *where_build;
 
@@ -80,11 +95,6 @@ namespace IR {
 
     };
 
-    class Const : public Value {
-    public:
-        using Value::Value;
-    private:
-    };
 
     class IntConst : public Const {
     public:
@@ -92,7 +102,13 @@ namespace IR {
 
         void addValue(long long);
 
+        void generateT86(T86::Context &) override;
+
+        std::unique_ptr<T86::Operand> getOperand(T86::Context &) override;
+
         void print(std::ostream &) override;
+
+        std::string toString() override;
 
     private:
         long long value = 0;
@@ -104,7 +120,13 @@ namespace IR {
 
         void addValue(double);
 
+        void generateT86(T86::Context &) override;
+
+        std::unique_ptr<T86::Operand> getOperand(T86::Context &) override;
+
         void print(std::ostream &) override;
+
+        std::string toString() override;
 
     private:
         double value = 0;
@@ -112,11 +134,27 @@ namespace IR {
 
     class Nullptr : public Const {
     public:
+        using Const::Const;
+
+        void generateT86(T86::Context &) override;
+
+        std::unique_ptr<T86::Operand> getOperand(T86::Context &) override;
+
+        void print(std::ostream &) override;
+
+        std::string toString() override;
+
     private:
     };
 
     class StructValue : public Const {
     public:
+        void generateT86(T86::Context &) override;
+
+        std::unique_ptr<T86::Operand> getOperand(T86::Context &) override;
+
+        void print(std::ostream &) override;
+
     private:
     };
 
@@ -160,6 +198,10 @@ namespace IR {
 
         void setTypeOfResult(Type *);
 
+        void generateT86(T86::Context &) override;
+
+        std::unique_ptr<T86::Operand> getOperand(T86::Context &) override;
+
         void print(std::ostream &) override;
 
     private:
@@ -178,6 +220,10 @@ namespace IR {
 
         void print(std::ostream &) override;
 
+        void generateT86(T86::Context &) override;
+
+        std::unique_ptr<T86::Operand> getOperand(T86::Context &) override;
+
     private:
     };
 
@@ -190,6 +236,10 @@ namespace IR {
         Value *getPointer();
 
         void print(std::ostream &) override;
+
+        void generateT86(T86::Context &) override;
+
+        std::unique_ptr<T86::Operand> getOperand(T86::Context &) override;
 
     private:
         Value *where;
@@ -205,6 +255,8 @@ namespace IR {
 
         void print(std::ostream &) override;
 
+        void generateT86(T86::Context &) override;
+
     private:
         Value *where;
 
@@ -217,10 +269,21 @@ namespace IR {
 
         void addType(Type *);
 
+        void addBasicValue(std::unique_ptr<Const> &&);
+
         void print(std::ostream &) override;
+
+        void generateT86(T86::Context &) override;
+
+        std::unique_ptr<T86::Operand> getOperand(T86::Context &) override;
 
     private:
         Type *type;
+
+        std::unique_ptr<Const> basicValue;
+
+        long long place_on_stack = -1;
+
     };
 
     class IRGlobal : public Instruction {
@@ -232,6 +295,10 @@ namespace IR {
         void addType(Type *);
 
         void print(std::ostream &) override;
+
+        void generateT86(T86::Context &) override;
+
+        std::unique_ptr<T86::Operand> getOperand(T86::Context &) override;
 
     private:
         Type *type;
@@ -250,6 +317,10 @@ namespace IR {
 
         void print(std::ostream &) override;
 
+        void generateT86(T86::Context &) override;
+
+//        std::unique_ptr<T86::Operand> getOperand(T86::Context &) override;
+
     private:
         Value *result;
         Value *brT, *brNT;
@@ -262,6 +333,10 @@ namespace IR {
         void addRetVal(Value *);
 
         void print(std::ostream &) override;
+
+        void generateT86(T86::Context &) override;
+
+//        std::unique_ptr<T86::Operand> getOperand(T86::Context &) override;
 
     private:
         Value *res;
@@ -276,6 +351,10 @@ namespace IR {
         void addArg(Value *);
 
         void print(std::ostream &) override;
+
+        void generateT86(T86::Context &) override;
+
+        std::unique_ptr<T86::Operand> getOperand(T86::Context &) override;
 
     private:
         Value *function;
@@ -294,6 +373,10 @@ namespace IR {
 
         void print(std::ostream &) override;
 
+        void generateT86(T86::Context &) override;
+
+        std::unique_ptr<T86::Operand> getOperand(T86::Context &) override;
+
     private:
         Value *expr;
         Type *to;
@@ -305,10 +388,18 @@ namespace IR {
 
         void addType(Type *);
 
+        void addOrder(int = 0);
+
         void print(std::ostream &) override;
+
+        void generateT86(T86::Context &) override;
+
+        std::unique_ptr<T86::Operand> getOperand(T86::Context &) override;
 
     private:
         Type *type;
+
+        int order_of_arg = 0;
 
     };
 
@@ -331,6 +422,8 @@ namespace IR {
         std::vector<std::unique_ptr<Value>> *getLinkToBody();
 
         void print(std::ostream &) override;
+
+        void generateT86(T86::Context &) override;
 
     private:
         Type *return_type;
@@ -355,6 +448,8 @@ namespace IR {
 
         void print(std::ostream &) override;
 
+        void generateT86(T86::Context &) override;
+
     private:
         std::vector<std::unique_ptr<Value>> globalDecl;
 
@@ -368,6 +463,8 @@ namespace IR {
         IRComment *addText(std::string);
 
         void print(std::ostream &) override;
+
+        void generateT86(T86::Context &) override;
 
     private:
         std::string comment;

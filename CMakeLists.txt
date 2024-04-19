@@ -3,11 +3,14 @@ project(compiler)
 
 set(CMAKE_CXX_STANDARD 20)
 
-set(FRONDEND_HEADERS src/Frontend/Headers)
-set(FRONDEND_SOURCES src/Frontend/Sources)
+set(FRONDEND_HEADERS src/FrontEnd/Headers)
+set(FRONDEND_SOURCES src/FrontEnd/Sources)
 
 set(MIDDLEEND_HEADERS src/MiddleEnd/Headers)
 set(MIDDLEEND_SOURCES src/MiddleEnd/Sources)
+
+set(BACKEND_HEADERS src/BackEnd/Headers)
+set(BACKEND_SOURCES src/BackEnd/Sources)
 
 set(COMMON_HEADERS src/Common/Headers)
 set(COMMON_SOURCES src/Common/Sources)
@@ -15,6 +18,7 @@ set(COMMON_SOURCES src/Common/Sources)
 include_directories(${COMMON_HEADERS})
 include_directories(${FRONDEND_HEADERS})
 include_directories(${MIDDLEEND_HEADERS})
+include_directories(${BACKEND_HEADERS})
 
 set(
         SOURCE_FILES
@@ -28,6 +32,10 @@ set(
         ${FRONDEND_SOURCES}/parser.cpp
 
         ${MIDDLEEND_SOURCES}/IR.cpp
+        ${MIDDLEEND_SOURCES}/IR_codegen.cpp
+
+        ${BACKEND_SOURCES}/Operands.cpp
+        ${BACKEND_SOURCES}/T86Inst.cpp
 
         main.cpp)
 add_executable(compiler ${SOURCE_FILES})

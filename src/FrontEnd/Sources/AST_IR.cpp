@@ -144,10 +144,19 @@ IR::Value *AST::ASTStruct::generateIR(IR::Context &ctx) {
 }
 
 IR::Value *AST::ASTVar::generateIR(IR::Context &ctx) {
-    auto res = std::make_unique<IR::IRLoad>(ctx.counter);
-    res->addLoadFrom(ctx.getVariable(name));
+    // Variable
+    if (auto link = ctx.getVariable(name)) {
+        auto res = std::make_unique<IR::IRLoad>(ctx.counter);
+        res->addLoadFrom(link);
 
-    return ctx.buildInstruction(std::move(res));
+        return ctx.buildInstruction(std::move(res));
+    }
+
+    // Function
+    auto function = ctx.getFunction(name);
+
+    auto res = std::make_unique<IR::IRCall>(ctx.counter);
+
 }
 
 IR::Value *AST::ASTTypeDeclaration::generateIR(IR::Context &ctx) {
@@ -156,7 +165,6 @@ IR::Value *AST::ASTTypeDeclaration::generateIR(IR::Context &ctx) {
 
 IR::Value *AST::ASTVarDeclaration::generateIR(IR::Context &ctx) {
     if (ctx.Global) {
-        // TODO value later
         for (auto i = 0; i < name.size(); ++i) {
             auto res = std::make_unique<IR::IRGlobal>(ctx.counter);
 
@@ -166,6 +174,7 @@ IR::Value *AST::ASTVarDeclaration::generateIR(IR::Context &ctx) {
                 res->addType(value[i]->typeOfNode);
 
             ctx.addVariable(name[i], res.get());
+            // TODO basic value
             ctx.program->addGlobDecl(std::move(res));
         }
         return nullptr;
@@ -173,10 +182,16 @@ IR::Value *AST::ASTVarDeclaration::generateIR(IR::Context &ctx) {
     for (auto i = 0; i < name.size(); ++i) {
         auto res = std::make_unique<IR::IRAlloca>(ctx.counter);
 
+
+        Type *type_of_alloca;
         if (type)
-            res->addType(type->typeOfNode);
+            type_of_alloca = type->typeOfNode;
         else
-            res->addType(value[i]->typeOfNode);
+            type_of_alloca = value[i]->typeOfNode;
+
+        res->addType(type_of_alloca);
+        if (value.empty())
+            res->addBasicValue(ctx.getBasicValue(type_of_alloca));
 
         ctx.addVariable(name[i], res.get());
         ctx.buildInstruction(std::move(res));
@@ -207,7 +222,6 @@ IR::Value *AST::ASTConstDeclaration::generateIR(IR::Context &ctx) {
         }
         return nullptr;
     }
-    // TODO values later
     for (auto i = 0; i < name.size(); ++i) {
         auto res = std::make_unique<IR::IRAlloca>(ctx.counter);
 
@@ -215,6 +229,7 @@ IR::Value *AST::ASTConstDeclaration::generateIR(IR::Context &ctx) {
             res->addType(type->typeOfNode);
         else
             res->addType(value[i]->typeOfNode);
+
 
         ctx.addVariable(name[i], res.get());
         ctx.buildInstruction(std::move(res));
@@ -414,6 +429,7 @@ IR::Value *AST::ASTAssign::generateIR(IR::Context &ctx) {
 
 
 IR::Value *AST::Function::generateIR(IR::Context &ctx) {
+
     auto res = std::make_unique<IR::IRFunc>(ctx.counter);
     if (!return_type.empty())
         res->addReturnType(return_type[0]->typeOfNode);
@@ -425,10 +441,13 @@ IR::Value *AST::Function::generateIR(IR::Context &ctx) {
     ctx.setFunction(res.get());
 
     // arguments
+
+    int place_of_arg = 0;
     for (auto &[i, j]: params)
         for (auto &var_name: i) {
             auto argument = std::make_unique<IR::IRFuncArg>(ctx.counter);
             argument->addType(j->typeOfNode);
+            argument->addOrder(place_of_arg++);
 //            ctx.addVariable(var_name, argument.get());
             auto alloca = std::make_unique<IR::IRAlloca>(ctx.counter);
             alloca->addType(j->typeOfNode);
