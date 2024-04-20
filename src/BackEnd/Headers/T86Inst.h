@@ -5,6 +5,7 @@
 #include <memory>
 #include <vector>
 #include <map>
+#include <set>
 #include <iostream>
 
 #include "magic_enum.hpp"
@@ -73,6 +74,10 @@ namespace T86 {
 
         Instruction(Opcode, std::unique_ptr<Operand> && = nullptr, std::unique_ptr<Operand> && = nullptr);
 
+        void addOperand(std::unique_ptr<Operand> &&);
+
+        Opcode getOpcode();
+
         void print(std::ostream &);
 
     private:
@@ -117,7 +122,15 @@ namespace T86 {
 
         std::size_t getNumberOfInstructions();
 
-        void addWhereFunctionBegin(std::string);
+        void addFunctionCall(std::string, IntImmediate *);
+
+        void addFunctionPlace(std::string);
+
+        void addJumpToLabel(long long, IntImmediate *);
+
+        void addLabelPlace(long long);
+
+        void finishCallsAndJmps();
 
     private:
         T86Program program;
@@ -126,9 +139,13 @@ namespace T86 {
 
         long long placeOnStack = 1;
 
-        std::map<std::string, std::vector<Instruction *>> notFinishedCalls;
+        std::map<std::string, std::vector<IntImmediate *>> notFinishedCalls;
 
-        std::map<std::string, size_t> placeForCall;
+        std::set<std::pair<std::string, size_t>> placeForCall;
+
+        std::map<long long, std::vector<IntImmediate *>> notFinishedJumps;
+
+        std::set<std::pair<long long, size_t>> placeForJumps;
 
     };
 

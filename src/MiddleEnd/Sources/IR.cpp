@@ -275,8 +275,9 @@ void IR::IRCast::addExpr(Value *new_expr) {
     expr = new_expr;
 }
 
-void IR::IRCast::addTypeTo(Type *new_type) {
-    to = new_type;
+void IR::IRCast::addTypeToFrom(Type *new_to, Type *new_from) {
+    to = new_to;
+    from = new_from;
 }
 
 void IR::IRCast::print(std::ostream &oss) {

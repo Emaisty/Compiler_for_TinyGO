@@ -15,6 +15,8 @@ namespace T86 {
     public:
         IntImmediate(long long = 0);
 
+        void addValue(long long);
+
         std::string toString() override;
 
     private:

@@ -7,6 +7,10 @@ std::string T86::IntImmediate::toString() {
     return std::to_string(value);
 }
 
+void T86::IntImmediate::addValue(long long new_value) {
+    value = new_value;
+}
+
 T86::DoubleImmediate::DoubleImmediate(double new_value) : value(new_value) {}
 
 std::string T86::DoubleImmediate::toString() {

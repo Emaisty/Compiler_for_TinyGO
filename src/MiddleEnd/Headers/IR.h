@@ -224,8 +224,6 @@ namespace IR {
 
         void generateT86(T86::Context &) override;
 
-        std::unique_ptr<T86::Operand> getOperand(T86::Context &) override;
-
     private:
     };
 
@@ -371,7 +369,7 @@ namespace IR {
 
         void addExpr(Value *);
 
-        void addTypeTo(Type *);
+        void addTypeToFrom(Type *, Type *);
 
         void print(std::ostream &) override;
 
@@ -381,7 +379,7 @@ namespace IR {
 
     private:
         Value *expr;
-        Type *to;
+        Type *to, *from;
     };
 
     class IRFuncArg : public Value {

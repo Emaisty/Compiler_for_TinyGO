@@ -489,7 +489,7 @@ IR::Value *AST::Program::generateIR(IR::Context &ctx) {
 IR::Value *AST::ASTCast::generateIR(IR::Context &ctx) {
     auto value_pointer = expr->generateIR(ctx);
     auto cast_node = std::make_unique<IR::IRCast>(ctx.counter);
-    cast_node->addTypeTo(cast_to);
+    cast_node->addTypeToFrom(cast_to, expr->typeOfNode);
 
     cast_node->addExpr(value_pointer);
 
