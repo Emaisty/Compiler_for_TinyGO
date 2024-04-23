@@ -29,7 +29,8 @@ std::unique_ptr<T86::Operand> IR::Nullptr::getOperand(T86::Context &) {
 }
 
 void IR::IRArithOp::generateT86(T86::Context &ctx) {
-    if (op == PLUS || op == MINUS || op == MUL || op == DIV) {
+    if (op == PLUS || op == MINUS || op == MUL || op == DIV || op == BINAND || op == AND || op == BINOR || op == OR ||
+        op == XOR) {
         T86::Instruction::Opcode opcode_for_instruction;
         // float operations
         if (dynamic_cast<FloatType *>(result_type)) {
@@ -43,6 +44,7 @@ void IR::IRArithOp::generateT86(T86::Context &ctx) {
                 opcode_for_instruction = T86::Instruction::FDIV;
 
         } else {
+            // int operation
             if (op == PLUS)
                 opcode_for_instruction = T86::Instruction::ADD;
             else if (op == MINUS)
@@ -52,7 +54,13 @@ void IR::IRArithOp::generateT86(T86::Context &ctx) {
             else
                 opcode_for_instruction = T86::Instruction::DIV;
         }
-        // int operation
+        if (op == BINAND || op == AND)
+            opcode_for_instruction = T86::Instruction::AND;
+        if (op == BINOR || op == OR)
+            opcode_for_instruction = T86::Instruction::OR;
+        if (op == XOR)
+            opcode_for_instruction = T86::Instruction::XOR;
+
         ctx.addInstruction(T86::Instruction(T86::Instruction::MOV,
                                             std::make_unique<T86::Register>(inner_number - ctx.offset_of_function),
                                             left->getOperand(ctx)));
@@ -61,7 +69,53 @@ void IR::IRArithOp::generateT86(T86::Context &ctx) {
                                             right->getOperand(ctx)));
         return;
     }
+    // TODO mod
 
+
+
+
+    //EQ, NE, GT, GE, LT, LE,
+
+    T86::Instruction::Opcode type_of_compare;
+    if (dynamic_cast<FloatType *>(result_type))
+        type_of_compare = T86::Instruction::FCMP;
+    else
+        type_of_compare = T86::Instruction::CMP;
+
+    ctx.addInstruction(T86::Instruction(type_of_compare, left->getOperand(ctx), right->getOperand(ctx)));
+
+
+    T86::Instruction::Opcode opcode_of_compare;
+    if (op == EQ)
+        opcode_of_compare = T86::Instruction::JE;
+    else if (op == NE)
+        opcode_of_compare = T86::Instruction::JNE;
+    else if (op == GT)
+        opcode_of_compare = T86::Instruction::JG;
+    else if (op == GE)
+        opcode_of_compare = T86::Instruction::JGE;
+    else if (op == LT)
+        opcode_of_compare = T86::Instruction::JL;
+    else
+        opcode_of_compare = T86::Instruction::JLE;
+    // Jump to true
+    ctx.addInstruction(T86::Instruction(opcode_of_compare,
+                                        std::make_unique<T86::IntImmediate>(ctx.getNumberOfInstructions() + 3)));
+
+    // if false
+
+    ctx.addInstruction(T86::Instruction(T86::Instruction::MOV,
+                                        std::make_unique<T86::Register>(inner_number - ctx.offset_of_function),
+                                        std::make_unique<T86::IntImmediate>(0)));
+
+    ctx.addInstruction(T86::Instruction(T86::Instruction::JMP,
+                                        std::make_unique<T86::IntImmediate>(ctx.getNumberOfInstructions() + 2)));
+
+    // if true.
+
+    ctx.addInstruction(T86::Instruction(T86::Instruction::MOV,
+                                        std::make_unique<T86::Register>(inner_number - ctx.offset_of_function),
+                                        std::make_unique<T86::IntImmediate>(1)));
 
 }
 
@@ -113,6 +167,21 @@ std::unique_ptr<T86::Operand> IR::IRGlobal::getOperand(T86::Context &) {
 }
 
 void IR::IRBranch::generateT86(T86::Context &ctx) {
+    auto place_to_jmp_if_true = std::make_unique<T86::IntImmediate>();
+    auto place_to_jmp_if_false = std::make_unique<T86::IntImmediate>();
+
+    ctx.addJumpToLabel(brT->inner_number, place_to_jmp_if_true.get());
+    if (!result) {
+        ctx.addInstruction(T86::Instruction(T86::Instruction::JMP, std::move(place_to_jmp_if_true)));
+        return;
+    }
+
+    ctx.addJumpToLabel(brNT->inner_number, place_to_jmp_if_false.get());
+    ctx.addInstruction(
+            T86::Instruction(T86::Instruction::CMP, result->getOperand(ctx), std::make_unique<T86::IntImmediate>(1)));
+
+    ctx.addInstruction(T86::Instruction(T86::Instruction::JE, std::move(place_to_jmp_if_true)));
+    ctx.addInstruction(T86::Instruction(T86::Instruction::JMP, std::move(place_to_jmp_if_false)));
 
 }
 

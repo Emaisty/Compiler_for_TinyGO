@@ -299,14 +299,14 @@ Token Lexer::readNumber() {
     m_NumVal = cur_symb - 48;
     inputNumber(10, false);
     if (cur_symb == '.') {
-        int int_part = m_NumVal;
+        long long int_part = m_NumVal;
         m_NumVal = 0;
 
         inputNumber(10);
         m_DouVal = m_NumVal;
         m_NumVal = 0;
 
-        while (m_DouVal > 1) {
+        while (m_DouVal >= 1) {
             m_DouVal /= 10;
         }
         m_DouVal += int_part;
