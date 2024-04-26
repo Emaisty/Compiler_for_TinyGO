@@ -251,8 +251,12 @@ void IR::IRRet::print(std::ostream &oss) {
         oss << "   " << "ret 'nothing'" << std::endl;
 }
 
-void IR::IRCall::addLinkToFunc(Value *new_func) {
+void IR::IRCall::addLinkToFunc(IRFunc *new_func) {
     function = new_func;
+}
+
+void IR::IRCall::addFunctionName(std::string name) {
+    name_of_function = name;
 }
 
 void IR::IRCall::addArg(Value *new_arg) {
@@ -260,8 +264,7 @@ void IR::IRCall::addArg(Value *new_arg) {
 }
 
 void IR::IRCall::print(std::ostream &oss) {
-    auto f_name = dynamic_cast<IR::IRFunc *>(function);
-    oss << "   " << "call %" << f_name->getName() << " with arguments : (";
+    oss << "   " << "%" << inner_number << " = call %" << name_of_function << " with arguments : (";
     for (auto i = 0; i < arguments.size(); ++i) {
         oss << "%" << arguments[i]->inner_number;
 

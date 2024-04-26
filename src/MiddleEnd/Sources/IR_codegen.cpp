@@ -186,15 +186,40 @@ void IR::IRBranch::generateT86(T86::Context &ctx) {
 }
 
 void IR::IRRet::generateT86(T86::Context &ctx) {
-
+    ctx.addInstruction(T86::Instruction(T86::Instruction::MOV, std::make_unique<T86::Memory>(
+                                                std::make_unique<T86::Register>(T86::Register::BP, 2 + ctx.number_of_arguments_in_function)),
+                                        res->getOperand(ctx)));
 }
 
 void IR::IRCall::generateT86(T86::Context &ctx) {
+    // reserv space to return value(1) if return value exists
+    // todo later for structures
+    ctx.addInstruction(T86::Instruction(T86::Instruction::SUB, std::make_unique<T86::Register>(T86::Register::SP),
+                                        std::make_unique<T86::IntImmediate>(1)));
+
+    // push values to a stack
+
+    for (long long i = arguments.size() - 1; i >= 0; --i)
+        ctx.addInstruction(T86::Instruction(T86::Instruction::PUSH, arguments[i]->getOperand(ctx)));
+
+    auto place_to_jump_func = std::make_unique<T86::IntImmediate>();
+    ctx.addFunctionCall(name_of_function, place_to_jump_func.get());
+
+    ctx.addInstruction(T86::Instruction(T86::Instruction::CALL, std::move(place_to_jump_func)));
+
+
+    // delete all arguments from stack
+    ctx.addInstruction(T86::Instruction(T86::Instruction::ADD, std::make_unique<T86::Register>(T86::Register::SP),
+                                        std::make_unique<T86::IntImmediate>(arguments.size())));
+
+    // pop return value
+    ctx.addInstruction(T86::Instruction(T86::Instruction::POP,
+                                        std::make_unique<T86::Register>(inner_number - ctx.offset_of_function)));
 
 }
 
-std::unique_ptr<T86::Operand> IR::IRCall::getOperand(T86::Context &) {
-
+std::unique_ptr<T86::Operand> IR::IRCall::getOperand(T86::Context &ctx) {
+    return std::make_unique<T86::Register>(inner_number - ctx.offset_of_function);
 }
 
 void IR::IRCast::generateT86(T86::Context &ctx) {
@@ -226,13 +251,14 @@ void IR::IRFunc::generateT86(T86::Context &ctx) {
     // pre init for any function
     ctx.addFunctionPlace(this->name);
     ctx.offset_of_function = inner_number;
+    ctx.number_of_arguments_in_function = arguments.size();
 
     ctx.addInstruction(T86::Instruction(T86::Instruction::PUSH, std::make_unique<T86::Register>(T86::Register::BP)));
     ctx.addInstruction(T86::Instruction(T86::Instruction::MOV, std::make_unique<T86::Register>(T86::Register::BP),
                                         std::make_unique<T86::Register>(T86::Register::SP)));
 
     // allocating space on stack for local variables
-
+    // TODO later for structures
     ctx.addInstruction(T86::Instruction(T86::Instruction::SUB, std::make_unique<T86::Register>(T86::Register::SP),
                                         std::make_unique<T86::IntImmediate>(allocas.size())));
     ctx.AllocPlaceOnStack();

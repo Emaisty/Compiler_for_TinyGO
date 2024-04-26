@@ -346,7 +346,9 @@ namespace IR {
     public:
         using Instruction::Instruction;
 
-        void addLinkToFunc(Value *);
+        void addLinkToFunc(IRFunc *);
+
+        void addFunctionName(std::string);
 
         void addArg(Value *);
 
@@ -357,7 +359,9 @@ namespace IR {
         std::unique_ptr<T86::Operand> getOperand(T86::Context &) override;
 
     private:
-        Value *function;
+        IRFunc *function;
+
+        std::string name_of_function;
 
         std::vector<Value *> arguments;
 

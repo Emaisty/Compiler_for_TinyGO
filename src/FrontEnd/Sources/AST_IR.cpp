@@ -109,9 +109,10 @@ IR::Value *AST::ASTFunctionCall::generateIR(IR::Context &ctx) {
     for (auto &i: arg)
         arguments.emplace_back(i->generateIR(ctx));
 
-    auto res = std::make_unique<IR::IRCall>(ctx.counter);
-
-
+    auto func_pointer = dynamic_cast<IR::IRCall *>(name->generateIR(ctx));
+    for (auto &i: arguments)
+        func_pointer->addArg(i);
+    return func_pointer;
 }
 
 IR::Value *AST::ASTMemberAccess::generateIR(IR::Context &ctx) {
@@ -153,10 +154,10 @@ IR::Value *AST::ASTVar::generateIR(IR::Context &ctx) {
     }
 
     // Function
-    auto function = ctx.getFunction(name);
-
     auto res = std::make_unique<IR::IRCall>(ctx.counter);
-
+//    res->addLinkToFunc(ctx.getFunction(name));
+    res->addFunctionName(name);
+    return ctx.buildInstruction(std::move(res));
 }
 
 IR::Value *AST::ASTTypeDeclaration::generateIR(IR::Context &ctx) {
@@ -431,6 +432,8 @@ IR::Value *AST::ASTAssign::generateIR(IR::Context &ctx) {
 IR::Value *AST::Function::generateIR(IR::Context &ctx) {
 
     auto res = std::make_unique<IR::IRFunc>(ctx.counter);
+    ctx.addFunction(name,res.get());
+
     if (!return_type.empty())
         res->addReturnType(return_type[0]->typeOfNode);
 

@@ -2,6 +2,7 @@
 #define COMPILER_OPERAND_H
 
 #include <string>
+#include <memory>
 
 namespace T86 {
     class Operand {
@@ -41,8 +42,8 @@ namespace T86 {
 
         enum SecialRegisters {
             SP = LLONG_MAX - 1,
-            BP = LLONG_MAX - 1,
-            IP = LLONG_MAX - 1,
+            BP = LLONG_MAX - 2,
+            IP = LLONG_MAX - 3,
         };
 
         std::string toString() override;

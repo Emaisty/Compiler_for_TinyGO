@@ -8,7 +8,7 @@
 #include <set>
 #include <iostream>
 
-#include "magic_enum.hpp"
+//#include "magic_enum.hpp"
 
 #include "Operands.h"
 
@@ -72,6 +72,62 @@ namespace T86 {
             NOP
         };
 
+        inline static const std::map<Opcode, std::string> opcode_to_str = {
+                {MOV,     "MOV"},
+                {LEA,     "LEA"},
+                {ADD,     "ADD"},
+                {SUB,     "SUB"},
+                {INC,     "INC"},
+                {DEC,     "DEC"},
+                {NEG,     "NEG"},
+                {MUL,     "MUL"},
+                {DIV,     "DIV"},
+                {IMUL,    "IMUL"},
+                {IDIV,    "IDIV"},
+                {FADD,    "FADD"},
+                {FSUB,    "FSUB"},
+                {FMUL,    "FMUL"},
+                {FDIV,    "FDIV"},
+                {AND,     "AND"},
+                {OR,      "OR"},
+                {XOR,     "XOR"},
+                {LSH,     "LSH"},
+                {RSH,     "RSH"},
+                {CMP,     "CMP"},
+                {FCMP,    "FCMP"},
+                {JMP,     "JMP"},
+                {LOOP,    "LOOP"},
+                {JZ,      "JZ"},
+                {JNZ,     "JNZ"},
+                {JE,      "JE"},
+                {JNE,     "JNE"},
+                {JG,      "JG"},
+                {JGE,     "JGE"},
+                {JL,      "JL"},
+                {JLE,     "JLE"},
+                {JA,      "JA"},
+                {JAE,     "JAE"},
+                {JB,      "JB"},
+                {JBE,     "JBE"},
+                {JO,      "JO"},
+                {JNO,     "JNO"},
+                {JS,      "JS"},
+                {JNS,     "JNS"},
+                {CALL,    "CALL"},
+                {RET,     "RET"},
+                {PUSH,    "PUSH"},
+                {FPUSH,   "FPUSH"},
+                {POP,     "POP"},
+                {FPOP,    "FPOP"},
+                {PUTCHAR, "PUTCHAR"},
+                {PUTNUM,  "PUTNUM"},
+                {GETCHAR, "GETCHAR"},
+                {EXT,     "EXT"},
+                {NRW,     "NRW"},
+                {HALT,    "HALT"},
+                {NOP,     "NOP"}
+        };
+
         Instruction(Opcode, std::unique_ptr<Operand> && = nullptr, std::unique_ptr<Operand> && = nullptr);
 
         void addOperand(std::unique_ptr<Operand> &&);
@@ -107,6 +163,8 @@ namespace T86 {
     class Context {
     public:
         long long offset_of_function = 0;
+
+        long long number_of_arguments_in_function = 0;
 
         void AllocPlaceOnStack();
 

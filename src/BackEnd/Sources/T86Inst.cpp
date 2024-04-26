@@ -24,7 +24,9 @@ T86::Instruction::Opcode T86::Instruction::getOpcode() {
 }
 
 void T86::Instruction::print(std::ostream &oss) {
-    oss << magic_enum::enum_name(op) << ' ';
+//    oss << magic_enum::enum_name(op) << ' ';
+    oss << opcode_to_str.find(op)->second << ' ';
+
     if (first)
         oss << first->toString();
     if (second)
