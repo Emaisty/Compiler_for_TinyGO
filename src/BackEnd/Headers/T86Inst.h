@@ -189,7 +189,7 @@ namespace T86 {
         void addLabelPlace(long long);
 
         void finishCallsAndJmps();
-
+        
     private:
         T86Program program;
 

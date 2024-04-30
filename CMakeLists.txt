@@ -3,8 +3,6 @@ project(compiler)
 
 set(CMAKE_CXX_STANDARD 20)
 
-find_package(magic_enum CONFIG REQUIRED)
-
 set(FRONDEND_HEADERS src/FrontEnd/Headers)
 set(FRONDEND_SOURCES src/FrontEnd/Sources)
 
@@ -42,4 +40,3 @@ set(
         main.cpp)
 add_executable(compiler ${SOURCE_FILES})
 
-target_link_libraries(compiler PRIVATE magic_enum::magic_enum)

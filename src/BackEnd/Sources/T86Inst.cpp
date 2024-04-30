@@ -39,6 +39,7 @@ T86::Instruction *T86::T86Program::emplaceInstruction(Instruction &&inst) {
 }
 
 void T86::T86Program::print(std::ostream &oss) {
+    oss << ".text" << std::endl;
     for (size_t i = 0; i < program.size(); ++i) {
         oss << std::to_string(i) << ' ';
         program[i].print(oss);
@@ -60,6 +61,7 @@ long long T86::Context::getCurrentPlaceOnStack() {
 
 void T86::Context::addInstruction(T86::Instruction &&new_instruction) {
     program.emplaceInstruction(std::move(new_instruction));
+    //program.emplaceInstruction(T86::Instruction(T86::Instruction::NOP));
 }
 
 void T86::Context::printProgramConsole() {

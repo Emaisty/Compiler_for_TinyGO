@@ -388,6 +388,7 @@ IR::Value *AST::ASTAssign::generateIR(IR::Context &ctx) {
                 res->addStoreWhere(where_store);
                 ctx.deleteLastRow();
                 ctx.buildInstruction(std::move(res));
+                break;
             }
             case PLUSASSIGN:
             case MINUSASSIGN:
@@ -419,6 +420,7 @@ IR::Value *AST::ASTAssign::generateIR(IR::Context &ctx) {
                 store->addStoreWhat(new_val);
 
                 ctx.buildInstruction(std::move(store));
+                break;
             }
 
 

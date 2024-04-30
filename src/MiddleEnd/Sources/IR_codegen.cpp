@@ -138,6 +138,14 @@ std::unique_ptr<T86::Operand> IR::IRLoad::getOperand(T86::Context &ctx) {
 }
 
 void IR::IRStore::generateT86(T86::Context &ctx) {
+    // todo something more smarter
+    if (dynamic_cast<T86::Memory*>(what->getOperand(ctx).get())) {
+        ctx.addInstruction(T86::Instruction(T86::Instruction::MOV, std::make_unique<T86::Register>(
+                what->inner_number - ctx.offset_of_function), what->getOperand(ctx)));
+        ctx.addInstruction(T86::Instruction(T86::Instruction::MOV, where->getOperand(ctx), std::make_unique<T86::Register>(
+                what->inner_number - ctx.offset_of_function)));
+        return;
+    }
     ctx.addInstruction(T86::Instruction(T86::Instruction::MOV, where->getOperand(ctx), what->getOperand(ctx)));
 }
 
@@ -189,6 +197,12 @@ void IR::IRRet::generateT86(T86::Context &ctx) {
     ctx.addInstruction(T86::Instruction(T86::Instruction::MOV, std::make_unique<T86::Memory>(
                                                 std::make_unique<T86::Register>(T86::Register::BP, 2 + ctx.number_of_arguments_in_function)),
                                         res->getOperand(ctx)));
+  //  ctx.addInstruction(T86::Instruction(T86::Instruction(T86::Instruction::PUTNUM,res->getOperand(ctx))));
+    ctx.addInstruction(T86::Instruction(T86::Instruction::ADD, std::make_unique<T86::Register>(T86::Register::SP),
+                                        std::make_unique<T86::IntImmediate>(ctx.number_of_arguments_in_function)));
+
+    ctx.addInstruction(T86::Instruction(T86::Instruction::POP, std::make_unique<T86::Register>(T86::Register::BP)));
+    ctx.addInstruction(T86::Instruction(T86::Instruction::RET));
 }
 
 void IR::IRCall::generateT86(T86::Context &ctx) {
@@ -243,7 +257,7 @@ void IR::IRFuncArg::generateT86(T86::Context &ctx) {
     throw std::invalid_argument("Should not happen???");
 }
 
-std::unique_ptr<T86::Operand> IR::IRFuncArg::getOperand(T86::Context &) {
+std::unique_ptr<T86::Operand> IR::IRFuncArg::getOperand(T86::Context &ctx) {
     return std::make_unique<T86::Memory>(std::make_unique<T86::Register>(T86::Register::BP, order_of_arg + 2));
 }
 
@@ -259,7 +273,8 @@ void IR::IRFunc::generateT86(T86::Context &ctx) {
 
     // allocating space on stack for local variables
     // TODO later for structures
-    ctx.addInstruction(T86::Instruction(T86::Instruction::SUB, std::make_unique<T86::Register>(T86::Register::SP),
+    if (!allocas.empty())
+        ctx.addInstruction(T86::Instruction(T86::Instruction::SUB, std::make_unique<T86::Register>(T86::Register::SP),
                                         std::make_unique<T86::IntImmediate>(allocas.size())));
     ctx.AllocPlaceOnStack();
 
@@ -271,15 +286,19 @@ void IR::IRFunc::generateT86(T86::Context &ctx) {
     for (auto &i: body)
         i->generateT86(ctx);
 
+    if (!return_type){
+        if (!allocas.empty())
+            ctx.addInstruction(T86::Instruction(T86::Instruction::ADD, std::make_unique<T86::Register>(T86::Register::SP),
+                                            std::make_unique<T86::IntImmediate>(allocas.size())));
 
-    // end. POP BP and ret
-
-    ctx.addInstruction(T86::Instruction(T86::Instruction::POP, std::make_unique<T86::Register>(T86::Register::BP)));
-    ctx.addInstruction(T86::Instruction(T86::Instruction::RET));
-
+        ctx.addInstruction(T86::Instruction(T86::Instruction::POP, std::make_unique<T86::Register>(T86::Register::BP)));
+        ctx.addInstruction(T86::Instruction(T86::Instruction::RET));
+    }
 }
 
 void IR::IRProgram::generateT86(T86::Context &ctx) {
+    // pre init
+
     // TODO later -- .data segment
 
     // Pre init of any program;
