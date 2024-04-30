@@ -323,6 +323,10 @@ namespace AST {
 
         ASTFunctionCall(std::unique_ptr<ASTExpression> &&, std::vector<std::unique_ptr<ASTExpression>> &);
 
+        void setArgs(std::vector<std::unique_ptr<ASTExpression>>&&);
+
+        std::vector<std::unique_ptr<ASTExpression>> resetArgs();
+
         Type *checker(Context &) override;
 
         std::set<std::string> getVarNames() override;
@@ -691,6 +695,8 @@ namespace AST {
         void setName(std::string new_name);
 
         void addParam(std::vector<std::string> &&, std::unique_ptr<ASTType> &&);
+
+        std::vector<Type*> getListOfArgTypes();
 
         void setMethod(std::string, std::unique_ptr<ASTType> &&);
 

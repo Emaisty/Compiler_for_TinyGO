@@ -580,7 +580,7 @@ std::unique_ptr<AST::Statement> Parser::parseReturn() {
     if (return_values.size() == 1)
         res->addReturnValue(std::move(return_values[0]));
     else
-        for (auto &i: parseExpressionListOrNone())
+        for (auto &i: return_values)
             res->addReturnValue(std::move(i));
 
     return res;

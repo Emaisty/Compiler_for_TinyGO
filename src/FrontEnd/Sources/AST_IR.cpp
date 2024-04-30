@@ -268,8 +268,8 @@ IR::Value *AST::ASTContinue::generateIR(IR::Context &ctx) {
 IR::Value *AST::ASTReturn::generateIR(IR::Context &ctx) {
     auto res = std::make_unique<IR::IRRet>(ctx.counter);
 
-    if (!return_value.empty())
-        res->addRetVal(this->return_value[0]->generateIR(ctx));
+    for (auto &i : return_value)
+        res->addRetVal(i->generateIR(ctx));
 
     ctx.buildInstruction(std::move(res));
     return nullptr;
@@ -470,6 +470,9 @@ IR::Value *AST::Function::generateIR(IR::Context &ctx) {
 
 
     body->generateIR(ctx);
+    if (return_type.empty())
+        ctx.buildInstruction(std::make_unique<IR::IRRet>(ctx.counter));
+
     ctx.program->addFunc(std::move(res));
 
     ctx.goUp();

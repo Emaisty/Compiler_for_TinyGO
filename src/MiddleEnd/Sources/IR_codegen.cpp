@@ -285,15 +285,6 @@ void IR::IRFunc::generateT86(T86::Context &ctx) {
 
     for (auto &i: body)
         i->generateT86(ctx);
-
-    if (!return_type){
-        if (!allocas.empty())
-            ctx.addInstruction(T86::Instruction(T86::Instruction::ADD, std::make_unique<T86::Register>(T86::Register::SP),
-                                            std::make_unique<T86::IntImmediate>(allocas.size())));
-
-        ctx.addInstruction(T86::Instruction(T86::Instruction::POP, std::make_unique<T86::Register>(T86::Register::BP)));
-        ctx.addInstruction(T86::Instruction(T86::Instruction::RET));
-    }
 }
 
 void IR::IRProgram::generateT86(T86::Context &ctx) {

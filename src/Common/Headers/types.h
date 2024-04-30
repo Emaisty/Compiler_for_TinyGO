@@ -99,6 +99,8 @@ public:
 
     bool compareArgs(const std::vector<Type *> &);
 
+    std::vector<Type* > getArgs();
+
     Type *getReturn();
 
     void setReturn(Type *);
@@ -130,20 +132,22 @@ private:
 
 
 //// this class created only for times, when func returns more than 1 type at the same time
-//class SeqType : public Type {
-//public:
-//
-//    bool canConvertToThisType(const Type *other) const override;
-//
-//    bool compareSignatures(const Type *other) const override;
-//
-//    void addType(Type *);
-//
-//    std::vector<Type *> getTypes();
-//
-//private:
-//
-//    std::vector<Type *> types;
-//};
+class SeqType : public Type {
+public:
+
+    bool canConvertToThisType(const Type *other) const override;
+
+    bool compareSignatures(const Type *other) const override;
+
+    void addType(Type *);
+
+    std::vector<Type *> getTypes();
+
+    std::string toString() override;
+
+private:
+
+    std::vector<Type *> types;
+};
 
 #endif //COMPILER_TYPES_H

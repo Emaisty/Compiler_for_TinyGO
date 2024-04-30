@@ -47,6 +47,14 @@ AST::ASTFunctionCall::ASTFunctionCall(std::unique_ptr<AST::ASTExpression> &&new_
     arg = std::move(new_args);
 }
 
+void AST::ASTFunctionCall::setArgs(std::vector<std::unique_ptr<ASTExpression>>&&new_args){
+    arg = std::move(new_args);
+}
+
+std::vector<std::unique_ptr<AST::ASTExpression>> AST::ASTFunctionCall::resetArgs(){
+    return std::move(arg);
+}
+
 
 AST::ASTMemberAccess::ASTMemberAccess(std::unique_ptr<AST::ASTExpression> &&new_name,
                                       std::string &new_member) {
@@ -171,6 +179,13 @@ void AST::Function::setName(std::string new_name) {
 
 void AST::Function::addParam(std::vector<std::string> &&new_names, std::unique_ptr<ASTType> &&new_type) {
     params.emplace_back(std::move(new_names), std::move(new_type));
+}
+
+std::vector<Type*> AST::Function::getListOfArgTypes(){
+    std::vector<Type*> res;
+    for (auto &i : params)
+        for(auto &j : i.first)
+            res.emplace_back(i.second->typeOfNode);
 }
 
 void AST::Function::setMethod(std::string new_name, std::unique_ptr<ASTType> &&new_type) {

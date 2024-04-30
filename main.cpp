@@ -18,9 +18,9 @@ int main() {
     IR->print(std::cout);
 
     auto T86ctx = IRctx.createT86Context();
-    IR->generateT86(T86ctx);
+    //IR->generateT86(T86ctx);
 
-    T86ctx.printProgramConsole();
+    //T86ctx.printProgramConsole();
 
     return 0;
 }

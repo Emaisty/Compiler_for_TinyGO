@@ -115,8 +115,6 @@ std::string PointerType::toString() {
 }
 
 bool FunctionType::canConvertToThisType(const Type *other) const {
-    if (this == other)
-        return true;
     return false;
 }
 
@@ -134,7 +132,7 @@ bool FunctionType::compareSignatures(const Type *other) const {
     if (args.size() != other_func->args.size())
         return false;
     for (auto i = 0; i < args.size(); ++i)
-        if (!args[i]->canConvertToThisType(other_func->args[i]))
+        if (args[i] != other_func->args[i])
             return false;
 
     return true;
@@ -148,6 +146,10 @@ bool FunctionType::compareArgs(const std::vector<Type *> &other_args) {
             return false;
 
     return true;
+}
+
+std::vector<Type* > FunctionType::getArgs(){
+    return args;
 }
 
 Type *FunctionType::getReturn() {
@@ -166,15 +168,38 @@ std::string FunctionType::toString() {
 
 }
 
-//NamedType::NamedType(std::string new_name, Type *new_type) {
-//    name = new_name;
-//    type = new_type;
-//}
-//
-//bool NamedType::canConvertToThisType(const Type *other) const {
-//
-//}
-//
-//bool NamedType::compareSignatures(const Type *other) const {
-//
-//}
+bool SeqType::canConvertToThisType(const Type *other) const{
+    return false;
+}
+
+bool SeqType::compareSignatures(const Type *other) const{
+    auto another_seq = dynamic_cast<const SeqType*>(other);
+    if (!another_seq)
+        return false;
+    if (types.size() != another_seq->types.size())
+        return false;
+    for (unsigned long long i = 0; i < types.size(); ++i)
+        if (types[i] != another_seq->types[i])
+            return false;
+
+    return true;
+}
+
+void SeqType::addType(Type * new_type){
+    types.emplace_back(new_type);
+}
+
+std::vector<Type *> SeqType::getTypes(){
+    return types;
+}
+
+std::string SeqType::toString(){
+    std::string res = "{";
+    for (unsigned long long i = 0; i < types.size(); ++i){
+        res += types[i]->toString() + ' ';
+        if (i != types.size() - 1)
+            res += ",";
+    }
+    res += "}";
+    return res;
+}

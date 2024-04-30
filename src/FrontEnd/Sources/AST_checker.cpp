@@ -347,11 +347,15 @@ Type *AST::ASTFunctionCall::checker(AST::Context &ctx) {
     std::vector<Type *> args;
     for (auto &i: arg)
         args.emplace_back(i->checker(ctx));
-    // TODO convert args
+
 
     if (!func_type->compareArgs(args))
         throw std::invalid_argument("ERROR. Mismatch in types between passed argument type and expected type.");
 
+    auto list_of_func_args = func_type->getArgs();
+
+    for (auto i = 0; i < list_of_func_args.size(); ++i)
+        arg[i] = ctx.convertTypeTo(std::move(arg[i]),list_of_func_args[i]);
 
     typeOfNode = func_type->getReturn();
     return typeOfNode;
@@ -467,8 +471,6 @@ bool AST::ASTVar::isConst() {
 }
 
 Type *AST::ASTVar::checker(AST::Context &ctx) {
-
-
     auto var = ctx.getInfByVarName(name);
     if (!var)
         throw std::invalid_argument("ERROR. Unknown name (" + name + ") for a variable");
@@ -545,7 +547,9 @@ Type *AST::ASTVarDeclaration::checker(Context &ctx) {
             throw std::invalid_argument("ERROR. Such name (" + name[i] + ") for var already exists.");
 
         if (!type) {
-            ctx.addIntoNameSpace(name[i], value[i]->checker(ctx));
+            if (!value[i]->checker(ctx))
+                throw std::invalid_argument("ERROR. Variable cannot be null type");
+            ctx.addIntoNameSpace(name[i], value[i]->typeOfNode);
             continue;
         }
 
@@ -588,7 +592,9 @@ Type *AST::ASTConstDeclaration::checker(Context &ctx) {
             throw std::invalid_argument("ERROR. Such name (" + name[i] + ") for var already exists.");
 
         if (!type) {
-            ctx.addIntoNameSpace(name[i], value[i]->checker(ctx), true);
+            if (!value[i]->checker(ctx))
+                throw std::invalid_argument("ERROR. Variable cannot be null type");
+            ctx.addIntoNameSpace(name[i], value[i]->typeOfNode, true);
             continue;
         }
 
@@ -720,6 +726,7 @@ Type *AST::Function::checker(Context &ctx) {
 
     ctx.return_type.clear();
 
+
     for (auto &i: return_type)
         ctx.return_type.emplace_back(i->checker(ctx));
 
@@ -734,9 +741,15 @@ Type *AST::Function::checker(Context &ctx) {
 void AST::Function::globalPreInit(Context &ctx) {
     auto new_function_type = std::make_unique<FunctionType>();
 
-    // todo with return
+
     if (return_type.size() == 1)
         new_function_type->setReturn(return_type[0]->checker(ctx));
+    else{
+        auto new_seq = std::make_unique<SeqType>();
+        for (auto &i : return_type)
+            new_seq->addType(i->checker(ctx));
+        new_function_type->setReturn(ctx.addType(std::move(new_seq)));
+    }
 
 
     for (auto &i: params)
