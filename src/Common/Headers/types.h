@@ -135,6 +135,8 @@ private:
 class SeqType : public Type {
 public:
 
+    StructType* corespStruct;
+
     bool canConvertToThisType(const Type *other) const override;
 
     bool compareSignatures(const Type *other) const override;

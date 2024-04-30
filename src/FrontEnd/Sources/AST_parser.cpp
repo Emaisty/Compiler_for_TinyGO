@@ -57,7 +57,7 @@ std::vector<std::unique_ptr<AST::ASTExpression>> AST::ASTFunctionCall::resetArgs
 
 
 AST::ASTMemberAccess::ASTMemberAccess(std::unique_ptr<AST::ASTExpression> &&new_name,
-                                      std::string &new_member) {
+                                      std::string new_member) {
     name = std::move(new_name);
     member = new_member;
 }

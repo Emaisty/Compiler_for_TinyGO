@@ -268,6 +268,9 @@ IR::Value *AST::ASTContinue::generateIR(IR::Context &ctx) {
 IR::Value *AST::ASTReturn::generateIR(IR::Context &ctx) {
     auto res = std::make_unique<IR::IRRet>(ctx.counter);
 
+    if (return_value.size() == 1)
+        res->addRetVal(return_value[0]->generateIR(ctx));
+
     for (auto &i : return_value)
         res->addRetVal(i->generateIR(ctx));
 
@@ -375,6 +378,20 @@ IR::Value *AST::ASTFor::generateIR(IR::Context &ctx) {
 }
 
 IR::Value *AST::ASTAssign::generateIR(IR::Context &ctx) {
+    if (!name.empty() && func_call){
+        auto place = std::make_unique<IR::IRAlloca>(ctx.counter);
+        place->addType(func_call->typeOfNode);
+
+        ctx.addVariable(name,place.get());
+        ctx.buildInstruction(std::move(place));
+
+        auto store = std::make_unique<IR::IRStore>(ctx.counter);
+        store->addStoreWhere(ctx.getVariable(name));
+        store->addStoreWhat(func_call->generateIR(ctx));
+
+        ctx.buildInstruction(std::move(store));
+    }
+
     for (auto i = 0; i < value.size(); ++i) {
         switch (type) {
             case ASSIGN: {
@@ -437,7 +454,8 @@ IR::Value *AST::Function::generateIR(IR::Context &ctx) {
     ctx.addFunction(name,res.get());
 
     if (!return_type.empty())
-        res->addReturnType(return_type[0]->typeOfNode);
+        res->addReturnType(typeOfNode);
+
 
     res->setName(name);
 

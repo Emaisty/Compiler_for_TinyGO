@@ -96,7 +96,14 @@ bool StructType::nameAlreadyExists(std::string name) {
 }
 
 std::string StructType::toString() {
-    // TODO later
+    std::string res = "{";
+    for (unsigned long long i = 0; i < fields.size(); ++i){
+        res += fields[i].second->toString();
+        if (i != fields.size() - 1)
+            res += ", ";
+    }
+    res += "}";
+    return res;
 }
 
 
@@ -196,9 +203,9 @@ std::vector<Type *> SeqType::getTypes(){
 std::string SeqType::toString(){
     std::string res = "{";
     for (unsigned long long i = 0; i < types.size(); ++i){
-        res += types[i]->toString() + ' ';
+        res += types[i]->toString();
         if (i != types.size() - 1)
-            res += ",";
+            res += ", ";
     }
     res += "}";
     return res;

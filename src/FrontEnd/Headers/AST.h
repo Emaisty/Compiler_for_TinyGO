@@ -41,6 +41,8 @@ namespace AST {
 
         std::vector<Type *> return_type;
 
+        unsigned long long tmp_count = 0;
+
         bool checkIfNameExist(std::string);
 
         bool checkIfTypeExist(std::string);
@@ -342,7 +344,7 @@ namespace AST {
     class ASTMemberAccess : public ASTExpression {
     public:
 
-        ASTMemberAccess(std::unique_ptr<ASTExpression> &&, std::string &);
+        ASTMemberAccess(std::unique_ptr<ASTExpression> &&, std::string );
 
         bool hasAddress() override;
 
@@ -682,6 +684,13 @@ namespace AST {
         IR::Value * generateIR(IR::Context &) override;
 
     private:
+
+        // if value is a function call with a multiple return values -- first it dispatched into a new variable
+        // and then to others.
+        std::string name;
+
+        std::unique_ptr<ASTExpression> func_call;
+
 
         std::vector<std::unique_ptr<AST::ASTExpression>> variable, value;
 

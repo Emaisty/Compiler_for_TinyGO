@@ -698,11 +698,42 @@ Type *AST::ASTFor::checker(Context &ctx) {
 
 
 Type *AST::ASTAssign::checker(Context &ctx) {
+    for (auto &i : variable){
+        i->checker(ctx);
+        if (!i->hasAddress())
+            throw std::invalid_argument("ERROR. Var is not assignable type.");
+        if (i->isConst())
+            throw std::invalid_argument("ERROR. Cannot assign new value to a const.");
+    }
+
+
+    // if func with many return values
+    if (value.size() == 1 && dynamic_cast<SeqType*>(value[0]->checker(ctx)) && dynamic_cast<ASTFunctionCall*>(value[0].get())){
+        auto seq = dynamic_cast<SeqType*>(value[0]->typeOfNode);
+
+        if (variable.size() != seq->getTypes().size())
+            throw std::invalid_argument("ERROR. Number of variables and number of values returned by functions is not the same.");
+
+        for (unsigned long long i = 0; i < variable.size(); ++i)
+            if (!variable[i]->checker(ctx)->canConvertToThisType(seq->getTypes()[i]))
+                throw std::invalid_argument("ERROR. Var and assigned value not the same types");
+
+        name = "tmp" + std::to_string(ctx.tmp_count++);
+
+        func_call = std::move(value[0]);
+        ctx.addIntoNameSpace(name,func_call->typeOfNode);
+        value.clear();
+
+        for (unsigned long long i = 0; i < variable.size(); ++i)
+            auto member_call = std::make_unique<AST::ASTMemberAccess>(std::make_unique<ASTVar>(name),std::to_string(i));
+
+    }
+    if (variable.size() != value.size())
+        throw std::invalid_argument("ERROR. Number of variables and number of values are mismatched.");
 
     for (int i = 0; i < variable.size(); ++i) {
-        auto var_type = variable[i]->checker(ctx);
-        if (!variable[i]->hasAddress())
-            throw std::invalid_argument("ERROR. Var is not assignable type.");
+        auto var_type = variable[i]->typeOfNode;
+
         auto val_type = value[i]->checker(ctx);
         if (!var_type || !val_type || !var_type->canConvertToThisType(val_type))
             throw std::invalid_argument("ERROR. Var and assigned value not the same types");
@@ -742,12 +773,19 @@ void AST::Function::globalPreInit(Context &ctx) {
     auto new_function_type = std::make_unique<FunctionType>();
 
 
-    if (return_type.size() == 1)
+    if (return_type.size() == 1) {
         new_function_type->setReturn(return_type[0]->checker(ctx));
-    else{
+        typeOfNode = return_type[0]->typeOfNode;
+    } else {
         auto new_seq = std::make_unique<SeqType>();
-        for (auto &i : return_type)
-            new_seq->addType(i->checker(ctx));
+        auto same_struct = std::make_unique<StructType>();
+        for (unsigned long long i = 0; i < return_type.size(); ++i) {
+            new_seq->addType(return_type[i]->checker(ctx));
+            same_struct->addNewField(std::to_string(i),return_type[i]->typeOfNode);
+        }
+
+        new_seq->corespStruct = dynamic_cast<StructType*>(ctx.addType(std::move(same_struct)));
+        typeOfNode = new_seq->corespStruct;
         new_function_type->setReturn(ctx.addType(std::move(new_seq)));
     }
 

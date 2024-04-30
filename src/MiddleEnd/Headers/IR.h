@@ -149,7 +149,7 @@ namespace IR {
     private:
     };
 
-    class StructValue : public Const {
+    class StructConst : public Const {
     public:
         void generateT86(T86::Context &) override;
 
@@ -158,6 +158,7 @@ namespace IR {
         void print(std::ostream &) override;
 
     private:
+
     };
 
     class Instruction : public Value {
