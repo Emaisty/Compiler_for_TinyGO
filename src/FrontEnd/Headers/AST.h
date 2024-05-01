@@ -92,6 +92,8 @@ namespace AST {
 
         IR::Context createIRContext();
 
+
+
     private:
 
         std::vector<std::unique_ptr<Type>> existItems;
@@ -528,7 +530,7 @@ namespace AST {
         IR::Value * generateIR(IR::Context &) override;
 
     private:
-
+        std::unique_ptr<ASTVarDeclaration> function_dispatch;
 
     };
 
@@ -687,10 +689,7 @@ namespace AST {
 
         // if value is a function call with a multiple return values -- first it dispatched into a new variable
         // and then to others.
-        std::string name;
-
-        std::unique_ptr<ASTExpression> func_call;
-
+        std::unique_ptr<ASTVarDeclaration> function_dispatch;
 
         std::vector<std::unique_ptr<AST::ASTExpression>> variable, value;
 

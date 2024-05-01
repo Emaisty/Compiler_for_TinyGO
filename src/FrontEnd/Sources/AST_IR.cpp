@@ -116,7 +116,37 @@ IR::Value *AST::ASTFunctionCall::generateIR(IR::Context &ctx) {
 }
 
 IR::Value *AST::ASTMemberAccess::generateIR(IR::Context &ctx) {
+    if (auto func_type = dynamic_cast<FunctionType*>(typeOfNode)){
+        IR::Value* method;
+        if (func_type->isPointer())
+            ctx.l_value = true;
+        method = name->generateIR(ctx);
 
+        auto res = std::make_unique<IR::IRCall>(ctx.counter);
+        res->addArg(method);
+        res->addFunctionName("_"+func_type->innerName()+"_"+member);
+        return ctx.buildInstruction(std::move(res));
+    }
+
+
+    bool flag = ctx.l_value;
+    auto pointer_to_member = std::make_unique<IR::IRMembCall>(ctx.counter);
+    ctx.l_value = true;
+    pointer_to_member->addCallWhere(name->generateIR(ctx));
+    if (auto struc = dynamic_cast<StructType*>(name->typeOfNode))
+        pointer_to_member->addCallWhat(struc->getFieldOrder(member));
+    else
+        pointer_to_member->addCallWhat(dynamic_cast<StructType*>(dynamic_cast<PointerType*>(name->typeOfNode)->getBase())->getFieldOrder(member));
+
+
+    if (flag)
+        return ctx.buildInstruction(std::move(pointer_to_member));
+
+    auto link_to_member = ctx.buildInstruction(std::move(pointer_to_member));
+
+    auto load = std::make_unique<IR::IRLoad>(ctx.counter);
+    load->addLoadFrom(link_to_member);
+    return ctx.buildInstruction(std::move(load));
 }
 
 IR::Value *AST::ASTIntNumber::generateIR(IR::Context &ctx) {
@@ -141,12 +171,28 @@ IR::Value *AST::ASTBoolNumber::generateIR(IR::Context &ctx) {
 }
 
 IR::Value *AST::ASTStruct::generateIR(IR::Context &ctx) {
+    auto res = std::make_unique<IR::StructConst>(ctx.counter);
+    std::map<std::string, IR::Value*> predefined_fields;
+    for (auto &i : values)
+        predefined_fields[i.first] = i.second->generateIR(ctx);
 
+    for(auto &i : dynamic_cast<StructType*>(typeOfNode)->getFields())
+        if (predefined_fields.find(i.first) == predefined_fields.end())
+            res->addConst(ctx.getBasicValue(i.second));
+        else
+            res->addValue(predefined_fields[i.first]);
+
+    return ctx.buildInstruction(std::move(res));
 }
 
 IR::Value *AST::ASTVar::generateIR(IR::Context &ctx) {
+
     // Variable
     if (auto link = ctx.getVariable(name)) {
+        if (ctx.l_value) {
+            ctx.l_value = false;
+            return link;
+        }
         auto res = std::make_unique<IR::IRLoad>(ctx.counter);
         res->addLoadFrom(link);
 
@@ -180,6 +226,10 @@ IR::Value *AST::ASTVarDeclaration::generateIR(IR::Context &ctx) {
         }
         return nullptr;
     }
+
+    if (function_dispatch)
+        function_dispatch->generateIR(ctx);
+
     for (auto i = 0; i < name.size(); ++i) {
         auto res = std::make_unique<IR::IRAlloca>(ctx.counter);
 
@@ -268,11 +318,23 @@ IR::Value *AST::ASTContinue::generateIR(IR::Context &ctx) {
 IR::Value *AST::ASTReturn::generateIR(IR::Context &ctx) {
     auto res = std::make_unique<IR::IRRet>(ctx.counter);
 
-    if (return_value.size() == 1)
-        res->addRetVal(return_value[0]->generateIR(ctx));
 
-    for (auto &i : return_value)
-        res->addRetVal(i->generateIR(ctx));
+    if (!return_value.empty()) {
+        if (return_value.size() == 1)
+            res->addRetVal(return_value[0]->generateIR(ctx));
+        else{
+            std::vector<IR::Value*> values;
+            for (auto &i : return_value)
+                values.emplace_back(i->generateIR(ctx));
+
+            auto structure = std::make_unique<IR::StructConst>(ctx.counter);
+
+            for (auto &i : values)
+                structure->addValue(i);
+
+            res->addRetVal(ctx.buildInstruction(std::move(structure)));
+        }
+    }
 
     ctx.buildInstruction(std::move(res));
     return nullptr;
@@ -378,19 +440,9 @@ IR::Value *AST::ASTFor::generateIR(IR::Context &ctx) {
 }
 
 IR::Value *AST::ASTAssign::generateIR(IR::Context &ctx) {
-    if (!name.empty() && func_call){
-        auto place = std::make_unique<IR::IRAlloca>(ctx.counter);
-        place->addType(func_call->typeOfNode);
+    if (function_dispatch)
+        function_dispatch->generateIR(ctx);
 
-        ctx.addVariable(name,place.get());
-        ctx.buildInstruction(std::move(place));
-
-        auto store = std::make_unique<IR::IRStore>(ctx.counter);
-        store->addStoreWhere(ctx.getVariable(name));
-        store->addStoreWhat(func_call->generateIR(ctx));
-
-        ctx.buildInstruction(std::move(store));
-    }
 
     for (auto i = 0; i < value.size(); ++i) {
         switch (type) {
@@ -400,10 +452,9 @@ IR::Value *AST::ASTAssign::generateIR(IR::Context &ctx) {
                 res->addStoreWhat(value_pointer);
                 //TODO prove it. Maybe it does not work???
                 //Also check in case of function
+                ctx.l_value = true;
                 auto loader = variable[i]->generateIR(ctx);
-                auto where_store = dynamic_cast<IR::IRLoad *>(loader)->getPointer();
-                res->addStoreWhere(where_store);
-                ctx.deleteLastRow();
+                res->addStoreWhere(loader);
                 ctx.buildInstruction(std::move(res));
                 break;
             }
@@ -456,22 +507,42 @@ IR::Value *AST::Function::generateIR(IR::Context &ctx) {
     if (!return_type.empty())
         res->addReturnType(typeOfNode);
 
-
-    res->setName(name);
+    if (type_of_method)
+        res->setName("_" + *type_of_method->getDependencies().begin()+"_"+name);
+    else
+        res->setName(name);
 
     ctx.goDeeper();
 
     ctx.setFunction(res.get());
 
     // arguments
-
     int place_of_arg = 0;
+
+    if (type_of_method){
+        auto argument = std::make_unique<IR::IRFuncArg>(ctx.counter);
+        argument->addType(type_of_method->typeOfNode);
+        argument->addOrder(place_of_arg++);
+        auto alloca = std::make_unique<IR::IRAlloca>(ctx.counter);
+        alloca->addType(type_of_method->typeOfNode);
+        auto store = std::make_unique<IR::IRStore>(ctx.counter);
+        store->addStoreWhat(argument.get());
+        store->addStoreWhere(alloca.get());
+
+        ctx.addVariable(inner_name, alloca.get());
+
+        ctx.buildInstruction(std::move(alloca));
+        ctx.buildInstruction(std::move(store));
+
+        res->addArg(std::move(argument));
+    }
+
+
     for (auto &[i, j]: params)
         for (auto &var_name: i) {
             auto argument = std::make_unique<IR::IRFuncArg>(ctx.counter);
             argument->addType(j->typeOfNode);
             argument->addOrder(place_of_arg++);
-//            ctx.addVariable(var_name, argument.get());
             auto alloca = std::make_unique<IR::IRAlloca>(ctx.counter);
             alloca->addType(j->typeOfNode);
             auto store = std::make_unique<IR::IRStore>(ctx.counter);

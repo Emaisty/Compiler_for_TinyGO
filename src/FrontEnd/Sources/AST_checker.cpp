@@ -338,11 +338,13 @@ std::set<std::string> AST::ASTUnaryOperator::getVarNames() {
     return value->getVarNames();
 }
 
-
 Type *AST::ASTFunctionCall::checker(AST::Context &ctx) {
     auto func_type = dynamic_cast<FunctionType *>(name->checker(ctx));
     if (!func_type)
         throw std::invalid_argument("ERROR. Attempt to call function call on non-function.");
+
+
+
 
     std::vector<Type *> args;
     for (auto &i: arg)
@@ -538,6 +540,35 @@ Type *AST::ASTVarDeclaration::checker(Context &ctx) {
     if (type && !type->typeOfNode)
         type->checker(ctx);
 
+    // if func with many return values
+    if (value.size() == 1 && dynamic_cast<SeqType*>(value[0]->checker(ctx)) && dynamic_cast<ASTFunctionCall*>(value[0].get())){
+        auto seq = dynamic_cast<SeqType*>(value[0]->typeOfNode);
+
+        if (name.size() != seq->getTypes().size())
+            throw std::invalid_argument("ERROR. Number of variables and number of values returned by functions is not the same.");
+
+        if (type)
+            for (auto &i : seq->getTypes())
+                if (!type->typeOfNode->canConvertToThisType(i))
+                    throw std::invalid_argument("ERROR. Type of var and type of expression different.");
+
+        auto name_for_struct = "tmp" + std::to_string(ctx.tmp_count++);
+        auto name_list = {name_for_struct};
+        std::vector<std::unique_ptr<ASTExpression>> tmp;
+        tmp.emplace_back(std::move(value[0]));
+
+
+        function_dispatch = std::make_unique<ASTVarDeclaration>(name_list,std::move(tmp));
+
+        ctx.addIntoNameSpace(name_for_struct,seq->corespStruct);
+        value.clear();
+
+        for (unsigned long long i = 0; i < name.size(); ++i)
+            value.emplace_back(std::make_unique<AST::ASTMemberAccess>(std::make_unique<ASTVar>(name_for_struct),
+                                                                      std::to_string(i)));
+
+    }
+
     if (name.size() != value.size() && value.size() != 0)
         throw std::invalid_argument("ERROR. Assignment number mismatch.");
 
@@ -718,16 +749,23 @@ Type *AST::ASTAssign::checker(Context &ctx) {
             if (!variable[i]->checker(ctx)->canConvertToThisType(seq->getTypes()[i]))
                 throw std::invalid_argument("ERROR. Var and assigned value not the same types");
 
-        name = "tmp" + std::to_string(ctx.tmp_count++);
+        auto name = "tmp" + std::to_string(ctx.tmp_count++);
+        auto name_list = {name};
+        std::vector<std::unique_ptr<ASTExpression>> tmp;
+        tmp.emplace_back(std::move(value[0]));
 
-        func_call = std::move(value[0]);
-        ctx.addIntoNameSpace(name,func_call->typeOfNode);
+
+        function_dispatch = std::make_unique<ASTVarDeclaration>(name_list,std::move(tmp));
+
+        ctx.addIntoNameSpace(name,seq->corespStruct);
         value.clear();
 
         for (unsigned long long i = 0; i < variable.size(); ++i)
-            auto member_call = std::make_unique<AST::ASTMemberAccess>(std::make_unique<ASTVar>(name),std::to_string(i));
+            value.emplace_back(std::make_unique<AST::ASTMemberAccess>(std::make_unique<ASTVar>(name),
+                                                                      std::to_string(i)));
 
     }
+
     if (variable.size() != value.size())
         throw std::invalid_argument("ERROR. Number of variables and number of values are mismatched.");
 
@@ -796,17 +834,25 @@ void AST::Function::globalPreInit(Context &ctx) {
 
     //if it is method
     if (type_of_method) {
-        StructType *structType;
-        if (dynamic_cast<StructType *>(type_of_method->checker(ctx)))
-            structType = dynamic_cast<StructType *>(type_of_method->checker(ctx));
+        new_function_type->setInnerName(*type_of_method->getDependencies().begin());
 
-        if (dynamic_cast<PointerType *>(type_of_method->checker(ctx)) &&
-            dynamic_cast<StructType *>(dynamic_cast<PointerType *>(type_of_method->checker(ctx))->getBase()))
-            structType = dynamic_cast<StructType *>(dynamic_cast<PointerType *>(type_of_method->checker(
-                    ctx))->getBase());
+        StructType *structType;
+        type_of_method->checker(ctx);
+        if (dynamic_cast<StructType *>(type_of_method->checker(ctx))) {
+            structType = dynamic_cast<StructType *>(type_of_method->typeOfNode);
+            new_function_type->setIsPointer(false);
+        }
+
+        if (dynamic_cast<PointerType *>(type_of_method->typeOfNode) &&
+            dynamic_cast<StructType *>(dynamic_cast<PointerType *>(type_of_method->typeOfNode)->getBase())) {
+            structType = dynamic_cast<StructType *>(dynamic_cast<PointerType *>(type_of_method->typeOfNode)->getBase());
+            new_function_type->setIsPointer(true);
+        }
 
         if (!structType)
             throw std::invalid_argument("ERROR. Cannot create method for such type.");
+
+
 
         structType->addNewField(name, ctx.addType(std::move(new_function_type)));
         return;

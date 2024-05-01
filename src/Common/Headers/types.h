@@ -45,17 +45,16 @@ private:
 
 class FloatType : public Type {
 public:
-
     bool canConvertToThisType(const Type *other) const override;
 
     std::string toString() override;
 
 private:
+
 };
 
 class StructType : public Type {
 public:
-
     bool canConvertToThisType(const Type *other) const override;
 
     bool compareSignatures(const Type *other) const override;
@@ -63,6 +62,10 @@ public:
     void addNewField(std::string, Type *) ;
 
     Type *getField(std::string) const;
+
+    int getFieldOrder(std::string) const;
+
+    std::vector<std::pair<std::string, Type *>> getFields();
 
     Type** getDoubleLinkToField(std::string);
 
@@ -105,15 +108,27 @@ public:
 
     void setReturn(Type *);
 
+    void setInnerName(std::string);
+
+    void setIsPointer(bool);
+
+    std::string innerName();
+
+    bool isPointer();
+
     void addParam(Type *);
 
     std::string toString() override;
 
 private:
-
     std::vector<Type *> args;
 
     Type *return_type;
+
+    std::string inner_name_of_method;
+
+    bool is_method_pointer = false;
+
 };
 
 //class NamedType : public Type {

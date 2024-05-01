@@ -81,6 +81,21 @@ Type *StructType::getField(std::string name) const {
     return nullptr;
 }
 
+int StructType::getFieldOrder(std::string name) const{
+    for (int i = 0; i < fields.size(); ++i)
+        if (name == fields[i].first)
+            return i;
+    return -1;
+}
+
+std::vector<std::pair<std::string, Type *>> StructType::getFields(){
+    std::vector<std::pair<std::string, Type *>> res;
+    for (auto &i : fields)
+        if (!dynamic_cast<FunctionType*>(i.second))
+            res.emplace_back(i);
+    return res;
+}
+
 Type **StructType::getDoubleLinkToField(std::string name) {
     for (auto &i: fields)
         if (i.first == name)
@@ -89,8 +104,8 @@ Type **StructType::getDoubleLinkToField(std::string name) {
 }
 
 bool StructType::nameAlreadyExists(std::string name) {
-    for (auto &i: fields)
-        if (i.first == name)
+    for (auto &[i,_]: fields)
+        if (i == name)
             return true;
     return false;
 }
@@ -98,9 +113,11 @@ bool StructType::nameAlreadyExists(std::string name) {
 std::string StructType::toString() {
     std::string res = "{";
     for (unsigned long long i = 0; i < fields.size(); ++i){
-        res += fields[i].second->toString();
-        if (i != fields.size() - 1)
+        if (dynamic_cast<FunctionType*>(fields[i].second))
+            continue;
+        if (i != 0)
             res += ", ";
+        res += fields[i].second->toString();
     }
     res += "}";
     return res;
@@ -129,6 +146,12 @@ bool FunctionType::compareSignatures(const Type *other) const {
     if (!dynamic_cast<const FunctionType *>(other))
         return false;
     auto other_func = dynamic_cast<const FunctionType *>(other);
+
+    if (inner_name_of_method != other_func->inner_name_of_method)
+        return false;
+
+    if (is_method_pointer != other_func->is_method_pointer)
+        return false;
 
     if ((other_func->return_type && !return_type) || (!other_func->return_type && return_type))
         return false;
@@ -167,12 +190,28 @@ void FunctionType::setReturn(Type *new_type) {
     return_type = new_type;
 }
 
+void FunctionType::setInnerName(std::string new_name){
+    inner_name_of_method = new_name;
+}
+
+void FunctionType::setIsPointer(bool flag){
+    is_method_pointer = flag;
+}
+
+std::string FunctionType::innerName(){
+    return inner_name_of_method;
+}
+
+bool FunctionType::isPointer(){
+    return is_method_pointer;
+}
+
 void FunctionType::addParam(Type *new_type) {
     args.emplace_back(new_type);
 }
 
 std::string FunctionType::toString() {
-
+    return "ERROR. Function type called to string";
 }
 
 bool SeqType::canConvertToThisType(const Type *other) const{

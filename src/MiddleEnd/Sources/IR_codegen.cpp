@@ -28,6 +28,14 @@ std::unique_ptr<T86::Operand> IR::Nullptr::getOperand(T86::Context &) {
     return std::make_unique<T86::IntImmediate>();
 }
 
+void IR::StructConst::generateT86(T86::Context &) {
+
+}
+
+std::unique_ptr<T86::Operand> IR::StructConst::getOperand(T86::Context &) {
+
+}
+
 void IR::IRArithOp::generateT86(T86::Context &ctx) {
     if (op == PLUS || op == MINUS || op == MUL || op == DIV || op == BINAND || op == AND || op == BINOR || op == OR ||
         op == XOR) {
@@ -234,6 +242,14 @@ void IR::IRCall::generateT86(T86::Context &ctx) {
 
 std::unique_ptr<T86::Operand> IR::IRCall::getOperand(T86::Context &ctx) {
     return std::make_unique<T86::Register>(inner_number - ctx.offset_of_function);
+}
+
+void IR::IRMembCall::generateT86(T86::Context &) {
+
+}
+
+std::unique_ptr<T86::Operand> IR::IRMembCall::getOperand(T86::Context &) {
+
 }
 
 void IR::IRCast::generateT86(T86::Context &ctx) {

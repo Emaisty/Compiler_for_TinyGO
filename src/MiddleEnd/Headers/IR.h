@@ -50,6 +50,8 @@ namespace IR {
 
         bool Global = true;
 
+        bool l_value = false;
+
         std::unique_ptr<IRProgram> program;
 
         long long counter = 0;
@@ -151,13 +153,23 @@ namespace IR {
 
     class StructConst : public Const {
     public:
+        using Const::Const;
+
+        void addValue(Value*);
+
+        void addConst(std::unique_ptr<Const>&&);
+
         void generateT86(T86::Context &) override;
 
         std::unique_ptr<T86::Operand> getOperand(T86::Context &) override;
 
         void print(std::ostream &) override;
 
+        std::string toString() override;
+
     private:
+        //it may be const, or might be a value
+        std::vector<std::pair<std::unique_ptr<Const>, Value*>> basic_values;
 
     };
 
@@ -365,6 +377,27 @@ namespace IR {
         std::string name_of_function;
 
         std::vector<Value *> arguments;
+
+    };
+
+    class IRMembCall : public Instruction {
+    public:
+        using Instruction::Instruction;
+
+        void addCallWhere(Value *);
+
+        void addCallWhat(int);
+
+        void print(std::ostream &) override;
+
+        void generateT86(T86::Context &) override;
+
+        std::unique_ptr<T86::Operand> getOperand(T86::Context &) override;
+
+    private:
+        Value* where;
+
+        int what;
 
     };
 
