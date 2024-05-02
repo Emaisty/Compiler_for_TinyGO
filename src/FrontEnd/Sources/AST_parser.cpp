@@ -13,18 +13,20 @@ AST::ASTType *AST::ASTTypePointer::getValue() {
     return type.get();
 }
 
-void AST::ASTTypeStruct::addField(std::string name, std::unique_ptr<AST::ASTType> &&type) {
-    for (auto &i: fileds)
-        if (name == i.first && name != "")
-            throw std::invalid_argument("ERROR. 2 or more fields in structure with the same names");
-    fileds.emplace_back(name, std::move(type));
+void AST::ASTTypeStruct::addField(std::vector<std::string> &&name, std::unique_ptr<AST::ASTType> &&type) {
+    for (auto &i : name)
+        for (auto &[j,_] : fileds)
+            for (auto &k : j)
+                if (i == k)
+                    throw std::invalid_argument("ERROR. 2 or more fields in structure with the same names");
+    fileds.emplace_back(std::move(name), std::move(type));
 }
 
 AST::ASTType *AST::ASTTypeStruct::findField(std::string name) const {
-    for (auto &i: fileds)
-        if (i.first == name)
-            return i.second.get();
-
+    for (auto &[i,j] : fileds)
+        for (auto &k : i)
+            if (name == k)
+                return j.get();
     return nullptr;
 }
 

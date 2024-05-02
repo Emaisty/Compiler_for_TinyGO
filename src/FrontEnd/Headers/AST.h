@@ -39,6 +39,8 @@ namespace AST {
 
         bool GlobalInit = true;
 
+        bool body_of_function = false;
+
         std::vector<Type *> return_type;
 
         unsigned long long tmp_count = 0;
@@ -229,7 +231,7 @@ namespace AST {
 
         ASTTypeStruct() = default;
 
-        void addField(std::string name, std::unique_ptr<ASTType> &&type);
+        void addField(std::vector<std::string> &&, std::unique_ptr<ASTType> &&);
 
         ASTType *findField(std::string name) const;
 
@@ -238,7 +240,7 @@ namespace AST {
         std::set<std::string> getDependencies() override;
 
     private:
-        std::vector<std::pair<std::string, std::unique_ptr<ASTType >>> fileds;
+        std::vector<std::pair<std::vector<std::string>, std::unique_ptr<ASTType >>> fileds;
     };
 
     class ASTTypeNamed : public ASTType {

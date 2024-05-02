@@ -17,6 +17,8 @@ public:
 
     virtual std::string toString() = 0;
 
+    virtual long long size() = 0;
+
 private:
 };
 
@@ -29,6 +31,8 @@ public:
 
     std::string toString() override;
 
+    long long size() override;
+
 private:
     int bits;
 };
@@ -40,6 +44,8 @@ public:
 
     std::string toString() override;
 
+    long long size() override;
+
 private:
 };
 
@@ -48,6 +54,8 @@ public:
     bool canConvertToThisType(const Type *other) const override;
 
     std::string toString() override;
+
+    long long size() override;
 
 private:
 
@@ -73,6 +81,8 @@ public:
 
     std::string toString() override;
 
+    long long size() override;
+
 private:
     std::vector<std::pair<std::string, Type *>> fields;
 
@@ -88,6 +98,8 @@ public:
     Type *getBase();
 
     std::string toString() override;
+
+    long long size() override;
 
 private:
     Type *base_type;
@@ -119,6 +131,8 @@ public:
     void addParam(Type *);
 
     std::string toString() override;
+
+    long long size() override;
 
 private:
     std::vector<Type *> args;
@@ -161,6 +175,8 @@ public:
     std::vector<Type *> getTypes();
 
     std::string toString() override;
+
+    long long size() override;
 
 private:
 

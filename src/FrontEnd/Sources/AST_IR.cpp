@@ -171,10 +171,11 @@ IR::Value *AST::ASTBoolNumber::generateIR(IR::Context &ctx) {
 }
 
 IR::Value *AST::ASTStruct::generateIR(IR::Context &ctx) {
-    auto res = std::make_unique<IR::StructConst>(ctx.counter);
     std::map<std::string, IR::Value*> predefined_fields;
     for (auto &i : values)
         predefined_fields[i.first] = i.second->generateIR(ctx);
+
+    auto res = std::make_unique<IR::StructConst>(ctx.counter);
 
     for(auto &i : dynamic_cast<StructType*>(typeOfNode)->getFields())
         if (predefined_fields.find(i.first) == predefined_fields.end())
@@ -517,12 +518,13 @@ IR::Value *AST::Function::generateIR(IR::Context &ctx) {
     ctx.setFunction(res.get());
 
     // arguments
-    int place_of_arg = 0;
+    long long place_of_arg = 0;
 
     if (type_of_method){
         auto argument = std::make_unique<IR::IRFuncArg>(ctx.counter);
         argument->addType(type_of_method->typeOfNode);
-        argument->addOrder(place_of_arg++);
+        argument->addOrder(place_of_arg);
+        place_of_arg+= type_of_method->typeOfNode->size();
         auto alloca = std::make_unique<IR::IRAlloca>(ctx.counter);
         alloca->addType(type_of_method->typeOfNode);
         auto store = std::make_unique<IR::IRStore>(ctx.counter);
@@ -537,12 +539,12 @@ IR::Value *AST::Function::generateIR(IR::Context &ctx) {
         res->addArg(std::move(argument));
     }
 
-
     for (auto &[i, j]: params)
         for (auto &var_name: i) {
             auto argument = std::make_unique<IR::IRFuncArg>(ctx.counter);
             argument->addType(j->typeOfNode);
-            argument->addOrder(place_of_arg++);
+            argument->addOrder(place_of_arg);
+            place_of_arg += j->typeOfNode->size();
             auto alloca = std::make_unique<IR::IRAlloca>(ctx.counter);
             alloca->addType(j->typeOfNode);
             auto store = std::make_unique<IR::IRStore>(ctx.counter);

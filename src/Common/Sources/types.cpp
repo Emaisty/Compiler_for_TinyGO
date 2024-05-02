@@ -14,6 +14,12 @@ std::string IntType::toString() {
     return "i" + std::to_string(bits);
 }
 
+long long IntType::size() {
+    if (bits <= 32)
+        return 1;
+    return 2;
+}
+
 bool BoolType::canConvertToThisType(const Type *other) const {
     if (this == other)
         return true;
@@ -22,6 +28,10 @@ bool BoolType::canConvertToThisType(const Type *other) const {
 
 std::string BoolType::toString() {
     return "i1";
+}
+
+long long BoolType::size() {
+    return 1;
 }
 
 bool FloatType::canConvertToThisType(const Type *other) const {
@@ -34,6 +44,9 @@ std::string FloatType::toString() {
     return "float";
 }
 
+long long FloatType::size() {
+    return 1;
+}
 
 bool StructType::canConvertToThisType(const Type *other) const {
     if (!dynamic_cast<const StructType *>(other))
@@ -123,6 +136,12 @@ std::string StructType::toString() {
     return res;
 }
 
+long long StructType::size() {
+    long long res = 0;
+    for (auto &[_,i] : fields)
+        res += i->size();
+    return res;
+}
 
 bool PointerType::canConvertToThisType(const Type *other) const {
     if (dynamic_cast<const PointerType *>(other) && dynamic_cast<const PointerType *>(other)->base_type == base_type)
@@ -136,6 +155,10 @@ Type *PointerType::getBase() {
 
 std::string PointerType::toString() {
     return "ptr";
+}
+
+long long PointerType::size() {
+    return 1;
 }
 
 bool FunctionType::canConvertToThisType(const Type *other) const {
@@ -214,6 +237,10 @@ std::string FunctionType::toString() {
     return "ERROR. Function type called to string";
 }
 
+long long FunctionType::size() {
+    return 0;
+}
+
 bool SeqType::canConvertToThisType(const Type *other) const{
     return false;
 }
@@ -248,4 +275,8 @@ std::string SeqType::toString(){
     }
     res += "}";
     return res;
+}
+
+long long SeqType::size() {
+    return 0;
 }

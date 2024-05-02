@@ -105,12 +105,9 @@ std::unique_ptr<AST::ASTTypeStruct> Parser::parseStruct() {
     auto res = std::make_unique<AST::ASTTypeStruct>();
 
     while (cur_tok != tok_clfigbr) {
+
         auto names = parseIdentifierList();
-
-        auto type = parseType();
-
-        for (auto &name: names)
-            res->addField(name, std::move(type));
+        res->addField(std::move(names), parseType());
 
         if (!checkForSeparator()) {
             match(tok_clfigbr);

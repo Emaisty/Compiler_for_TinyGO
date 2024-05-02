@@ -164,11 +164,13 @@ namespace T86 {
     public:
         long long offset_of_function = 0;
 
-        long long number_of_arguments_in_function = 0;
+        long long allocated_space_for_variables = 0;
 
-        void AllocPlaceOnStack();
+        long long allocated_space_for_arguments = 0;
 
-        long long getCurrentPlaceOnStack();
+        void startFunction();
+
+        long long getCurrentPlaceOnStack(long long);
 
         void addOperand(long long, std::unique_ptr<Operand> &&);
 
@@ -195,8 +197,6 @@ namespace T86 {
 
         std::map<long long, std::unique_ptr<Operand>> instructionToOperand;
 
-        long long placeOnStack = 1;
-
         std::map<std::string, std::vector<IntImmediate *>> notFinishedCalls;
 
         std::set<std::pair<std::string, size_t>> placeForCall;
@@ -204,6 +204,8 @@ namespace T86 {
         std::map<long long, std::vector<IntImmediate *>> notFinishedJumps;
 
         std::set<std::pair<long long, size_t>> placeForJumps;
+
+        long long current_place_on_stack = 0;
 
     };
 

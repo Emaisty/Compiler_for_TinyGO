@@ -24,9 +24,7 @@ T86::Instruction::Opcode T86::Instruction::getOpcode() {
 }
 
 void T86::Instruction::print(std::ostream &oss) {
-//    oss << magic_enum::enum_name(op) << ' ';
     oss << opcode_to_str.find(op)->second << ' ';
-
     if (first)
         oss << first->toString();
     if (second)
@@ -51,12 +49,16 @@ std::size_t T86::T86Program::getNumberOfInstructions() {
     return program.size();
 }
 
-void T86::Context::AllocPlaceOnStack() {
-    placeOnStack = 1;
+void T86::Context::startFunction() {
+    allocated_space_for_arguments = 0;
+    allocated_space_for_variables = 0;
+    current_place_on_stack = 1;
 }
 
-long long T86::Context::getCurrentPlaceOnStack() {
-    return placeOnStack++;
+long long T86::Context::getCurrentPlaceOnStack(long long offset){
+    auto res = current_place_on_stack;
+    current_place_on_stack += offset;
+    return res;
 }
 
 void T86::Context::addInstruction(T86::Instruction &&new_instruction) {

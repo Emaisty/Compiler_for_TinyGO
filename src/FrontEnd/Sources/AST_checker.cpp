@@ -205,16 +205,17 @@ std::set<std::string> AST::ASTTypePointer::getDependencies() {
 
 Type *AST::ASTTypeStruct::checker(Context &ctx) {
     auto res = std::make_unique<StructType>();
-    for (auto &i: fileds) {
-        try {
-            res->addNewField(i.first, i.second->checker(ctx));
-        } catch (std::invalid_argument e) {
-            if (ctx.GlobalInit) {
-                res->addNewField(i.first, nullptr);
-                ctx.addFieldFillInLater(i.second.get(), res->getDoubleLinkToField(i.first));
-            } else
-                throw e;
-        }
+    for (auto &[names,type]: fileds) {
+        for (auto &name : names)
+            try {
+                res->addNewField(name, type->checker(ctx));
+            } catch (std::invalid_argument e) {
+                if (ctx.GlobalInit) {
+                    res->addNewField(name, nullptr);
+                    ctx.addFieldFillInLater(type.get(), res->getDoubleLinkToField(name));
+                } else
+                    throw e;
+            }
     }
     typeOfNode = ctx.addType(std::move(res));
     return typeOfNode;
@@ -449,8 +450,8 @@ Type *AST::ASTStruct::checker(AST::Context &ctx) {
         auto field_type = struct_type->getField(i.first);
         if (!field_type)
             throw std::invalid_argument("ERROR. Field with such name does not exists in structure.");
-        if (field_type->canConvertToThisType(i.second->checker(ctx)))
-            throw std::invalid_argument("ERROR. Filed and assigned type mismatch.");
+        if (!field_type->canConvertToThisType(i.second->checker(ctx)))
+            throw std::invalid_argument("ERROR. Field and assigned type mismatch.");
     }
 
     typeOfNode = struct_type;
@@ -643,6 +644,12 @@ Type *AST::ASTConstDeclaration::checker(Context &ctx) {
 }
 
 Type *AST::ASTBlock::checker(Context &ctx) {
+    if (ctx.body_of_function){
+        ctx.body_of_function = false;
+        for (auto &i: statements)
+            i->checker(ctx);
+        return nullptr;
+    }
     ctx.goDeeper();
     for (auto &i: statements)
         i->checker(ctx);
@@ -799,7 +806,7 @@ Type *AST::Function::checker(Context &ctx) {
     for (auto &i: return_type)
         ctx.return_type.emplace_back(i->checker(ctx));
 
-
+    ctx.body_of_function = true;
     body->checker(ctx);
 
     ctx.goUp();

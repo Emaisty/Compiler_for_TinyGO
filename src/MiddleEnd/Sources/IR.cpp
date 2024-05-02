@@ -233,6 +233,10 @@ void IR::IRAlloca::addType(Type *new_type) {
     type = new_type;
 }
 
+Type* IR::IRAlloca::getType(){
+    return type;
+}
+
 void IR::IRAlloca::addBasicValue(std::unique_ptr<Const> &&new_value) {
     basicValue = std::move(new_value);
 }
@@ -346,12 +350,16 @@ void IR::IRFuncArg::addType(Type *new_type) {
     type = new_type;
 }
 
-void IR::IRFuncArg::addOrder(int num) {
+void IR::IRFuncArg::addOrder(long long num) {
     order_of_arg = num;
 }
 
 void IR::IRFuncArg::print(std::ostream &oss) {
     oss << "'" << type->toString() << "' %" << inner_number;
+}
+
+long long IR::IRFuncArg::size(){
+    return type->size();
 }
 
 void IR::IRFunc::addReturnType(Type *new_type) {
@@ -376,6 +384,10 @@ void IR::IRFunc::setName(std::string new_name) {
 
 std::string IR::IRFunc::getName() {
     return name;
+}
+
+void IR::IRFunc::setSpaceForAlloca(long long value){
+    space_for_alloca = value;
 }
 
 std::vector<std::unique_ptr<IR::Value>> *IR::IRFunc::getLinkToBody() {

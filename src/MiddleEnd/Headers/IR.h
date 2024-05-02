@@ -282,6 +282,8 @@ namespace IR {
 
         void addType(Type *);
 
+        Type* getType();
+
         void addBasicValue(std::unique_ptr<Const> &&);
 
         void print(std::ostream &) override;
@@ -426,7 +428,7 @@ namespace IR {
 
         void addType(Type *);
 
-        void addOrder(int = 0);
+        void addOrder(long long = 0);
 
         void print(std::ostream &) override;
 
@@ -434,10 +436,12 @@ namespace IR {
 
         std::unique_ptr<T86::Operand> getOperand(T86::Context &) override;
 
+        long long size();
+
     private:
         Type *type;
 
-        int order_of_arg = 0;
+        long long order_of_arg = 0;
 
     };
 
@@ -457,6 +461,8 @@ namespace IR {
 
         std::string getName();
 
+        void setSpaceForAlloca(long long);
+
         std::vector<std::unique_ptr<Value>> *getLinkToBody();
 
         void print(std::ostream &) override;
@@ -473,6 +479,8 @@ namespace IR {
         std::vector<std::unique_ptr<Value>> allocas;
 
         std::vector<std::unique_ptr<Value>> body;
+
+        long long space_for_alloca = 0;
 
     };
 
