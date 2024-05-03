@@ -96,16 +96,23 @@ IR::Value *AST::ASTUnaryOperator::generateIR(IR::Context &ctx) {
                 return value_pointer;
         }
         case REFER: {
-
+            ctx.l_value = true;
+            return value->generateIR(ctx);
         }
         case DEREFER: {
-
+            if (ctx.l_value) {
+                ctx.l_value = false;
+                return value->generateIR(ctx);
+            }
+            auto res = std::make_unique<IR::IRLoad>(ctx.counter);
+            res->addLoadFrom(value->generateIR(ctx));
+            return ctx.buildInstruction(std::move(res));
         }
     }
 }
 
 IR::Value *AST::ASTFunctionCall::generateIR(IR::Context &ctx) {
-    std::vector<IR::Value *> arguments;
+    std::vector < IR::Value * > arguments;
     for (auto &i: arg)
         arguments.emplace_back(i->generateIR(ctx));
 
@@ -116,27 +123,31 @@ IR::Value *AST::ASTFunctionCall::generateIR(IR::Context &ctx) {
 }
 
 IR::Value *AST::ASTMemberAccess::generateIR(IR::Context &ctx) {
-    if (auto func_type = dynamic_cast<FunctionType*>(typeOfNode)){
-        IR::Value* method;
+    if (auto func_type = dynamic_cast<FunctionType *>(typeOfNode)) {
+        IR::Value *method;
         if (func_type->isPointer())
             ctx.l_value = true;
         method = name->generateIR(ctx);
 
         auto res = std::make_unique<IR::IRCall>(ctx.counter);
         res->addArg(method);
-        res->addFunctionName("_"+func_type->innerName()+"_"+member);
+        res->addFunctionName("_" + func_type->innerName() + "_" + member);
         return ctx.buildInstruction(std::move(res));
     }
 
 
     bool flag = ctx.l_value;
+    ctx.l_value = false;
     auto pointer_to_member = std::make_unique<IR::IRMembCall>(ctx.counter);
-    ctx.l_value = true;
+    if (!dynamic_cast<PointerType*>(name->typeOfNode))
+        ctx.l_value = true;
     pointer_to_member->addCallWhere(name->generateIR(ctx));
-    if (auto struc = dynamic_cast<StructType*>(name->typeOfNode))
+    if (auto struc = dynamic_cast<StructType *>(name->typeOfNode))
         pointer_to_member->addCallWhat(struc->getFieldOrder(member));
     else
-        pointer_to_member->addCallWhat(dynamic_cast<StructType*>(dynamic_cast<PointerType*>(name->typeOfNode)->getBase())->getFieldOrder(member));
+        pointer_to_member->addCallWhat(
+                dynamic_cast<StructType *>(dynamic_cast<PointerType *>(name->typeOfNode)->getBase())->getFieldOrder(
+                        member));
 
 
     if (flag)
@@ -171,13 +182,13 @@ IR::Value *AST::ASTBoolNumber::generateIR(IR::Context &ctx) {
 }
 
 IR::Value *AST::ASTStruct::generateIR(IR::Context &ctx) {
-    std::map<std::string, IR::Value*> predefined_fields;
-    for (auto &i : values)
+    std::map < std::string, IR::Value * > predefined_fields;
+    for (auto &i: values)
         predefined_fields[i.first] = i.second->generateIR(ctx);
 
     auto res = std::make_unique<IR::StructConst>(ctx.counter);
 
-    for(auto &i : dynamic_cast<StructType*>(typeOfNode)->getFields())
+    for (auto &i: dynamic_cast<StructType *>(typeOfNode)->getFields())
         if (predefined_fields.find(i.first) == predefined_fields.end())
             res->addConst(ctx.getBasicValue(i.second));
         else
@@ -323,14 +334,14 @@ IR::Value *AST::ASTReturn::generateIR(IR::Context &ctx) {
     if (!return_value.empty()) {
         if (return_value.size() == 1)
             res->addRetVal(return_value[0]->generateIR(ctx));
-        else{
-            std::vector<IR::Value*> values;
-            for (auto &i : return_value)
+        else {
+            std::vector < IR::Value * > values;
+            for (auto &i: return_value)
                 values.emplace_back(i->generateIR(ctx));
 
             auto structure = std::make_unique<IR::StructConst>(ctx.counter);
 
-            for (auto &i : values)
+            for (auto &i: values)
                 structure->addValue(i);
 
             res->addRetVal(ctx.buildInstruction(std::move(structure)));
@@ -448,6 +459,22 @@ IR::Value *AST::ASTAssign::generateIR(IR::Context &ctx) {
     for (auto i = 0; i < value.size(); ++i) {
         switch (type) {
             case ASSIGN: {
+                if (dynamic_cast<StructType *>(value[i]->typeOfNode)) {
+                    ctx.l_value = true;
+                    auto value_pointer = value[i]->generateIR(ctx);
+                    ctx.l_value = true;
+                    auto variable_pointer = variable[i]->generateIR(ctx);
+
+                    auto res = std::make_unique<IR::IRMemCopy>(ctx.counter);
+                    res->addCopyFrom(value_pointer);
+                    res->addCopyTo(variable_pointer);
+                    res->addSize(value[i]->typeOfNode->size());
+
+                    ctx.buildInstruction(std::move(res));
+                    break;
+                }
+
+
                 auto value_pointer = value[i]->generateIR(ctx);
                 auto res = std::make_unique<IR::IRStore>(ctx.counter);
                 res->addStoreWhat(value_pointer);
@@ -503,15 +530,12 @@ IR::Value *AST::ASTAssign::generateIR(IR::Context &ctx) {
 IR::Value *AST::Function::generateIR(IR::Context &ctx) {
 
     auto res = std::make_unique<IR::IRFunc>(ctx.counter);
-    ctx.addFunction(name,res.get());
+    ctx.addFunction(name, res.get());
 
     if (!return_type.empty())
         res->addReturnType(typeOfNode);
 
-    if (type_of_method)
-        res->setName("_" + *type_of_method->getDependencies().begin()+"_"+name);
-    else
-        res->setName(name);
+    res->setName(name);
 
     ctx.goDeeper();
 
@@ -520,11 +544,11 @@ IR::Value *AST::Function::generateIR(IR::Context &ctx) {
     // arguments
     long long place_of_arg = 0;
 
-    if (type_of_method){
+    if (type_of_method) {
         auto argument = std::make_unique<IR::IRFuncArg>(ctx.counter);
         argument->addType(type_of_method->typeOfNode);
         argument->addOrder(place_of_arg);
-        place_of_arg+= type_of_method->typeOfNode->size();
+        place_of_arg += type_of_method->typeOfNode->size();
         auto alloca = std::make_unique<IR::IRAlloca>(ctx.counter);
         alloca->addType(type_of_method->typeOfNode);
         auto store = std::make_unique<IR::IRStore>(ctx.counter);

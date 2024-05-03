@@ -446,6 +446,8 @@ std::unique_ptr<AST::ASTExpression> Parser::parseExpressionOrNone() {
         case tok_inc:
         case tok_dec:
         case tok_excl:
+        case tok_asterisk:
+        case tok_binand:
             return E11();
         default:
             return nullptr;

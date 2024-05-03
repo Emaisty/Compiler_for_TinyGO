@@ -205,8 +205,8 @@ std::set<std::string> AST::ASTTypePointer::getDependencies() {
 
 Type *AST::ASTTypeStruct::checker(Context &ctx) {
     auto res = std::make_unique<StructType>();
-    for (auto &[names,type]: fileds) {
-        for (auto &name : names)
+    for (auto &[names, type]: fileds) {
+        for (auto &name: names)
             try {
                 res->addNewField(name, type->checker(ctx));
             } catch (std::invalid_argument e) {
@@ -345,8 +345,6 @@ Type *AST::ASTFunctionCall::checker(AST::Context &ctx) {
         throw std::invalid_argument("ERROR. Attempt to call function call on non-function.");
 
 
-
-
     std::vector<Type *> args;
     for (auto &i: arg)
         args.emplace_back(i->checker(ctx));
@@ -358,7 +356,7 @@ Type *AST::ASTFunctionCall::checker(AST::Context &ctx) {
     auto list_of_func_args = func_type->getArgs();
 
     for (auto i = 0; i < list_of_func_args.size(); ++i)
-        arg[i] = ctx.convertTypeTo(std::move(arg[i]),list_of_func_args[i]);
+        arg[i] = ctx.convertTypeTo(std::move(arg[i]), list_of_func_args[i]);
 
     typeOfNode = func_type->getReturn();
     return typeOfNode;
@@ -542,14 +540,16 @@ Type *AST::ASTVarDeclaration::checker(Context &ctx) {
         type->checker(ctx);
 
     // if func with many return values
-    if (value.size() == 1 && dynamic_cast<SeqType*>(value[0]->checker(ctx)) && dynamic_cast<ASTFunctionCall*>(value[0].get())){
-        auto seq = dynamic_cast<SeqType*>(value[0]->typeOfNode);
+    if (value.size() == 1 && dynamic_cast<SeqType *>(value[0]->checker(ctx)) &&
+        dynamic_cast<ASTFunctionCall *>(value[0].get())) {
+        auto seq = dynamic_cast<SeqType *>(value[0]->typeOfNode);
 
         if (name.size() != seq->getTypes().size())
-            throw std::invalid_argument("ERROR. Number of variables and number of values returned by functions is not the same.");
+            throw std::invalid_argument(
+                    "ERROR. Number of variables and number of values returned by functions is not the same.");
 
         if (type)
-            for (auto &i : seq->getTypes())
+            for (auto &i: seq->getTypes())
                 if (!type->typeOfNode->canConvertToThisType(i))
                     throw std::invalid_argument("ERROR. Type of var and type of expression different.");
 
@@ -559,9 +559,9 @@ Type *AST::ASTVarDeclaration::checker(Context &ctx) {
         tmp.emplace_back(std::move(value[0]));
 
 
-        function_dispatch = std::make_unique<ASTVarDeclaration>(name_list,std::move(tmp));
+        function_dispatch = std::make_unique<ASTVarDeclaration>(name_list, std::move(tmp));
 
-        ctx.addIntoNameSpace(name_for_struct,seq->corespStruct);
+        ctx.addIntoNameSpace(name_for_struct, seq->corespStruct);
         value.clear();
 
         for (unsigned long long i = 0; i < name.size(); ++i)
@@ -644,7 +644,7 @@ Type *AST::ASTConstDeclaration::checker(Context &ctx) {
 }
 
 Type *AST::ASTBlock::checker(Context &ctx) {
-    if (ctx.body_of_function){
+    if (ctx.body_of_function) {
         ctx.body_of_function = false;
         for (auto &i: statements)
             i->checker(ctx);
@@ -736,7 +736,7 @@ Type *AST::ASTFor::checker(Context &ctx) {
 
 
 Type *AST::ASTAssign::checker(Context &ctx) {
-    for (auto &i : variable){
+    for (auto &i: variable) {
         i->checker(ctx);
         if (!i->hasAddress())
             throw std::invalid_argument("ERROR. Var is not assignable type.");
@@ -746,11 +746,13 @@ Type *AST::ASTAssign::checker(Context &ctx) {
 
 
     // if func with many return values
-    if (value.size() == 1 && dynamic_cast<SeqType*>(value[0]->checker(ctx)) && dynamic_cast<ASTFunctionCall*>(value[0].get())){
-        auto seq = dynamic_cast<SeqType*>(value[0]->typeOfNode);
+    if (value.size() == 1 && dynamic_cast<SeqType *>(value[0]->checker(ctx)) &&
+        dynamic_cast<ASTFunctionCall *>(value[0].get())) {
+        auto seq = dynamic_cast<SeqType *>(value[0]->typeOfNode);
 
         if (variable.size() != seq->getTypes().size())
-            throw std::invalid_argument("ERROR. Number of variables and number of values returned by functions is not the same.");
+            throw std::invalid_argument(
+                    "ERROR. Number of variables and number of values returned by functions is not the same.");
 
         for (unsigned long long i = 0; i < variable.size(); ++i)
             if (!variable[i]->checker(ctx)->canConvertToThisType(seq->getTypes()[i]))
@@ -762,9 +764,9 @@ Type *AST::ASTAssign::checker(Context &ctx) {
         tmp.emplace_back(std::move(value[0]));
 
 
-        function_dispatch = std::make_unique<ASTVarDeclaration>(name_list,std::move(tmp));
+        function_dispatch = std::make_unique<ASTVarDeclaration>(name_list, std::move(tmp));
 
-        ctx.addIntoNameSpace(name,seq->corespStruct);
+        ctx.addIntoNameSpace(name, seq->corespStruct);
         value.clear();
 
         for (unsigned long long i = 0; i < variable.size(); ++i)
@@ -782,6 +784,12 @@ Type *AST::ASTAssign::checker(Context &ctx) {
         auto val_type = value[i]->checker(ctx);
         if (!var_type || !val_type || !var_type->canConvertToThisType(val_type))
             throw std::invalid_argument("ERROR. Var and assigned value not the same types");
+
+        if (type != ASSIGN)
+            if (!dynamic_cast<IntType *>(val_type) && !dynamic_cast<FloatType *>(val_type))
+                throw std::invalid_argument(
+                        "ERROR. Cannot perform math operations on non integer and non float values and variables");
+
 
         value[i] = ctx.convertTypeTo(std::move(value[i]), variable[i]->typeOfNode);
     }
@@ -816,7 +824,7 @@ Type *AST::Function::checker(Context &ctx) {
 
 void AST::Function::globalPreInit(Context &ctx) {
     auto new_function_type = std::make_unique<FunctionType>();
-
+    typeOfNode = new_function_type.get();
 
     if (return_type.size() == 1) {
         new_function_type->setReturn(return_type[0]->checker(ctx));
@@ -826,10 +834,10 @@ void AST::Function::globalPreInit(Context &ctx) {
         auto same_struct = std::make_unique<StructType>();
         for (unsigned long long i = 0; i < return_type.size(); ++i) {
             new_seq->addType(return_type[i]->checker(ctx));
-            same_struct->addNewField(std::to_string(i),return_type[i]->typeOfNode);
+            same_struct->addNewField(std::to_string(i), return_type[i]->typeOfNode);
         }
 
-        new_seq->corespStruct = dynamic_cast<StructType*>(ctx.addType(std::move(same_struct)));
+        new_seq->corespStruct = dynamic_cast<StructType *>(ctx.addType(std::move(same_struct)));
         typeOfNode = new_seq->corespStruct;
         new_function_type->setReturn(ctx.addType(std::move(new_seq)));
     }
@@ -841,39 +849,45 @@ void AST::Function::globalPreInit(Context &ctx) {
 
     //if it is method
     if (type_of_method) {
-        new_function_type->setInnerName(*type_of_method->getDependencies().begin());
+
+        std::string new_name;
+
 
         StructType *structType;
         type_of_method->checker(ctx);
         if (dynamic_cast<StructType *>(type_of_method->checker(ctx))) {
             structType = dynamic_cast<StructType *>(type_of_method->typeOfNode);
             new_function_type->setIsPointer(false);
+            new_name = *type_of_method->getDependencies().begin();
         }
 
         if (dynamic_cast<PointerType *>(type_of_method->typeOfNode) &&
             dynamic_cast<StructType *>(dynamic_cast<PointerType *>(type_of_method->typeOfNode)->getBase())) {
             structType = dynamic_cast<StructType *>(dynamic_cast<PointerType *>(type_of_method->typeOfNode)->getBase());
             new_function_type->setIsPointer(true);
+            new_name = *(dynamic_cast<ASTTypePointer *>(type_of_method.get())->getValue())->getDependencies().begin();
         }
 
         if (!structType)
             throw std::invalid_argument("ERROR. Cannot create method for such type.");
 
-
-
-        structType->addNewField(name, ctx.addType(std::move(new_function_type)));
+        new_function_type->setInnerName(new_name);
+        typeOfNode = ctx.addType(std::move(new_function_type));
+        structType->addNewField(name, typeOfNode);
+        name = "_" + new_name + "_" + name;
         return;
     }
 
+    typeOfNode = ctx.addType(std::move(new_function_type));
     // if it is function
-    ctx.addIntoNameSpace(name, ctx.addType(std::move(new_function_type)));
+    ctx.addIntoNameSpace(name, typeOfNode);
 }
 
 
 Type *AST::Program::checker(Context &ctx) {
     // type declarations
     {
-        std::vector<dispatchedDecl> declarations;
+        std::vector <dispatchedDecl> declarations;
         for (auto &i: typeDeclarations)
             declarations.push_back(i->globalPreInit()[0]);
 
@@ -909,7 +923,7 @@ Type *AST::Program::checker(Context &ctx) {
 
     // var and const declarations
     {
-        std::vector<dispatchedDecl> declarations;
+        std::vector <dispatchedDecl> declarations;
         for (auto &i: varDeclarations)
             for (auto &j: i->globalPreInit())
                 declarations.push_back(j);

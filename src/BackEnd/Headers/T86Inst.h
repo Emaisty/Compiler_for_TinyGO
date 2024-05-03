@@ -160,6 +160,10 @@ namespace T86 {
         // also need to add .data segment
     };
 
+    class RegAndMemSpace {
+
+    };
+
     class Context {
     public:
         long long offset_of_function = 0;
@@ -191,8 +195,12 @@ namespace T86 {
         void addLabelPlace(long long);
 
         void finishCallsAndJmps();
+
+        std::unique_ptr<Operand> getRegister(long long);
         
     private:
+        RegAndMemSpace reg_allocator;
+
         T86Program program;
 
         std::map<long long, std::unique_ptr<Operand>> instructionToOperand;

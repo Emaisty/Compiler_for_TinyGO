@@ -274,6 +274,14 @@ std::unique_ptr<T86::Operand> IR::IRCast::getOperand(T86::Context &ctx) {
     return std::make_unique<T86::Register>(inner_number - ctx.offset_of_function);
 }
 
+void IR::IRMemCopy::generateT86(T86::Context &) {
+
+}
+
+std::unique_ptr<T86::Operand> IR::IRMemCopy::getOperand(T86::Context &) {
+
+}
+
 void IR::IRFuncArg::generateT86(T86::Context &ctx) {
     throw std::invalid_argument("Should not happen???");
 }

@@ -155,9 +155,9 @@ namespace IR {
     public:
         using Const::Const;
 
-        void addValue(Value*);
+        void addValue(Value *);
 
-        void addConst(std::unique_ptr<Const>&&);
+        void addConst(std::unique_ptr<Const> &&);
 
         void generateT86(T86::Context &) override;
 
@@ -169,7 +169,7 @@ namespace IR {
 
     private:
         //it may be const, or might be a value
-        std::vector<std::pair<std::unique_ptr<Const>, Value*>> basic_values;
+        std::vector<std::pair<std::unique_ptr<Const>, Value *>> basic_values;
 
     };
 
@@ -282,7 +282,7 @@ namespace IR {
 
         void addType(Type *);
 
-        Type* getType();
+        Type *getType();
 
         void addBasicValue(std::unique_ptr<Const> &&);
 
@@ -397,7 +397,7 @@ namespace IR {
         std::unique_ptr<T86::Operand> getOperand(T86::Context &) override;
 
     private:
-        Value* where;
+        Value *where;
 
         int what;
 
@@ -420,6 +420,29 @@ namespace IR {
     private:
         Value *expr;
         Type *to, *from;
+    };
+
+    class IRMemCopy : public Instruction {
+    public:
+        using Instruction::Instruction;
+
+        void addCopyFrom(Value*);
+
+        void addCopyTo(Value*);
+
+        void addSize(long long);
+
+        void print(std::ostream &) override;
+
+        void generateT86(T86::Context &) override;
+
+        std::unique_ptr<T86::Operand> getOperand(T86::Context &) override;
+
+    private:
+        Value *from, *to;
+
+        long long bytes;
+
     };
 
     class IRFuncArg : public Value {

@@ -102,9 +102,9 @@ std::unique_ptr<IR::Const> IR::Context::getBasicValue(Type *type) {
         return std::make_unique<IR::DoubleConst>(nothing);
     if (dynamic_cast<PointerType *>(type))
         return std::make_unique<IR::Nullptr>(nothing);
-    if (auto structure = dynamic_cast<StructType*>(type)){
+    if (auto structure = dynamic_cast<StructType *>(type)) {
         auto res = std::make_unique<IR::StructConst>(nothing);
-        for (auto &[_, i] : structure->getFields())
+        for (auto &[_, i]: structure->getFields())
             res->addConst(getBasicValue(i));
         return res;
     }
@@ -145,17 +145,17 @@ std::string IR::Nullptr::toString() {
     return "nullptr";
 }
 
-void IR::StructConst::addValue(Value* new_value){
-    basic_values.emplace_back(nullptr,new_value);
+void IR::StructConst::addValue(Value *new_value) {
+    basic_values.emplace_back(nullptr, new_value);
 }
 
-void IR::StructConst::addConst(std::unique_ptr<Const>&& new_const){
+void IR::StructConst::addConst(std::unique_ptr<Const> &&new_const) {
     basic_values.emplace_back(std::move(new_const), nullptr);
 }
 
 void IR::StructConst::print(std::ostream &oss) {
     oss << "   " << "%" << inner_number << " = create structure {";
-    for (unsigned long long i = 0; i < basic_values.size(); ++i){
+    for (unsigned long long i = 0; i < basic_values.size(); ++i) {
         if (basic_values[i].first)
             oss << basic_values[i].first->toString();
         else
@@ -168,7 +168,7 @@ void IR::StructConst::print(std::ostream &oss) {
 
 std::string IR::StructConst::toString() {
     std::string res = "{";
-    for (unsigned long long i = 0; i < basic_values.size(); ++i){
+    for (unsigned long long i = 0; i < basic_values.size(); ++i) {
         if (basic_values[i].first)
             res += basic_values[i].first->toString();
         else
@@ -233,7 +233,7 @@ void IR::IRAlloca::addType(Type *new_type) {
     type = new_type;
 }
 
-Type* IR::IRAlloca::getType(){
+Type *IR::IRAlloca::getType() {
     return type;
 }
 
@@ -320,16 +320,17 @@ void IR::IRCall::print(std::ostream &oss) {
     oss << ")" << std::endl;
 }
 
-void IR::IRMembCall::addCallWhere(Value *link){
+void IR::IRMembCall::addCallWhere(Value *link) {
     where = link;
 }
 
-void IR::IRMembCall::addCallWhat(int value){
+void IR::IRMembCall::addCallWhat(int value) {
     what = value;
 }
 
-void IR::IRMembCall::print(std::ostream & oss) {
-    oss << "   " << "%" << inner_number << " = get member - from: %" << where->inner_number << "; which: %" << std::to_string(what) << std::endl;
+void IR::IRMembCall::print(std::ostream &oss) {
+    oss << "   " << "%" << inner_number << " = get member - from: %" << where->inner_number << "; which: %"
+        << std::to_string(what) << std::endl;
 }
 
 void IR::IRCast::addExpr(Value *new_expr) {
@@ -346,6 +347,23 @@ void IR::IRCast::print(std::ostream &oss) {
         << std::endl;
 }
 
+void IR::IRMemCopy::addCopyFrom(Value *link) {
+    from = link;
+}
+
+void IR::IRMemCopy::addCopyTo(Value *link) {
+    to = link;
+}
+
+void IR::IRMemCopy::addSize(long long size) {
+    bytes = size * 4;
+}
+
+void IR::IRMemCopy::print(std::ostream &oss) {
+    oss << "   " << "copy content from: %" << from->inner_number << " ; to: %"
+        << to->inner_number << " with size of " << bytes << " bytes" << std::endl;
+}
+
 void IR::IRFuncArg::addType(Type *new_type) {
     type = new_type;
 }
@@ -358,7 +376,7 @@ void IR::IRFuncArg::print(std::ostream &oss) {
     oss << "'" << type->toString() << "' %" << inner_number;
 }
 
-long long IR::IRFuncArg::size(){
+long long IR::IRFuncArg::size() {
     return type->size();
 }
 
@@ -386,7 +404,7 @@ std::string IR::IRFunc::getName() {
     return name;
 }
 
-void IR::IRFunc::setSpaceForAlloca(long long value){
+void IR::IRFunc::setSpaceForAlloca(long long value) {
     space_for_alloca = value;
 }
 
