@@ -66,8 +66,8 @@ void T86::Context::addInstruction(T86::Instruction &&new_instruction) {
     //program.emplaceInstruction(T86::Instruction(T86::Instruction::NOP));
 }
 
-void T86::Context::printProgramConsole() {
-    program.print(std::cout);
+void T86::Context::print(std::ostream& oss) {
+    program.print(oss);
 }
 
 std::size_t T86::Context::getNumberOfInstructions() {

@@ -173,8 +173,13 @@ void IR::IRAlloca::generateT86(T86::Context &ctx) {
 
 }
 
-std::unique_ptr<T86::Operand> IR::IRAlloca::getOperand(T86::Context &) {
-    return std::make_unique<T86::Register>(T86::Register::BP, place_on_stack);
+std::unique_ptr<T86::Operand> IR::IRAlloca::getOperand(T86::Context &ctx) {
+    ctx.addInstruction(T86::Instruction(T86::Instruction::MOV,std::make_unique<T86::Register>(inner_number - ctx.offset_of_function), std::make_unique<T86::Register>(T86::Register::BP)));
+    ctx.addInstruction(T86::Instruction(T86::Instruction::ADD,std::make_unique<T86::Register>(inner_number - ctx.offset_of_function), std::make_unique<T86::IntImmediate>(place_on_stack)));
+    return std::make_unique<T86::Register>(inner_number - ctx.offset_of_function);
+
+
+    //return std::make_unique<T86::Register>(T86::Register::BP, place_on_stack);
 }
 
 void IR::IRGlobal::generateT86(T86::Context &ctx) {
@@ -249,12 +254,16 @@ std::unique_ptr<T86::Operand> IR::IRCall::getOperand(T86::Context &ctx) {
     return std::make_unique<T86::Register>(inner_number - ctx.offset_of_function);
 }
 
-void IR::IRMembCall::generateT86(T86::Context &) {
+void IR::IRMembCall::generateT86(T86::Context &ctx) {
+    ctx.addInstruction(T86::Instruction(T86::Instruction::MOV,std::make_unique<T86::Register>(inner_number - ctx.offset_of_function),
+            where->getOperand(ctx)));
+    ctx.addInstruction(T86::Instruction(T86::Instruction::ADD,std::make_unique<T86::Register>(inner_number - ctx.offset_of_function),std::make_unique<T86::IntImmediate>(what)));
 
+    ctx.addInstruction(T86::Instruction(T86::Instruction::MOV,std::make_unique<T86::Register>(inner_number - ctx.offset_of_function),std::make_unique<T86::Memory>(std::make_unique<T86::Register>(inner_number - ctx.offset_of_function))));
 }
 
-std::unique_ptr<T86::Operand> IR::IRMembCall::getOperand(T86::Context &) {
-
+std::unique_ptr<T86::Operand> IR::IRMembCall::getOperand(T86::Context &ctx) {
+    return std::make_unique<T86::Register>(inner_number - ctx.offset_of_function);
 }
 
 void IR::IRCast::generateT86(T86::Context &ctx) {
@@ -275,11 +284,11 @@ std::unique_ptr<T86::Operand> IR::IRCast::getOperand(T86::Context &ctx) {
 }
 
 void IR::IRMemCopy::generateT86(T86::Context &) {
-
+    // TODO
 }
 
 std::unique_ptr<T86::Operand> IR::IRMemCopy::getOperand(T86::Context &) {
-
+    // TODO
 }
 
 void IR::IRFuncArg::generateT86(T86::Context &ctx) {

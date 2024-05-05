@@ -9,22 +9,13 @@
 
 class Parser {
 public:
-    Parser(char *str = "");
+    Parser(std::string);
 
     ~Parser() = default;
 
     std::unique_ptr<AST::Program> parse();
 
-    void printIR(std::ostream &os);
-
 private:
-
-    std::map<std::string, std::unique_ptr<AST::ASTType>> named_type;
-
-
-    bool checkForSeparator();
-
-    bool matchTypes(const std::unique_ptr<AST::ASTType> &type, const std::unique_ptr<AST::ASTType> &reference_type);
 
     std::vector<std::string> parseIdentifierList();
 
@@ -125,6 +116,10 @@ private:
     void match(Token);
 
     void matchAndGoNext(Token tok);
+
+    bool checkForSeparatorAndSkip();
+
+    std::map<std::string, std::unique_ptr<AST::ASTType>> named_type;
 
     Token cur_tok;
 

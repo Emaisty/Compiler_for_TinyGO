@@ -30,14 +30,13 @@ const struct {
         {"false",    tok_false},
 };
 
-void Lexer::InitInput(char *name) {
-    if (name) {
+void Lexer::InitInput(std::string name) {
         file.open(name);
         if (file.is_open())
             open = true;
         else
-            std::cout << "input from console is activated" << std::endl;
-    }
+            throw std::invalid_argument("ERROR. Cannot open a given file.");
+
     cur_symb = inputSymbol();
 }
 
@@ -317,50 +316,18 @@ Token Lexer::readNumber() {
 
 }
 
-bool Lexer::haveBNL() {
-    return newLine;
-}
-
-void Lexer::decrease() {
-    if (newLine > 0)
-        newLine -= 1;
-}
-
 Token Lexer::gettok() {
     switch (type_of_char()) {
         case LETTER:
-            decrease();
-            return readString();
-        case NUMBER:
-            decrease();
-            return readNumber();
-        case NEW_LINE:
-            newLine = 2;
-        case WHITE_SPACE:
-            cur_symb = inputSymbol();
-            return gettok();
-        case END:
-            decrease();
-            return tok_eof;
-        case SPE_SYMB:
-            decrease();
-            return readSymbol();
-        default:
-            throw std::invalid_argument("ERROR. Unknown token");
-    }
-}
-
-Token Lexer::gettokWhithOutIgnoreNewLine() {
-    switch (type_of_char()) {
-        case LETTER:
             return readString();
         case NUMBER:
             return readNumber();
-        case WHITE_SPACE:
-            cur_symb = inputSymbol();
-            return gettok();
         case NEW_LINE:
+            cur_symb = inputSymbol();
             return tok_newline;
+        case WHITE_SPACE:
+            cur_symb = inputSymbol();
+            return gettok();
         case END:
             return tok_eof;
         case SPE_SYMB:

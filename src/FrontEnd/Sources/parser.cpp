@@ -11,8 +11,8 @@ void Parser::matchAndGoNext(Token tok) {
     cur_tok = lexer.gettok();
 }
 
-Parser::Parser(char *str) {
-    lexer.InitInput(str);
+Parser::Parser(std::string name) {
+    lexer.InitInput(name);
     cur_tok = lexer.gettok();
 }
 
@@ -25,6 +25,9 @@ std::unique_ptr<AST::Program> Parser::parse() {
     program->setName(lexer.identifierStr());
 
     cur_tok = lexer.gettok();
+
+    if (!checkForSeparatorAndSkip())
+        throw std::invalid_argument("ERROR. After package separator is required.");
 
     while (cur_tok != tok_eof) {
         switch (cur_tok) {
@@ -40,51 +43,28 @@ std::unique_ptr<AST::Program> Parser::parse() {
                 matchAndGoNext(tok_type);
                 for (auto &i: parseDeclarationBlock(std::bind(&Parser::parseTypeDeclarationLine, this)))
                     program->addTypeDecl(std::move(i));
-                if (!checkForSeparator())
-                    throw std::invalid_argument("ERROR. No separator after declaration");
                 break;
             }
             case tok_const: {
                 matchAndGoNext(tok_const);
                 for (auto &i: parseDeclarationBlock(std::bind(&Parser::parseConstDeclarationLine, this)))
                     program->addVarDecl(std::move(i));
-                if (!checkForSeparator())
-                    throw std::invalid_argument("ERROR. No separator after declaration");
                 break;
             }
             case tok_var: {
                 matchAndGoNext(tok_var);
                 for (auto &i: parseDeclarationBlock(std::bind(&Parser::parseVarDeclarationLine, this)))
-                    program->addVarDecl(std::move(i));
-                if (!checkForSeparator())
-                    throw std::invalid_argument("ERROR. No separator after declaration");
                 break;
             }
             default:
                 return nullptr;
         }
 
+        if (!checkForSeparatorAndSkip())
+            throw std::invalid_argument("ERROR. No separator after the global declared var, const, type or function.");
+
     }
     return program;
-}
-
-void Parser::printIR(std::ostream &os) {
-//    os << *program.generateIR();
-}
-
-bool Parser::checkForSeparator() {
-    if (cur_tok == tok_semicolon) {
-        cur_tok = lexer.gettok();
-        return true;
-    } else if (lexer.haveBNL()) {
-        return true;
-    }
-    return false;
-}
-
-bool
-Parser::matchTypes(const std::unique_ptr<AST::ASTType> &type, const std::unique_ptr<AST::ASTType> &reference_type) {
-    return type == reference_type;
 }
 
 std::vector<std::string> Parser::parseIdentifierList() {
@@ -104,12 +84,14 @@ std::unique_ptr<AST::ASTTypeStruct> Parser::parseStruct() {
     matchAndGoNext(tok_opfigbr);
     auto res = std::make_unique<AST::ASTTypeStruct>();
 
+    checkForSeparatorAndSkip();
+
     while (cur_tok != tok_clfigbr) {
 
         auto names = parseIdentifierList();
         res->addField(std::move(names), parseType());
 
-        if (!checkForSeparator()) {
+        if (!checkForSeparatorAndSkip()) {
             match(tok_clfigbr);
             break;
         }
@@ -641,6 +623,7 @@ std::unique_ptr<AST::Statement> Parser::parseSwitch() {
     res->addExpr(std::move(expr));
 
     matchAndGoNext(tok_opfigbr);
+    checkForSeparatorAndSkip();
 
     bool was_default = false;
     while (cur_tok == tok_case || cur_tok == tok_default) {
@@ -655,6 +638,7 @@ std::unique_ptr<AST::Statement> Parser::parseSwitch() {
         }
 
         matchAndGoNext(tok_colon);
+        checkForSeparatorAndSkip();
 
         auto block = std::make_unique<AST::ASTBlock>();
         for (auto &i: parseStatementList())
@@ -718,7 +702,9 @@ std::vector<std::unique_ptr<AST::Statement>> Parser::parseStatementList() {
         stat = parseStatement();
         for (auto &i: stat)
             res.emplace_back(std::move(i));
-    } while (!stat.empty() && checkForSeparator());
+        if (!stat.empty() && !checkForSeparatorAndSkip())
+            throw std::invalid_argument("ERROR. Separator required after an each statement");
+    } while (!stat.empty());
 
     return res;
 }
@@ -755,7 +741,7 @@ std::unique_ptr<AST::ASTType> Parser::parseType() {
 
 std::unique_ptr<AST::ASTBlock> Parser::parseBlock() {
     matchAndGoNext(tok_opfigbr);
-
+    checkForSeparatorAndSkip();
     auto res = std::make_unique<AST::ASTBlock>();
     auto stat_list = parseStatementList();
     for (auto &i: stat_list)
@@ -950,7 +936,7 @@ Parser::parseDeclarationBlock(const std::function<std::vector<std::unique_ptr<AS
             auto decl_line = type_of_line();
             for (auto &i: decl_line)
                 result.push_back(std::move(i));
-            if (!checkForSeparator()) {
+            if (!checkForSeparatorAndSkip()) {
                 match(tok_clbr);
                 break;
             }
@@ -984,7 +970,17 @@ std::vector<std::unique_ptr<AST::ASTDeclaration>> Parser::parseDeclaration() {
             res = parseDeclarationBlock(std::bind(&Parser::parseTypeDeclarationLine, this));
             break;
     }
-    if (!checkForSeparator())
-        throw std::invalid_argument("ERROR. No separator after declaration");
+    return res;
+}
+
+bool Parser::checkForSeparatorAndSkip(){
+    if (cur_tok == tok_eof)
+        return true;
+    bool res = false;
+    while (cur_tok == tok_newline || cur_tok == tok_semicolon) {
+        res = true;
+        cur_tok = lexer.gettok();
+    }
+    
     return res;
 }

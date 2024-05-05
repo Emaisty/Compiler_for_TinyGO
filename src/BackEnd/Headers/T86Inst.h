@@ -182,7 +182,7 @@ namespace T86 {
 
         void addInstruction(Instruction &&);
 
-        void printProgramConsole();
+        void print(std::ostream &);
 
         std::size_t getNumberOfInstructions();
 

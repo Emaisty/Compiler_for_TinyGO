@@ -106,8 +106,6 @@ public:
 
     Token gettok();
 
-    Token gettokWhithOutIgnoreNewLine();
-
     const std::string &identifierStr() const { return this->m_IdentifierStr; }
 
     int numVal() { return this->m_NumVal; }
@@ -116,7 +114,7 @@ public:
 
     int getLineNumber() { return this->line_number; }
 
-    void InitInput(char *name);
+    void InitInput(std::string);
 
     char inputSymbol();
 
@@ -134,15 +132,9 @@ public:
 
     void inputNumber(int base, bool mandatoryToBe = true);
 
-    bool haveBNL();
-
-    void decrease();
-
 private:
     std::ifstream file;
     char open = 0;
-
-    int newLine = 0;
 
     int cur_symb = -1;
 
