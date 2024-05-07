@@ -45,6 +45,21 @@ void T86::T86Program::print(std::ostream &oss) {
     }
 }
 
+
+void T86::MemorySpace::addOperand(unsigned long long value){
+    register_space[value] = std::make_unique<T86::Register>(value);
+}
+
+void T86::MemorySpace::addOperand(unsigned long long, std::unique_ptr<T86::Memory>){
+
+}
+
+std::unique_ptr<T86::Operand> T86::MemorySpace::getOperand(unsigned long long value){
+    return register_space[value]->clone();
+}
+
+
+
 std::size_t T86::T86Program::getNumberOfInstructions() {
     return program.size();
 }
@@ -59,6 +74,10 @@ long long T86::Context::getCurrentPlaceOnStack(long long offset){
     auto res = current_place_on_stack;
     current_place_on_stack += offset;
     return res;
+}
+
+std::unique_ptr<T86::Operand> T86::Context::getOperand(unsigned long long val) {
+    return mem_allocator.getOperand(val);
 }
 
 void T86::Context::addInstruction(T86::Instruction &&new_instruction) {

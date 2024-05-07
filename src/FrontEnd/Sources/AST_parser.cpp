@@ -175,6 +175,14 @@ AST::ASTAssign::ASTAssign(std::vector<std::unique_ptr<AST::ASTExpression>> &&new
     type = new_type;
 }
 
+void AST::ASTScan::addExpression(std::unique_ptr<AST::ASTExpression>&& new_expr) {
+    expression = std::move(new_expr);
+}
+
+void AST::ASTPrint::addExpression(std::unique_ptr<AST::ASTExpression>&& new_expr) {
+    expression = std::move(new_expr);
+}
+
 void AST::Function::setName(std::string new_name) {
     name = new_name;
 }

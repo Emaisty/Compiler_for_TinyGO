@@ -113,8 +113,28 @@ IR::Value *AST::ASTUnaryOperator::generateIR(IR::Context &ctx) {
 
 IR::Value *AST::ASTFunctionCall::generateIR(IR::Context &ctx) {
     std::vector < IR::Value * > arguments;
-    for (auto &i: arg)
-        arguments.emplace_back(i->generateIR(ctx));
+    for (auto &i: arg) {
+        if (!dynamic_cast<StructType*>(i->typeOfNode)){
+            arguments.emplace_back(i->generateIR(ctx));
+            continue;
+        }
+        auto alloca_tmp_arg = std::make_unique<IR::IRAlloca>(ctx.counter);
+
+        alloca_tmp_arg->addType(i->typeOfNode);
+        alloca_tmp_arg->addBasicValue(ctx.getBasicValue(i->typeOfNode));
+
+        auto pointer_to_tmp_arg = ctx.buildInstruction(std::move(alloca_tmp_arg));
+
+        auto copy = std::make_unique<IR::IRMemCopy>(ctx.counter);
+        copy->addCopyTo(pointer_to_tmp_arg);
+        ctx.l_value = true;
+        copy->addCopyFrom(i->generateIR(ctx));
+        copy->addSize(i->typeOfNode->size());
+
+        ctx.buildInstruction(std::move(copy));
+
+        arguments.emplace_back(pointer_to_tmp_arg);
+    }
 
     auto func_pointer = dynamic_cast<IR::IRCall *>(name->generateIR(ctx));
     for (auto &i: arguments)
@@ -125,8 +145,7 @@ IR::Value *AST::ASTFunctionCall::generateIR(IR::Context &ctx) {
 IR::Value *AST::ASTMemberAccess::generateIR(IR::Context &ctx) {
     if (auto func_type = dynamic_cast<FunctionType *>(typeOfNode)) {
         IR::Value *method;
-        if (func_type->isPointer())
-            ctx.l_value = true;
+        ctx.l_value = true;
         method = name->generateIR(ctx);
 
         auto res = std::make_unique<IR::IRCall>(ctx.counter);
@@ -182,19 +201,27 @@ IR::Value *AST::ASTBoolNumber::generateIR(IR::Context &ctx) {
 }
 
 IR::Value *AST::ASTStruct::generateIR(IR::Context &ctx) {
-    std::map < std::string, IR::Value * > predefined_fields;
-    for (auto &i: values)
-        predefined_fields[i.first] = i.second->generateIR(ctx);
+    auto alloca = std::make_unique<IR::IRAlloca>(ctx.counter);
+    alloca->addType(typeOfNode);
+    alloca->addBasicValue(ctx.getBasicValue(typeOfNode));
 
-    auto res = std::make_unique<IR::StructConst>(ctx.counter);
+    auto pointer_alloca = ctx.buildInstruction(std::move(alloca));
 
-    for (auto &i: dynamic_cast<StructType *>(typeOfNode)->getFields())
-        if (predefined_fields.find(i.first) == predefined_fields.end())
-            res->addConst(ctx.getBasicValue(i.second));
-        else
-            res->addValue(predefined_fields[i.first]);
 
-    return ctx.buildInstruction(std::move(res));
+    for (auto &i : values){
+        auto value = i.second->generateIR(ctx);
+        auto member_access = std::make_unique<IR::IRMembCall>(ctx.counter);
+        member_access->addCallWhere(pointer_alloca);
+        member_access->addCallWhat(dynamic_cast<StructType*>(typeOfNode)->getFieldOrder(i.first));
+        auto pointer_to_member = ctx.buildInstruction(std::move(member_access));
+
+        auto store = std::make_unique<IR::IRStore>(ctx.counter);
+        store->addStoreWhat(value);
+        store->addStoreWhere(pointer_to_member);
+        ctx.buildInstruction(std::move(store));
+    }
+
+    return pointer_alloca;
 }
 
 IR::Value *AST::ASTVar::generateIR(IR::Context &ctx) {
@@ -203,7 +230,8 @@ IR::Value *AST::ASTVar::generateIR(IR::Context &ctx) {
     if (auto link = ctx.getVariable(name)) {
         if (ctx.l_value) {
             ctx.l_value = false;
-            return link;
+            if (!ctx.wasVarModified(name))
+                return link;
         }
         auto res = std::make_unique<IR::IRLoad>(ctx.counter);
         res->addLoadFrom(link);
@@ -478,8 +506,6 @@ IR::Value *AST::ASTAssign::generateIR(IR::Context &ctx) {
                 auto value_pointer = value[i]->generateIR(ctx);
                 auto res = std::make_unique<IR::IRStore>(ctx.counter);
                 res->addStoreWhat(value_pointer);
-                //TODO prove it. Maybe it does not work???
-                //Also check in case of function
                 ctx.l_value = true;
                 auto loader = variable[i]->generateIR(ctx);
                 res->addStoreWhere(loader);
@@ -526,8 +552,22 @@ IR::Value *AST::ASTAssign::generateIR(IR::Context &ctx) {
     return nullptr;
 }
 
+IR::Value* AST::ASTScan::generateIR(IR::Context &ctx) {
+    auto res = std::make_unique<IR::IRScan>(ctx.counter);
+    res->addLink(expression->generateIR(ctx));
+
+    return ctx.buildInstruction(std::move(res));
+}
+
+IR::Value* AST::ASTPrint::generateIR(IR::Context &ctx) {
+    auto res = std::make_unique<IR::IRPrint>(ctx.counter);
+    res->addValue(expression->generateIR(ctx));
+
+    return ctx.buildInstruction(std::move(res));
+}
 
 IR::Value *AST::Function::generateIR(IR::Context &ctx) {
+    ctx.clearModifiedVars();
 
     auto res = std::make_unique<IR::IRFunc>(ctx.counter);
     ctx.addFunction(name, res.get());
@@ -543,6 +583,7 @@ IR::Value *AST::Function::generateIR(IR::Context &ctx) {
 
     // arguments
     long long place_of_arg = 0;
+    long long current_arg = 0;
 
     if (type_of_method) {
         auto argument = std::make_unique<IR::IRFuncArg>(ctx.counter);
@@ -555,6 +596,8 @@ IR::Value *AST::Function::generateIR(IR::Context &ctx) {
         store->addStoreWhat(argument.get());
         store->addStoreWhere(alloca.get());
 
+        if (was_arg_modified[current_arg++])
+            ctx.addModifiedVar(inner_name);
         ctx.addVariable(inner_name, alloca.get());
 
         ctx.buildInstruction(std::move(alloca));
@@ -575,6 +618,8 @@ IR::Value *AST::Function::generateIR(IR::Context &ctx) {
             store->addStoreWhat(argument.get());
             store->addStoreWhere(alloca.get());
 
+            if (was_arg_modified[current_arg++])
+                ctx.addModifiedVar(var_name);
             ctx.addVariable(var_name, alloca.get());
 
             ctx.buildInstruction(std::move(alloca));

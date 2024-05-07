@@ -56,10 +56,11 @@ bool StructType::canConvertToThisType(const Type *other) const {
     if (this->fields.size() != another_struct->fields.size())
         return false;
 
-    for (auto i = 0; i < fields.size(); ++i)
+    for (auto i = 0; i < fields.size();++i) {
         if (fields[i].first != another_struct->fields[i].first ||
-            !fields[i].second->canConvertToThisType(another_struct->fields[i].second))
+            fields[i].second != another_struct->fields[i].second)
             return false;
+    }
 
     return true;
 }

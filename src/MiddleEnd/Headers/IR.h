@@ -5,6 +5,7 @@
 #include <vector>
 #include <string>
 #include <map>
+#include <set>
 #include <stack>
 
 #include "types.h"
@@ -26,7 +27,7 @@ namespace IR {
 
         virtual std::unique_ptr<T86::Operand> getOperand(T86::Context &);
 
-        long long inner_number;
+        unsigned long long inner_number;
 
     private:
         std::vector<Value *> uses;
@@ -41,6 +42,8 @@ namespace IR {
         using Value::Value;
 
         virtual std::string toString() = 0;
+
+        virtual void fillWithValue(unsigned long long) = 0;
 
     private:
     };
@@ -78,6 +81,12 @@ namespace IR {
 
         Value *getVariable(std::string);
 
+        void addModifiedVar(std::string);
+
+        bool wasVarModified(std::string);
+
+        void clearModifiedVars();
+
         void setFunction(IRFunc *);
 
         Value *buildInstruction(std::unique_ptr<Value> &&);
@@ -97,6 +106,8 @@ namespace IR {
 
         std::vector<std::map<std::string, Value *>> variables;
 
+        std::set<std::string> modifiedVars;
+
     };
 
 
@@ -113,6 +124,8 @@ namespace IR {
         void print(std::ostream &) override;
 
         std::string toString() override;
+
+        void fillWithValue(unsigned long long) override{};
 
     private:
         long long value = 0;
@@ -132,6 +145,8 @@ namespace IR {
 
         std::string toString() override;
 
+        void fillWithValue(unsigned long long) override{};
+
     private:
         double value = 0;
     };
@@ -147,6 +162,8 @@ namespace IR {
         void print(std::ostream &) override;
 
         std::string toString() override;
+
+        void fillWithValue(unsigned long long) override{};
 
     private:
     };
@@ -166,6 +183,8 @@ namespace IR {
         void print(std::ostream &) override;
 
         std::string toString() override;
+
+        void fillWithValue(unsigned long long) override{};
 
     private:
         //it may be const, or might be a value
@@ -436,12 +455,40 @@ namespace IR {
 
         void generateT86(T86::Context &) override;
 
-        std::unique_ptr<T86::Operand> getOperand(T86::Context &) override;
-
     private:
         Value *from, *to;
 
-        long long bytes;
+        long long size;
+
+    };
+
+    class IRScan : public Instruction {
+    public:
+        using Instruction::Instruction;
+
+        void addLink(Value*);
+
+        void print(std::ostream &) override;
+
+        void generateT86(T86::Context &) override;
+
+    private:
+        Value* link;
+
+    };
+
+    class IRPrint : public Instruction {
+    public:
+        using Instruction::Instruction;
+
+        void addValue(Value*);
+
+        void print(std::ostream &) override;
+
+        void generateT86(T86::Context &) override;
+
+    private:
+        Value* value;
 
     };
 

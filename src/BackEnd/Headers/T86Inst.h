@@ -160,7 +160,16 @@ namespace T86 {
         // also need to add .data segment
     };
 
-    class RegAndMemSpace {
+    class MemorySpace {
+    public:
+        void addOperand(unsigned long long);
+
+        void addOperand(unsigned long long, std::unique_ptr<T86::Memory>);
+
+        std::unique_ptr<Operand> getOperand(unsigned long long);
+
+    private:
+        std::map<unsigned long long, std::unique_ptr<Operand>> register_space;
 
     };
 
@@ -176,9 +185,7 @@ namespace T86 {
 
         long long getCurrentPlaceOnStack(long long);
 
-        void addOperand(long long, std::unique_ptr<Operand> &&);
-
-        Operand *getOperand(long long);
+        std::unique_ptr<Operand> getOperand(unsigned long long);
 
         void addInstruction(Instruction &&);
 
@@ -195,11 +202,9 @@ namespace T86 {
         void addLabelPlace(long long);
 
         void finishCallsAndJmps();
-
-        std::unique_ptr<Operand> getRegister(long long);
         
     private:
-        RegAndMemSpace reg_allocator;
+        MemorySpace mem_allocator;
 
         T86Program program;
 

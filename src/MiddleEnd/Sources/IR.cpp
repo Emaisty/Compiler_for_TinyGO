@@ -77,17 +77,31 @@ IR::Value *IR::Context::getVariable(std::string name) {
     return nullptr;
 }
 
+void IR::Context::addModifiedVar(std::string name){
+    modifiedVars.emplace(name);
+}
+
+bool IR::Context::wasVarModified(std::string name){
+    if (modifiedVars.find(name) != modifiedVars.end())
+        return true;
+    return false;
+}
+
+void IR::Context::clearModifiedVars(){
+    modifiedVars.clear();
+}
+
 void IR::Context::setFunction(IRFunc *linl_to_func) {
     where_build = linl_to_func;
 }
 
 IR::Value *IR::Context::buildInstruction(std::unique_ptr<Value> &&new_instruction) {
-    if (dynamic_cast<IR::IRAlloca *>(new_instruction.get())) {
+    auto res = new_instruction.get();
+    if (dynamic_cast<IR::IRAlloca *>(new_instruction.get()))
         where_build->addAlloca(std::move(new_instruction));
-        return nullptr;
-    }
-    where_build->addInstToBody(std::move(new_instruction));
-    return where_build->getLinkToBody()->back().get();
+    else
+        where_build->addInstToBody(std::move(new_instruction));
+    return res;
 }
 
 void IR::Context::deleteLastRow() {
@@ -154,7 +168,12 @@ void IR::StructConst::addConst(std::unique_ptr<Const> &&new_const) {
 }
 
 void IR::StructConst::print(std::ostream &oss) {
-    oss << "   " << "%" << inner_number << " = create structure {";
+    oss << "   " << "%" << inner_number << " = create structure ";
+
+    if (basic_values.empty()){
+        oss << "no basic value" <<std::endl;
+        return;
+    }
     for (unsigned long long i = 0; i < basic_values.size(); ++i) {
         if (basic_values[i].first)
             oss << basic_values[i].first->toString();
@@ -355,13 +374,29 @@ void IR::IRMemCopy::addCopyTo(Value *link) {
     to = link;
 }
 
-void IR::IRMemCopy::addSize(long long size) {
-    bytes = size * 4;
+void IR::IRMemCopy::addSize(long long new_size) {
+    size = new_size;
 }
 
 void IR::IRMemCopy::print(std::ostream &oss) {
     oss << "   " << "copy content from: %" << from->inner_number << " ; to: %"
-        << to->inner_number << " with size of " << bytes << " bytes" << std::endl;
+        << to->inner_number << " with size of " << size * 4 << " bytes" << std::endl;
+}
+
+void IR::IRScan::addLink(Value* new_link){
+    link = new_link;
+}
+
+void IR::IRScan::print(std::ostream &oss) {
+    oss << "   " << "scan : into %" << link->inner_number << std::endl;
+}
+
+void IR::IRPrint::addValue(Value* new_value){
+    value = new_value;
+}
+
+void IR::IRPrint::print(std::ostream &oss) {
+    oss << "   " << "print : %" << value->inner_number << std::endl;
 }
 
 void IR::IRFuncArg::addType(Type *new_type) {

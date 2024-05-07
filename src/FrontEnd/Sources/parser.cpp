@@ -3,7 +3,8 @@
 
 void Parser::match(Token tok) {
     if (cur_tok != tok)
-        throw std::invalid_argument("ERROR. Unmatched tokens");
+        throw std::invalid_argument("ERROR. Unmatched tokens. On line " + std::to_string(lexer.getLineNumber())
+        + " expected to get a " + tokens_to_string.find(tok)->second);
 }
 
 void Parser::matchAndGoNext(Token tok) {
@@ -61,9 +62,13 @@ std::unique_ptr<AST::Program> Parser::parse() {
         }
 
         if (!checkForSeparatorAndSkip())
-            throw std::invalid_argument("ERROR. No separator after the global declared var, const, type or function.");
+            throw std::invalid_argument("ERROR. No separator after the global declared var, const, type or function on line"
+            + std::to_string(lexer.getLineNumber()));
 
     }
+
+    checkForSeparatorAndSkip();
+    match(tok_eof);
     return program;
 }
 
@@ -410,7 +415,8 @@ std::unique_ptr<AST::ASTExpression> Parser::E0() {
             return std::make_unique<AST::ASTStruct>(std::move(type), values);
         }
         default:
-            throw std::invalid_argument("ERROR. Cannot parse expression.");
+            throw std::invalid_argument("ERROR. Cannot parse expression on line "
+            + std::to_string(lexer.getLineNumber()));
     }
 }
 
@@ -653,6 +659,32 @@ std::unique_ptr<AST::Statement> Parser::parseSwitch() {
     return res;
 }
 
+std::unique_ptr<AST::Statement> Parser::parseScan() {
+    auto res = std::make_unique<AST::ASTScan>();
+
+    matchAndGoNext(tok_scan);
+    matchAndGoNext(tok_opbr);
+
+    res->addExpression(parseExpression());
+
+    matchAndGoNext(tok_clbr);
+
+    return res;
+}
+
+std::unique_ptr<AST::Statement> Parser::parsePrint() {
+    auto res = std::make_unique<AST::ASTPrint>();
+
+    matchAndGoNext(tok_print);
+    matchAndGoNext(tok_opbr);
+
+    res->addExpression(parseExpression());
+
+    matchAndGoNext(tok_clbr);
+
+    return res;
+}
+
 std::vector<std::unique_ptr<AST::Statement>> Parser::parseStatement() {
     std::vector<std::unique_ptr<AST::Statement>> res;
     switch (cur_tok) {
@@ -682,9 +714,14 @@ std::vector<std::unique_ptr<AST::Statement>> Parser::parseStatement() {
         case tok_return:
             res.emplace_back(parseReturn());
             break;
-
         case tok_opfigbr:
             res.emplace_back(parseBlock());
+            break;
+        case tok_scan:
+            res.emplace_back(parseScan());
+            break;
+        case tok_print:
+            res.emplace_back(parsePrint());
             break;
         default:
             for (auto &i: parseSimpleStat())
@@ -735,7 +772,7 @@ std::unique_ptr<AST::ASTType> Parser::parseType() {
             return tmp;
         }
         default:
-            throw std::invalid_argument("ERROR. UNPARSABLE TYPE");
+            throw std::invalid_argument("ERROR. Cannot parse type on line " + std::to_string(lexer.getLineNumber()));
     }
 }
 

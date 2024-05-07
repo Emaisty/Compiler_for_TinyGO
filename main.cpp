@@ -17,10 +17,6 @@ void incorrect_args(){
     exit(EXIT_FAILURE);
 }
 
-void printIntoFile(std::string name, std::ostream &&oss){
-
-}
-
 int main(int argc, char* argv[]) {
 
     bool asmPrint = false, irPrint = false;

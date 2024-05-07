@@ -85,6 +85,10 @@ private:
 
     std::unique_ptr<AST::Statement> parseSwitch();
 
+    std::unique_ptr<AST::Statement> parseScan();
+
+    std::unique_ptr<AST::Statement> parsePrint();
+
 
     std::vector<std::unique_ptr<AST::Statement>> parseStatement();
 

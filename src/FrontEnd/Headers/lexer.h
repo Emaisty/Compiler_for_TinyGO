@@ -4,6 +4,7 @@
 #include <iostream>
 #include <fstream>
 #include <string>
+#include <map>
 
 
 /*
@@ -91,6 +92,81 @@ enum Token {
 
     tok_true,
     tok_false,
+
+
+
+
+    tok_scan,
+    tok_print
+};
+
+
+const inline std::map<Token,std::string> tokens_to_string = {
+        {tok_eof,"end of file"},
+        {tok_break,"break"},
+        {tok_default,"default"},
+        {tok_func,"func"},
+        {tok_case,"case"},
+        {tok_struct,"struct"},
+        {tok_else,"else"},
+        {tok_package,"package"},
+        {tok_switch,"switch"},
+        {tok_const,"const"},
+        {tok_if,"if"},
+        {tok_type,"type"},
+        {tok_continue,"continue"},
+        {tok_for,"for"},
+        {tok_return,"return"},
+        {tok_var,"var"},
+        {tok_identifier,"identifier"},
+        {tok_int8,"int"},
+        {tok_int32,"int"},
+        {tok_int,"int"},
+        {tok_int64,"int"},
+        {tok_float,"float"},
+        {tok_bool,"bool"},
+        {tok_num_int,"integer number"},
+        {tok_num_float,"float number"},
+        {tok_semicolon,"semicolon (;)"},
+        {tok_newline," new line(\\n)"},
+        {tok_ge,"greater or equal (>=)"},
+        {tok_gt,"greater than (>)"},
+        {tok_le,"less or  equal (<=)"},
+        {tok_lt,"less then (<)"},
+        {tok_eq,"equal (==)"},
+        {tok_ne,"not equal (!=)"},
+        {tok_and,"logic and (&&)"},
+        {tok_or,"logic or (||)"},
+        {tok_binand,"binary and (&)"},
+        {tok_binor,"binary or (|)"},
+        {tok_assign,"assign sign (=)"},
+        {tok_plusassign,"plus value and assign (+=)"},
+        {tok_minassign,"minus value and assign (-=)"},
+        {tok_mulassign,"mult value and assign (*=)"},
+        {tok_divassign,"div value and assign (/=)"},
+        {tok_modassign,"modulus value and assign (%=)"},
+        {tok_fastassign,"declare var from a value (:=)"},
+        {tok_colon,"colon (:)"},
+        {tok_plus,"plus (+)"},
+        {tok_minus,"minus (-)"},
+        {tok_div,"divide (/)"},
+        {tok_asterisk,"asterisk (*)"},
+        {tok_mod,"modulus (%)"},
+        {tok_inc,"increment (++)"},
+        {tok_dec,"decrement (--)"},
+        {tok_opfigbr,"open figure bracket ({)"},
+        {tok_clfigbr,"close figure bracket (})"},
+        {tok_opbr,"open bracket \"(\""},
+        {tok_clbr,"close bracket \")\""},
+        {tok_opsqrbr,"open square bracket ([)"},
+        {tok_clsqrbr,"close square bracket (])"},
+        {tok_comma,"comma (,)"},
+        {tok_dot,"dot (.)"},
+        {tok_excl,"!"},
+        {tok_true,"true"},
+        {tok_false,"false"},
+        {tok_scan,"scan"},
+        {tok_print,"print"},
 };
 
 // type of input chars
@@ -143,6 +219,8 @@ private:
     double m_DouVal;
 
     int line_number = 1;
+
+    int if_new_line_appear = 0;
 };
 
 #endif //COMPILER_LEXER_H

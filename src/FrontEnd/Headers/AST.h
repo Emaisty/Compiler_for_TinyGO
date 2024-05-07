@@ -699,6 +699,34 @@ namespace AST {
 
     };
 
+    class ASTScan : public Statement {
+    public:
+        ASTScan() = default;
+
+        void addExpression(std::unique_ptr<AST::ASTExpression>&&);
+
+        Type *checker(Context &) override;
+
+        IR::Value * generateIR(IR::Context &) override;
+    private:
+        std::unique_ptr<AST::ASTExpression> expression;
+
+    };
+
+    class ASTPrint : public Statement {
+    public:
+        ASTPrint() = default;
+
+        void addExpression(std::unique_ptr<AST::ASTExpression>&&);
+
+        Type *checker(Context &) override;
+
+        IR::Value * generateIR(IR::Context &) override;
+    private:
+        std::unique_ptr<AST::ASTExpression> expression;
+
+    };
+
 
     class Function : public ASTNode {
     public:
@@ -724,6 +752,8 @@ namespace AST {
         std::string name;
 
         std::vector<std::pair<std::vector<std::string>, std::unique_ptr<ASTType>>> params;
+
+        std::vector<bool> was_arg_modified;
 
         std::vector<std::unique_ptr<AST::ASTType>> return_type;
 
@@ -759,9 +789,13 @@ namespace AST {
 
     private:
         std::string name;
+
         std::vector<std::unique_ptr<ASTDeclaration>> typeDeclarations;
+
         std::vector<std::unique_ptr<ASTDeclaration>> varDeclarations;
+
         std::vector<std::unique_ptr<Function>> functions;
+
     };
 
 

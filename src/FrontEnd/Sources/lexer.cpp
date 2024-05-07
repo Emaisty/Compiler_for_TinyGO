@@ -28,9 +28,12 @@ const struct {
         {"bool",     tok_bool},
         {"true",     tok_true},
         {"false",    tok_false},
+        {"scan",     tok_scan},
+        {"print",    tok_print},
 };
 
 void Lexer::InitInput(std::string name) {
+    line_number = 1;
         file.open(name);
         if (file.is_open())
             open = true;
@@ -62,7 +65,6 @@ InputCharType Lexer::type_of_char() {
     else if (cur_symb == EOF || cur_symb == 0)
         return END;
     else if (cur_symb == '\n') {
-        line_number++;
         return NEW_LINE;
     } else if (cur_symb <= ' ')
         return WHITE_SPACE;
@@ -317,12 +319,15 @@ Token Lexer::readNumber() {
 }
 
 Token Lexer::gettok() {
+    line_number += if_new_line_appear;
+    if_new_line_appear = 0;
     switch (type_of_char()) {
         case LETTER:
             return readString();
         case NUMBER:
             return readNumber();
         case NEW_LINE:
+            if_new_line_appear++;
             cur_symb = inputSymbol();
             return tok_newline;
         case WHITE_SPACE:

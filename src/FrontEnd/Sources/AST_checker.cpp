@@ -797,16 +797,53 @@ Type *AST::ASTAssign::checker(Context &ctx) {
     return nullptr;
 }
 
+Type *AST::ASTScan::checker(Context &ctx) {
+    expression->checker(ctx);
+    PointerType* pointer = dynamic_cast<PointerType*>(expression->typeOfNode);
+    if (!pointer)
+        throw std::invalid_argument("ERROR. Cannot scan into not pointer type.");
+
+    if (!dynamic_cast<IntType*>(pointer->getBase()) && !dynamic_cast<FloatType*>(pointer->getBase()))
+        throw std::invalid_argument("ERROR. Cannot scan non integer or non float type.");
+
+    return nullptr;
+}
+
+Type *AST::ASTPrint::checker(Context &ctx) {
+    expression->checker(ctx);
+
+    if (!dynamic_cast<PointerType*>(expression->typeOfNode) && !dynamic_cast<IntType*>(expression->typeOfNode) &&
+            !dynamic_cast<FloatType*>(expression->typeOfNode))
+        throw std::invalid_argument("ERROR. Cannot print non pointer, float or integer type");
+    return nullptr;
+}
+
 Type *AST::Function::checker(Context &ctx) {
     ctx.goDeeper();
 
     if (type_of_method) {
         ctx.addIntoNameSpace(inner_name, type_of_method->checker(ctx));
+        if (dynamic_cast<StructType*>(type_of_method->typeOfNode)){
+            type_of_method = std::make_unique<AST::ASTTypePointer>(std::move(type_of_method));
+            type_of_method->checker(ctx);
+            was_arg_modified.emplace_back(true);
+        } else
+            was_arg_modified.emplace_back(false);
+
+
     }
 
     for (auto &i: params)
-        for (auto &j: i.first)
-            ctx.addIntoNameSpace(j, i.second->checker(ctx));
+        for (auto &j: i.first) {
+            ctx.addIntoNameSpace(j,i.second->checker(ctx));
+            if (dynamic_cast<StructType*>(i.second->typeOfNode)) {
+                i.second = std::make_unique<AST::ASTTypePointer>(std::move(i.second));
+                i.second->checker(ctx);
+                was_arg_modified.emplace_back(true);
+            } else
+                was_arg_modified.emplace_back(false);
+
+        }
 
     ctx.return_type.clear();
 
@@ -855,10 +892,11 @@ void AST::Function::globalPreInit(Context &ctx) {
 
         StructType *structType;
         type_of_method->checker(ctx);
-        if (dynamic_cast<StructType *>(type_of_method->checker(ctx))) {
+        if (dynamic_cast<StructType *>(type_of_method->typeOfNode)) {
             structType = dynamic_cast<StructType *>(type_of_method->typeOfNode);
             new_function_type->setIsPointer(false);
             new_name = *type_of_method->getDependencies().begin();
+
         }
 
         if (dynamic_cast<PointerType *>(type_of_method->typeOfNode) &&
