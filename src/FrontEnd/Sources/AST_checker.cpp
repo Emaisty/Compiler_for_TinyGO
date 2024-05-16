@@ -344,6 +344,10 @@ Type *AST::ASTFunctionCall::checker(AST::Context &ctx) {
     if (!func_type)
         throw std::invalid_argument("ERROR. Attempt to call function call on non-function.");
 
+    if (!func_type->getReturnArg().empty()) {
+        name_for_return_arg = func_type->getReturnArg();
+        type_for_return_arg = func_type->getReturnArgType();
+    }
 
     std::vector<Type *> args;
     for (auto &i: arg)
@@ -785,8 +789,7 @@ Type *AST::ASTAssign::checker(Context &ctx) {
         if (!var_type || !val_type || !var_type->canConvertToThisType(val_type))
             throw std::invalid_argument("ERROR. Var and assigned value not the same types");
 
-        if (type != ASSIGN)
-            if (!dynamic_cast<IntType *>(val_type) && !dynamic_cast<FloatType *>(val_type))
+        if (!(type == ASSIGN || dynamic_cast<IntType *>(val_type) || dynamic_cast<FloatType *>(val_type)))
                 throw std::invalid_argument(
                         "ERROR. Cannot perform math operations on non integer and non float values and variables");
 
@@ -851,6 +854,8 @@ Type *AST::Function::checker(Context &ctx) {
     for (auto &i: return_type)
         ctx.return_type.emplace_back(i->checker(ctx));
 
+
+
     ctx.body_of_function = true;
     body->checker(ctx);
 
@@ -861,12 +866,12 @@ Type *AST::Function::checker(Context &ctx) {
 
 void AST::Function::globalPreInit(Context &ctx) {
     auto new_function_type = std::make_unique<FunctionType>();
-    typeOfNode = new_function_type.get();
+
 
     if (return_type.size() == 1) {
         new_function_type->setReturn(return_type[0]->checker(ctx));
         typeOfNode = return_type[0]->typeOfNode;
-    } else {
+    } else if (return_type.size() > 1) {
         auto new_seq = std::make_unique<SeqType>();
         auto same_struct = std::make_unique<StructType>();
         for (unsigned long long i = 0; i < return_type.size(); ++i) {
@@ -878,6 +883,15 @@ void AST::Function::globalPreInit(Context &ctx) {
         typeOfNode = new_seq->corespStruct;
         new_function_type->setReturn(ctx.addType(std::move(new_seq)));
     }
+
+    if (auto st = dynamic_cast<StructType*>(typeOfNode)){
+        type_for_return_arg = ctx.getPointer(typeOfNode);
+        name_for_return = "_tmp_nameForReturn";
+        new_function_type->setReturnArg(name_for_return);
+        new_function_type->setReturnArgType(st);
+    }
+
+
 
 
     for (auto &i: params)
@@ -910,15 +924,13 @@ void AST::Function::globalPreInit(Context &ctx) {
             throw std::invalid_argument("ERROR. Cannot create method for such type.");
 
         new_function_type->setInnerName(new_name);
-        typeOfNode = ctx.addType(std::move(new_function_type));
-        structType->addNewField(name, typeOfNode);
+        structType->addNewField(name, ctx.addType(std::move(new_function_type)));
         name = "_" + new_name + "_" + name;
         return;
     }
 
-    typeOfNode = ctx.addType(std::move(new_function_type));
     // if it is function
-    ctx.addIntoNameSpace(name, typeOfNode);
+    ctx.addIntoNameSpace(name, ctx.addType(std::move(new_function_type)));
 }
 
 

@@ -342,7 +342,14 @@ namespace AST {
 
     private:
         std::unique_ptr<ASTExpression> name;
+
         std::vector<std::unique_ptr<ASTExpression>> arg;
+
+        // if function is going to have more than 1 return type -- it is going to return it as structure, and return
+        // is going to be made by argument
+        std::string name_for_return_arg;
+
+        StructType* type_for_return_arg;
     };
 
     class ASTMemberAccess : public ASTExpression {
@@ -603,7 +610,8 @@ namespace AST {
 
     private:
         std::vector<std::unique_ptr<AST::ASTExpression>> return_value;
-    };
+
+     };
 
     class ASTSwitch : public Statement {
     public:
@@ -689,8 +697,6 @@ namespace AST {
 
     private:
 
-        // if value is a function call with a multiple return values -- first it dispatched into a new variable
-        // and then to others.
         std::unique_ptr<ASTVarDeclaration> function_dispatch;
 
         std::vector<std::unique_ptr<AST::ASTExpression>> variable, value;
@@ -753,11 +759,17 @@ namespace AST {
 
         std::vector<std::pair<std::vector<std::string>, std::unique_ptr<ASTType>>> params;
 
-        std::vector<bool> was_arg_modified;
-
         std::vector<std::unique_ptr<AST::ASTType>> return_type;
 
         std::unique_ptr<AST::Statement> body;
+
+        // variables for inner state and use.
+
+        std::string name_for_return;
+
+        Type* type_for_return_arg;
+
+        std::vector<bool> was_arg_modified;
 
         std::unique_ptr<ASTType> type_of_method;
 

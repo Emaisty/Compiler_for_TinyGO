@@ -174,6 +174,7 @@ void IR::StructConst::print(std::ostream &oss) {
         oss << "no basic value" <<std::endl;
         return;
     }
+    oss << "{";
     for (unsigned long long i = 0; i < basic_values.size(); ++i) {
         if (basic_values[i].first)
             oss << basic_values[i].first->toString();
@@ -261,9 +262,7 @@ void IR::IRAlloca::addBasicValue(std::unique_ptr<Const> &&new_value) {
 }
 
 void IR::IRAlloca::print(std::ostream &oss) {
-    // TODO basic value
     oss << "   " << "%" << inner_number << " = alloca '" << type->toString() << "'; ";
-//    value is " << basicValue->toString()
     if (basicValue)
         oss << "default value is " << basicValue->toString() << std::endl;
     else
@@ -343,12 +342,33 @@ void IR::IRMembCall::addCallWhere(Value *link) {
     where = link;
 }
 
+void IR::IRMembCall::addTypeWhere(StructType* type){
+    typeOfWhere = type;
+}
+
 void IR::IRMembCall::addCallWhat(int value) {
     what = value;
 }
 
 void IR::IRMembCall::print(std::ostream &oss) {
     oss << "   " << "%" << inner_number << " = get member - from: %" << where->inner_number << "; which: %"
+        << std::to_string(what) << std::endl;
+}
+
+void IR::IRElemCall::addCallWhere(Value * link) {
+    where = link;
+}
+
+void IR::IRElemCall::addTypeWhere(Type* type) {
+    typeOfElem = type;
+}
+
+void IR::IRElemCall::addCallWhat(int value) {
+    what = value;
+}
+
+void IR::IRElemCall::print(std::ostream &oss) {
+    oss << "   " << "%" << inner_number << " = get element - from: %" << where->inner_number << "; which: %"
         << std::to_string(what) << std::endl;
 }
 

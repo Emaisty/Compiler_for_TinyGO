@@ -183,6 +183,12 @@ bool FunctionType::compareSignatures(const Type *other) const {
     if (return_type && !return_type->canConvertToThisType(other_func->return_type))
         return false;
 
+    if (return_as_arg != other_func->return_as_arg)
+        return false;
+
+    if (type_of_return_arg != other_func->type_of_return_arg)
+        return false;
+
     if (args.size() != other_func->args.size())
         return false;
     for (auto i = 0; i < args.size(); ++i)
@@ -224,6 +230,22 @@ void FunctionType::setIsPointer(bool flag){
 
 std::string FunctionType::innerName(){
     return inner_name_of_method;
+}
+
+void FunctionType::setReturnArg(std::string name) {
+    return_as_arg = name;
+}
+
+void FunctionType::setReturnArgType(StructType* type) {
+    type_of_return_arg = type;
+}
+
+std::string FunctionType::getReturnArg() {
+    return return_as_arg;
+}
+
+StructType* FunctionType::getReturnArgType(){
+    return type_of_return_arg;
 }
 
 bool FunctionType::isPointer(){

@@ -126,6 +126,14 @@ public:
 
     std::string innerName();
 
+    void setReturnArg(std::string);
+
+    void setReturnArgType(StructType*);
+
+    std::string getReturnArg();
+
+    StructType* getReturnArgType();
+
     bool isPointer();
 
     void addParam(Type *);
@@ -142,6 +150,10 @@ private:
     std::string inner_name_of_method;
 
     bool is_method_pointer = false;
+
+    std::string return_as_arg;
+
+    StructType* type_of_return_arg;
 
 };
 

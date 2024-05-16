@@ -55,9 +55,17 @@ namespace IR {
 
         bool l_value = false;
 
+        bool inside_dispatch = false;
+
         std::unique_ptr<IRProgram> program;
 
         long long counter = 0;
+
+        std::string name_if_return_become_arg;
+
+        std::string name_of_dispatched_struct;
+
+        StructType* type_of_return_arg;
 
         T86::Context createT86Context();
 
@@ -407,6 +415,8 @@ namespace IR {
 
         void addCallWhere(Value *);
 
+        void addTypeWhere(StructType*);
+
         void addCallWhat(int);
 
         void print(std::ostream &) override;
@@ -419,6 +429,33 @@ namespace IR {
         Value *where;
 
         int what;
+
+        StructType* typeOfWhere;
+
+    };
+
+    class IRElemCall : public Instruction {
+    public:
+        using Instruction::Instruction;
+
+        void addCallWhere(Value *);
+
+        void addTypeWhere(Type*);
+
+        void addCallWhat(int);
+
+        void print(std::ostream &) override;
+
+        void generateT86(T86::Context &) override;
+
+        std::unique_ptr<T86::Operand> getOperand(T86::Context &) override;
+
+    private:
+        Value *where;
+
+        int what;
+
+        Type* typeOfElem;
 
     };
 
@@ -540,7 +577,7 @@ namespace IR {
         void generateT86(T86::Context &) override;
 
     private:
-        Type *return_type;
+        Type *return_type = nullptr;
 
         std::string name;
 
