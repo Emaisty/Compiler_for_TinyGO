@@ -96,6 +96,7 @@ IR::Value *AST::ASTUnaryOperator::generateIR(IR::Context &ctx) {
                 return value_pointer;
         }
         case REFER: {
+            // ask as the l_value
             ctx.l_value = true;
             return value->generateIR(ctx);
         }
@@ -115,9 +116,12 @@ IR::Value *AST::ASTFunctionCall::generateIR(IR::Context &ctx) {
     std::vector < IR::Value * > arguments;
     for (auto &i: arg) {
         if (!dynamic_cast<StructType*>(i->typeOfNode)){
+            // if arguments is not struct -- pass it
             arguments.emplace_back(i->generateIR(ctx));
             continue;
         }
+
+        // if it is -- create a copy instance and pass it by reference
         auto alloca_tmp_arg = std::make_unique<IR::IRAlloca>(ctx.counter);
 
         alloca_tmp_arg->addType(i->typeOfNode);
@@ -140,19 +144,23 @@ IR::Value *AST::ASTFunctionCall::generateIR(IR::Context &ctx) {
     for (auto &i: arguments)
         func_pointer->addArg(i);
     if (!ctx.name_of_dispatched_struct.empty()) {
+        // if return is made by struct arguments -- return to upper node a pointer to struct
         func_pointer->addArg(ctx.getVariable(ctx.name_of_dispatched_struct));
         return ctx.getVariable(ctx.name_of_dispatched_struct);
     }
+    // return the function return
     return func_pointer;
 }
 
 IR::Value *AST::ASTMemberAccess::generateIR(IR::Context &ctx) {
     if (auto func_type = dynamic_cast<FunctionType *>(typeOfNode)) {
+        // if member is have been accessed -- is a method
         IR::Value *method;
         ctx.l_value = true;
         method = name->generateIR(ctx);
 
         if (!func_type->isPointer()){
+            // if method passes the structure by value -- create a copy instanse and pass it by reference
             auto alloca_tmp_arg = std::make_unique<IR::IRAlloca>(ctx.counter);
             alloca_tmp_arg->addType(name->typeOfNode);
             alloca_tmp_arg->addBasicValue(ctx.getBasicValue(name->typeOfNode));
@@ -171,7 +179,7 @@ IR::Value *AST::ASTMemberAccess::generateIR(IR::Context &ctx) {
             res->addFunctionName("_" + func_type->innerName() + "_" + member);
             return ctx.buildInstruction(std::move(res));
         } else {
-
+            // pass structure by reference
             auto res = std::make_unique<IR::IRCall>(ctx.counter);
             res->addArg(method);
             res->addFunctionName("_" + func_type->innerName() + "_" + member);
@@ -179,11 +187,13 @@ IR::Value *AST::ASTMemberAccess::generateIR(IR::Context &ctx) {
         }
     }
 
+    // if member is a field
 
     bool flag = ctx.l_value;
     ctx.l_value = false;
     auto pointer_to_member = std::make_unique<IR::IRMembCall>(ctx.counter);
     if (!dynamic_cast<PointerType*>(name->typeOfNode))
+        // if structure is a pointer to it -- use l_value always
         ctx.l_value = true;
     pointer_to_member->addCallWhere(name->generateIR(ctx));
     if (auto struc = dynamic_cast<StructType *>(name->typeOfNode)) {
@@ -196,7 +206,9 @@ IR::Value *AST::ASTMemberAccess::generateIR(IR::Context &ctx) {
     }
 
     if (flag)
+        // if was asked by the l_value -- return the ptr to the member
         return ctx.buildInstruction(std::move(pointer_to_member));
+    //if not =- load it and return value
 
     auto link_to_member = ctx.buildInstruction(std::move(pointer_to_member));
 
@@ -256,6 +268,7 @@ IR::Value *AST::ASTVar::generateIR(IR::Context &ctx) {
     // Variable
     if (auto link = ctx.getVariable(name)) {
         if (ctx.l_value) {
+            // if asked by the l-value -- return the link to it
             ctx.l_value = false;
             if (!ctx.wasVarModified(name))
                 return link;
@@ -274,6 +287,7 @@ IR::Value *AST::ASTVar::generateIR(IR::Context &ctx) {
 }
 
 IR::Value *AST::ASTTypeDeclaration::generateIR(IR::Context &ctx) {
+    // nothing to generate
     return nullptr;
 }
 
@@ -293,12 +307,12 @@ IR::Value *AST::ASTVarDeclaration::generateIR(IR::Context &ctx) {
                 res->addType(value[i]->typeOfNode);
 
             ctx.addVariable(name[i], res.get());
-            // TODO basic value
             ctx.program->addGlobDecl(std::move(res));
         }
         return nullptr;
     }
 
+    // generate dispatcher first
     if (function_dispatch) {
         ctx.inside_dispatch = true;
         function_dispatch->generateIR(ctx);
@@ -340,7 +354,6 @@ IR::Value *AST::ASTVarDeclaration::generateIR(IR::Context &ctx) {
 
 IR::Value *AST::ASTConstDeclaration::generateIR(IR::Context &ctx) {
     if (ctx.Global) {
-        // TODO value later
         for (auto i = 0; i < name.size(); ++i) {
             auto res = std::make_unique<IR::IRGlobal>(ctx.counter);
 
@@ -381,6 +394,7 @@ IR::Value *AST::ASTBlock::generateIR(IR::Context &ctx) {
 IR::Value *AST::ASTBreak::generateIR(IR::Context &ctx) {
     auto res = std::make_unique<IR::IRBranch>(ctx.counter);
 
+    // create unconditional jump to the break label
     res->addBrTaken(ctx.getBreakLabel());
 
     ctx.buildInstruction(std::move(res));
@@ -390,6 +404,7 @@ IR::Value *AST::ASTBreak::generateIR(IR::Context &ctx) {
 IR::Value *AST::ASTContinue::generateIR(IR::Context &ctx) {
     auto res = std::make_unique<IR::IRBranch>(ctx.counter);
 
+    // create unconditional jump to the next label
     res->addBrTaken(ctx.getContinueLabel());
 
     ctx.buildInstruction(std::move(res));
@@ -400,9 +415,10 @@ IR::Value *AST::ASTReturn::generateIR(IR::Context &ctx) {
     auto res = std::make_unique<IR::IRRet>(ctx.counter);
 
     if (return_value.size() == 1) {
+        // if single return -- just return it
         res->addRetVal(return_value[0]->generateIR(ctx));
     } else if (return_value.size() > 1){
-
+        // if returns multiple of them -- put the result in the special argument
         auto load_of_st = std::make_unique<IR::IRLoad>(ctx.counter);
         load_of_st->addLoadFrom(ctx.getVariable(ctx.name_if_return_become_arg));
         auto ptr_to_st = ctx.buildInstruction(std::move(load_of_st));
@@ -528,6 +544,7 @@ IR::Value *AST::ASTFor::generateIR(IR::Context &ctx) {
 }
 
 IR::Value *AST::ASTAssign::generateIR(IR::Context &ctx) {
+
     if (function_dispatch) {
         ctx.inside_dispatch = true;
         function_dispatch->generateIR(ctx);
@@ -536,7 +553,8 @@ IR::Value *AST::ASTAssign::generateIR(IR::Context &ctx) {
     for (auto i = 0; i < value.size(); ++i) {
         switch (type) {
             case ASSIGN: {
-                if (dynamic_cast<StructType *>(value[i]->typeOfNode) || dynamic_cast<StructType *>(value[i]->typeOfNode)) {
+                // if variable and value is a structure -- use instruction copy, instead of store
+                if (dynamic_cast<StructType *>(value[i]->typeOfNode)) {
                     ctx.l_value = true;
                     auto value_pointer = value[i]->generateIR(ctx);
                     ctx.l_value = true;
@@ -554,6 +572,7 @@ IR::Value *AST::ASTAssign::generateIR(IR::Context &ctx) {
 
                 auto value_pointer = value[i]->generateIR(ctx);
                 if (!dispatcher) {
+                    // if this assigment is a dispatcher -- it will return void and do not need to be stored
                     auto res = std::make_unique<IR::IRStore>(ctx.counter);
                     res->addStoreWhat(value_pointer);
                     ctx.l_value = true;
@@ -633,6 +652,7 @@ IR::Value *AST::Function::generateIR(IR::Context &ctx) {
     long long place_of_arg = 0;
     long long current_arg = 0;
 
+    // if it is a method -- add the structure as an argument
     if (type_of_method) {
         auto argument = std::make_unique<IR::IRFuncArg>(ctx.counter);
         argument->addType(type_of_method->typeOfNode);
@@ -654,6 +674,7 @@ IR::Value *AST::Function::generateIR(IR::Context &ctx) {
         res->addArg(std::move(argument));
     }
 
+    // add arguments to the function
     for (auto &[i, j]: params)
         for (auto &var_name: i) {
             auto argument = std::make_unique<IR::IRFuncArg>(ctx.counter);
@@ -679,8 +700,10 @@ IR::Value *AST::Function::generateIR(IR::Context &ctx) {
     ctx.name_if_return_become_arg = "";
     ctx.type_of_return_arg = nullptr;
 
+    // if function return something -- add the return
     if (typeOfNode){
         if (!name_for_return.empty()) {
+            // if it returns the structure -- add this structure as an arguments
             ctx.name_if_return_become_arg = name_for_return;
             ctx.type_of_return_arg = dynamic_cast<StructType*>(dynamic_cast<PointerType*>(type_for_return_arg)->getBase());
 
@@ -701,6 +724,7 @@ IR::Value *AST::Function::generateIR(IR::Context &ctx) {
 
             res->addArg(std::move(argument));
         } else
+            // add the single return
             res->addReturnType(typeOfNode);
     }
 

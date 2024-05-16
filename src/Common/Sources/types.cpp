@@ -56,6 +56,7 @@ bool StructType::canConvertToThisType(const Type *other) const {
     if (this->fields.size() != another_struct->fields.size())
         return false;
 
+    // fields should be on exact same places, names and types
     for (auto i = 0; i < fields.size();++i) {
         if (fields[i].first != another_struct->fields[i].first ||
             fields[i].second != another_struct->fields[i].second)
@@ -71,6 +72,7 @@ bool StructType::compareSignatures(const Type *other) const {
         if (fields.size() != other_struct->fields.size())
             return false;
 
+        // fields should be on exact same places, names and types
         for (auto i = 0; i < fields.size(); ++i)
             if (fields[i].first != other_struct->fields[i].first || fields[i].second != other_struct->fields[i].second)
                 return false;

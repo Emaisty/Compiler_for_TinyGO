@@ -13,18 +13,24 @@
 
 namespace IR {
 
+    /**
+     * Basic class of the IR instruction
+     */
     class Value {
     public:
         Value(long long &);
 
         virtual ~Value() = default;
 
+        // saves what instructions have this one by its child
         void addUse(Value *);
 
         virtual void print(std::ostream &) = 0;
 
+        // generates a machine code
         virtual void generateT86(T86::Context &) = 0;
 
+        // returns the operand, in which the result is stored
         virtual std::unique_ptr<T86::Operand> getOperand(T86::Context &);
 
         unsigned long long inner_number;
@@ -43,77 +49,109 @@ namespace IR {
 
         virtual std::string toString() = 0;
 
+        // fulfill with the value
         virtual void fillWithValue(unsigned long long) = 0;
 
     private:
     };
 
+    /**
+     * Info space of the ir generator
+     */
     struct Context {
         Context();
 
+        // does decl is on the top-level
         bool Global = true;
 
+        // does upper node ask for an address
         bool l_value = false;
 
+        // now inside the dipachter
         bool inside_dispatch = false;
 
+        // IR Program
         std::unique_ptr<IRProgram> program;
 
+        // tmp registers for an IR code
         long long counter = 0;
 
+        // name of the return structure as an argument
         std::string name_if_return_become_arg;
 
+        // name of the structure, which have accepted the dispatch from the function
         std::string name_of_dispatched_struct;
 
+        // type of the return structure as an argument
         StructType* type_of_return_arg;
 
+        // create a Info space to generate the machine code
         T86::Context createT86Context();
 
         void goDeeper();
 
         void goUp();
 
+        // add a label, to which continue instruction will jump
         void addContinueLabel(Value *);
 
+        // get a label, to which continue instruction will jump
         Value *getContinueLabel();
 
+        // add a label, to which break instruction will jump
         void addBreakLabel(Value *);
 
+        // get a label, to which break instruction will jump
         Value *getBreakLabel();
 
+        // add function into a space of names
         void addFunction(std::string, IRFunc *);
 
+        // get function by the name
         IRFunc *getFunction(std::string);
 
+        // add a link to the variable
         void addVariable(std::string, Value *);
 
+        // get the pointer, where variable is stored by the name
         Value *getVariable(std::string);
 
+        // add if the arguments was modified (changed from value to reference)
         void addModifiedVar(std::string);
 
+        // get if teh arguments was modified
         bool wasVarModified(std::string);
 
+        // clear the modified set
         void clearModifiedVars();
 
+        // set the current function, in which we are building
         void setFunction(IRFunc *);
 
+        // build instruction and get pointer to it
         Value *buildInstruction(std::unique_ptr<Value> &&);
 
+        // deletes the last row from the builder
+        // LEGACY
         void deleteLastRow();
 
+        // by the type get basic type, to store in it
         std::unique_ptr<Const> getBasicValue(Type *);
 
     private:
+        // set a function, in which it is going to build instruction
         IR::IRFunc *where_build;
 
         std::stack<Value *> cont_label;
-
         std::stack<Value *> break_label;
 
+        // functions by name
         std::vector<std::map<std::string, IRFunc *>> functions;
 
+        // variables by name
         std::vector<std::map<std::string, Value *>> variables;
 
+        // set of modified arguments
         std::set<std::string> modifiedVars;
 
     };
@@ -200,6 +238,9 @@ namespace IR {
 
     };
 
+    /**
+     * All instructions
+     */
     class Instruction : public Value {
     public:
         using Value::Value;
@@ -324,6 +365,7 @@ namespace IR {
 
         std::unique_ptr<Const> basicValue;
 
+        // how many bytes its upper, then Basic Pointer
         long long place_on_stack = -1;
 
     };
@@ -361,9 +403,8 @@ namespace IR {
 
         void generateT86(T86::Context &) override;
 
-//        std::unique_ptr<T86::Operand> getOperand(T86::Context &) override;
-
     private:
+        //if result is empty -- it is unconditional branch
         Value *result = nullptr;
         Value *brT = nullptr, *brNT = nullptr;
     };
@@ -377,8 +418,6 @@ namespace IR {
         void print(std::ostream &) override;
 
         void generateT86(T86::Context &) override;
-
-//        std::unique_ptr<T86::Operand> getOperand(T86::Context &) override;
 
     private:
         Value *res;
@@ -428,8 +467,10 @@ namespace IR {
     private:
         Value *where;
 
+        // which arguments by the order it calls
         int what;
 
+        // type of the structure, from which it calls the member
         StructType* typeOfWhere;
 
     };
@@ -478,6 +519,10 @@ namespace IR {
         Type *to, *from;
     };
 
+/**
+ * Copies the memory from one place (pointer from) to another (pointer to)
+ * Copies *size* elements
+ */
     class IRMemCopy : public Instruction {
     public:
         using Instruction::Instruction;

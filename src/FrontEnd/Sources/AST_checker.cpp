@@ -67,10 +67,13 @@ AST::ItemInNameSpace *AST::Context::getInfByVarName(std::string name) {
 }
 
 Type *AST::Context::addType(std::unique_ptr<Type> &&new_type) {
+    // compare with already existed. If exists with the exact same signature
+    // delete new_type and return pointer to already exists item
     for (auto &i: existItems)
         if (i->compareSignatures(new_type.get()))
             return i.get();
 
+    // if there was no type with the same signature -- add to the space and return pointer to it
     existItems.emplace_back(std::move(new_type));
     return existItems.back().get();
 }
@@ -87,9 +90,11 @@ void AST::Context::addIntoNameSpace(std::string new_name, Type *new_type, bool i
 }
 
 Type *AST::Context::getPointer(Type *base_type) {
+    // if pointer to such type already exists -- return it
     if (pointers.find(base_type) != pointers.end())
         return pointers[base_type];
 
+    // if not -- create and return it
     auto new_pointer = std::make_unique<PointerType>(base_type);
     pointers[base_type] = new_pointer.get();
 
@@ -161,9 +166,11 @@ AST::Context::convertTypeTo(std::unique_ptr<ASTExpression> &&from, Type *to) {
 
 std::pair<std::unique_ptr<AST::ASTExpression>, std::unique_ptr<AST::ASTExpression>>
 AST::Context::convertTypesEq(std::unique_ptr<ASTExpression> &&left, std::unique_ptr<ASTExpression> &&right) {
+    // if exact -- change nothing and return
     if (left->typeOfNode == right->typeOfNode)
         return std::make_pair(std::move(left), std::move(right));
 
+    // if left less - change the left and return new one
     if (typeGreater(left->typeOfNode, right->typeOfNode)) {
         auto new_left = std::make_unique<AST::ASTCast>();
         new_left->setChild(std::move(left));
@@ -211,9 +218,11 @@ Type *AST::ASTTypeStruct::checker(Context &ctx) {
                 res->addNewField(name, type->checker(ctx));
             } catch (std::invalid_argument e) {
                 if (ctx.GlobalInit) {
+                    // if type does not exist yet -- do not throw error and leave it to fulfill it later
                     res->addNewField(name, nullptr);
                     ctx.addFieldFillInLater(type.get(), res->getDoubleLinkToField(name));
                 } else
+                    // if decl is not in the top-level -- raise the error
                     throw e;
             }
     }
@@ -222,7 +231,7 @@ Type *AST::ASTTypeStruct::checker(Context &ctx) {
 }
 
 std::set<std::string> AST::ASTTypeStruct::getDependencies() {
-    std::set<std::string> res;
+    std::set < std::string > res;
     for (auto &i: fileds)
         res.merge(i.second->getDependencies());
     return res;
@@ -367,7 +376,7 @@ Type *AST::ASTFunctionCall::checker(AST::Context &ctx) {
 }
 
 std::set<std::string> AST::ASTFunctionCall::getVarNames() {
-    std::set<std::string> res;
+    std::set < std::string > res;
     for (auto &i: arg)
         res.merge(i->getVarNames());
     return res;
@@ -461,7 +470,7 @@ Type *AST::ASTStruct::checker(AST::Context &ctx) {
 }
 
 std::set<std::string> AST::ASTStruct::getVarNames() {
-    std::set<std::string> res;
+    std::set < std::string > res;
     for (auto &i: values)
         res.merge(i.second->getVarNames());
     return res;
@@ -527,12 +536,11 @@ Type *AST::ASTTypeDeclaration::checker(Context &ctx) {
 
 std::vector<AST::dispatchedDecl> AST::ASTVarDeclaration::globalPreInit() {
     std::vector<AST::dispatchedDecl> res;
-    // TODO if value.size() = 1 and it is func -- parse
     if (name.size() != value.size() && value.size() != 0)
         throw std::invalid_argument("ERROR. Assignment number mismatch.");
 
     for (int i = 0; i < name.size(); ++i)
-        res.emplace_back(name[i], this, value.size() > 0 ? value[i]->getVarNames() : std::set<std::string>(),
+        res.emplace_back(name[i], this, value.size() > 0 ? value[i]->getVarNames() : std::set < std::string > (),
                          value.size() > 0 ? value[i].get() : nullptr, type.get());
 
 
@@ -544,6 +552,8 @@ Type *AST::ASTVarDeclaration::checker(Context &ctx) {
         type->checker(ctx);
 
     // if func with many return values
+    // create a tmp variables-structure, which will saves the result
+    // and take the result for the variables as the assigment of the members
     if (value.size() == 1 && dynamic_cast<SeqType *>(value[0]->checker(ctx)) &&
         dynamic_cast<ASTFunctionCall *>(value[0].get())) {
         auto seq = dynamic_cast<SeqType *>(value[0]->typeOfNode);
@@ -606,7 +616,6 @@ Type *AST::ASTVarDeclaration::checker(Context &ctx) {
 
 std::vector<AST::dispatchedDecl> AST::ASTConstDeclaration::globalPreInit() {
     std::vector<AST::dispatchedDecl> res;
-    // TODO if value.size() = 1 and it is func -- parse
     if (name.size() != value.size())
         throw std::invalid_argument("ERROR. Assignment number mismatch.");
 
@@ -741,6 +750,7 @@ Type *AST::ASTFor::checker(Context &ctx) {
 
 
 Type *AST::ASTAssign::checker(Context &ctx) {
+    // check basics. Variables have addresses, and not constants
     for (auto &i: variable) {
         i->checker(ctx);
         if (!i->hasAddress())
@@ -751,6 +761,8 @@ Type *AST::ASTAssign::checker(Context &ctx) {
 
 
     // if func with many return values
+    // create a new variable structure in which will store the result
+    // and assigned the members of it to the variables
     if (value.size() == 1 && dynamic_cast<SeqType *>(value[0]->checker(ctx)) &&
         dynamic_cast<ASTFunctionCall *>(value[0].get())) {
         auto seq = dynamic_cast<SeqType *>(value[0]->typeOfNode);
@@ -792,8 +804,8 @@ Type *AST::ASTAssign::checker(Context &ctx) {
             throw std::invalid_argument("ERROR. Var and assigned value not the same types");
 
         if (!(type == ASSIGN || dynamic_cast<IntType *>(val_type) || dynamic_cast<FloatType *>(val_type)))
-                throw std::invalid_argument(
-                        "ERROR. Cannot perform math operations on non integer and non float values and variables");
+            throw std::invalid_argument(
+                    "ERROR. Cannot perform math operations on non integer and non float values and variables");
 
 
         value[i] = ctx.convertTypeTo(std::move(value[i]), variable[i]->typeOfNode);
@@ -804,11 +816,11 @@ Type *AST::ASTAssign::checker(Context &ctx) {
 
 Type *AST::ASTScan::checker(Context &ctx) {
     expression->checker(ctx);
-    PointerType* pointer = dynamic_cast<PointerType*>(expression->typeOfNode);
+    PointerType *pointer = dynamic_cast<PointerType *>(expression->typeOfNode);
     if (!pointer)
         throw std::invalid_argument("ERROR. Cannot scan into not pointer type.");
 
-    if (!dynamic_cast<IntType*>(pointer->getBase()) && !dynamic_cast<FloatType*>(pointer->getBase()))
+    if (!dynamic_cast<IntType *>(pointer->getBase()) && !dynamic_cast<FloatType *>(pointer->getBase()))
         throw std::invalid_argument("ERROR. Cannot scan non integer or non float type.");
 
     return nullptr;
@@ -817,31 +829,32 @@ Type *AST::ASTScan::checker(Context &ctx) {
 Type *AST::ASTPrint::checker(Context &ctx) {
     expression->checker(ctx);
 
-    if (!dynamic_cast<PointerType*>(expression->typeOfNode) && !dynamic_cast<IntType*>(expression->typeOfNode) &&
-            !dynamic_cast<FloatType*>(expression->typeOfNode))
+    if (!dynamic_cast<PointerType *>(expression->typeOfNode) && !dynamic_cast<IntType *>(expression->typeOfNode) &&
+        !dynamic_cast<FloatType *>(expression->typeOfNode))
         throw std::invalid_argument("ERROR. Cannot print non pointer, float or integer type");
     return nullptr;
 }
 
 Type *AST::Function::checker(Context &ctx) {
+    // go inside
     ctx.goDeeper();
 
+    // if type is method -- add it as the argument
     if (type_of_method) {
         ctx.addIntoNameSpace(inner_name, type_of_method->checker(ctx));
-        if (dynamic_cast<StructType*>(type_of_method->typeOfNode)){
+        if (dynamic_cast<StructType *>(type_of_method->typeOfNode)) {
             type_of_method = std::make_unique<AST::ASTTypePointer>(std::move(type_of_method));
             type_of_method->checker(ctx);
             was_arg_modified.emplace_back(true);
         } else
             was_arg_modified.emplace_back(false);
-
-
     }
 
+    // add all the rest arguments into space
     for (auto &i: params)
         for (auto &j: i.first) {
-            ctx.addIntoNameSpace(j,i.second->checker(ctx));
-            if (dynamic_cast<StructType*>(i.second->typeOfNode)) {
+            ctx.addIntoNameSpace(j, i.second->checker(ctx));
+            if (dynamic_cast<StructType *>(i.second->typeOfNode)) {
                 i.second = std::make_unique<AST::ASTTypePointer>(std::move(i.second));
                 i.second->checker(ctx);
                 was_arg_modified.emplace_back(true);
@@ -857,7 +870,6 @@ Type *AST::Function::checker(Context &ctx) {
         ctx.return_type.emplace_back(i->checker(ctx));
 
 
-
     ctx.body_of_function = true;
     body->checker(ctx);
 
@@ -867,13 +879,16 @@ Type *AST::Function::checker(Context &ctx) {
 }
 
 void AST::Function::globalPreInit(Context &ctx) {
+    // create a function type
     auto new_function_type = std::make_unique<FunctionType>();
 
-
     if (return_type.size() == 1) {
+        // just one type to return
         new_function_type->setReturn(return_type[0]->checker(ctx));
         typeOfNode = return_type[0]->typeOfNode;
     } else if (return_type.size() > 1) {
+        // more than one to return
+        // in that case return is going to be accepted as the argument and values it going to be written in it
         auto new_seq = std::make_unique<SeqType>();
         auto same_struct = std::make_unique<StructType>();
         for (unsigned long long i = 0; i < return_type.size(); ++i) {
@@ -886,7 +901,8 @@ void AST::Function::globalPreInit(Context &ctx) {
         new_function_type->setReturn(ctx.addType(std::move(new_seq)));
     }
 
-    if (auto st = dynamic_cast<StructType*>(typeOfNode)){
+    // if the return type is a structure -- remake it for the argument
+    if (auto st = dynamic_cast<StructType *>(typeOfNode)) {
         type_for_return_arg = ctx.getPointer(typeOfNode);
         name_for_return = "_tmp_nameForReturn";
         new_function_type->setReturnArg(name_for_return);
@@ -895,7 +911,7 @@ void AST::Function::globalPreInit(Context &ctx) {
 
 
 
-
+    // check arguments and it to the function type
     for (auto &i: params)
         for (auto &j: i.first)
             new_function_type->addParam(i.second->checker(ctx));
@@ -905,9 +921,9 @@ void AST::Function::globalPreInit(Context &ctx) {
 
         std::string new_name;
 
-
         StructType *structType;
         type_of_method->checker(ctx);
+        // if method passed by value
         if (dynamic_cast<StructType *>(type_of_method->typeOfNode)) {
             structType = dynamic_cast<StructType *>(type_of_method->typeOfNode);
             new_function_type->setIsPointer(false);
@@ -915,6 +931,7 @@ void AST::Function::globalPreInit(Context &ctx) {
 
         }
 
+        // if method passed by reference
         if (dynamic_cast<PointerType *>(type_of_method->typeOfNode) &&
             dynamic_cast<StructType *>(dynamic_cast<PointerType *>(type_of_method->typeOfNode)->getBase())) {
             structType = dynamic_cast<StructType *>(dynamic_cast<PointerType *>(type_of_method->typeOfNode)->getBase());
@@ -939,7 +956,7 @@ void AST::Function::globalPreInit(Context &ctx) {
 Type *AST::Program::checker(Context &ctx) {
     // type declarations
     {
-        std::vector <dispatchedDecl> declarations;
+        std::vector<dispatchedDecl> declarations;
         for (auto &i: typeDeclarations)
             declarations.push_back(i->globalPreInit()[0]);
 
@@ -975,7 +992,7 @@ Type *AST::Program::checker(Context &ctx) {
 
     // var and const declarations
     {
-        std::vector <dispatchedDecl> declarations;
+        std::vector<dispatchedDecl> declarations;
         for (auto &i: varDeclarations)
             for (auto &j: i->globalPreInit())
                 declarations.push_back(j);
@@ -988,7 +1005,7 @@ Type *AST::Program::checker(Context &ctx) {
         }
     }
 
-
+    // end of the declaration in global
     ctx.GlobalInit = false;
 
 

@@ -16,12 +16,21 @@
 
 namespace AST {
 
+    /**
+     * AST Node for the types
+     * It is a semantic representation of the any node, that contains type
+     * Does not represents type by itself. Type systems is implemented in types.h
+     */
     class ASTType;
 
+    /**
+     * AST Node for expressions
+     * Can be calculated and executed
+     */
     class ASTExpression;
 
-    struct ItemInNameSpace {
 
+    struct ItemInNameSpace {
         ItemInNameSpace(Type *new_type = nullptr, bool new_is_const = false) :
                 type(new_type), is_const(new_is_const) {}
 
@@ -29,169 +38,160 @@ namespace AST {
         bool is_const;
     };
 
-
+    /**
+     * Info space for the type checker
+     * Contains all the info about types, variables, functions, etc.
+     * Each node, when traverse by the type checker pass it as an argument
+     */
     struct Context {
         Context();
 
+        // if current command in the loop or not
         bool in_loop = false;
 
+        // if current command in the switch ot not
         bool in_switch = false;
 
+        // if right now we are checking the global variables and functions
+        // uses to not raise an error, if we have a pointer to a structure,
+        // which is not implemented yet
         bool GlobalInit = true;
 
+        // if we are inside the function or not
         bool body_of_function = false;
 
+        // saves the types, which return statement should return
         std::vector<Type *> return_type;
 
+        // helps to name the tmp variables with the different names
         unsigned long long tmp_count = 0;
 
+        // checks if the variable with such name exists in the nearest scope
         bool checkIfNameExist(std::string);
 
+        // checks if the named type with such name exists or not
         bool checkIfTypeExist(std::string);
 
-        //Go into loop/switch
+        // Go into loop/switch and increase the scope
         void goDeeper(bool, bool);
 
+        // Go up from the scope
         void goUp();
 
         Type *getTypeByTypeName(std::string);
 
         ItemInNameSpace *getInfByVarName(std::string);
 
+        // add the new type into the type space. If type with exact same signature exists
+        // deletes the new one and returns the old one
         Type *addType(std::unique_ptr<Type> &&);
 
+        // add named type
         Type *addAliasType(std::string, Type *);
 
+        // adds the variable into the space of them.
+        // accepts name, type and if it is const or not
         void addIntoNameSpace(std::string, Type *, bool);
 
+        // get the pointer type to the given type
         Type *getPointer(Type *);
 
+        // saves type node, which cannot be implemented yet for later
         Type *addForLater(std::unique_ptr<Type> &&);
 
+        // if filed of the structure cannot be completed yet, and it is global decl
+        // add it for later
         void addFieldFillInLater(ASTType *, Type **);
 
+        // fill the types, which was left for later
         void fillUpEmptyField();
 
         void transFromTmpTypes();
 
         inline static std::vector<std::string> base_types = {"int8", "int32", "int", "int64", "bool", "float"};
 
-
+        // return does the type if int or not
         bool isInt(const Type *);
 
+        // accepts two int types. Returns the greater one
         Type *greaterInt(const Type *, const Type *);
 
+        // return does the type if float or not
         bool isFloat(const Type *);
 
+        // return does the type if bool or not
         bool isBool(const Type *);
 
+        // if the given type is not the exact the same as to be needed -- add the cast node
         std::unique_ptr<ASTExpression> convertTypeTo(std::unique_ptr<ASTExpression> &&, Type *);
 
+        // accepts the two nodes. Find, to which type one of them should be casted and adds above it cast node
         std::pair<std::unique_ptr<ASTExpression>, std::unique_ptr<ASTExpression>>
         convertTypesEq(std::unique_ptr<ASTExpression> &&, std::unique_ptr<ASTExpression> &&);
 
+        // which type have a greater priority
+        // float => int64 => int32 => int16 => int1
         bool typeGreater(Type *, Type *);
 
+        // Creates a context space for the IR generation
         IR::Context createIRContext();
-
-
 
     private:
 
+        // exist unique types
         std::vector<std::unique_ptr<Type>> existItems;
 
+        // variables of the program
         std::vector<std::map<std::string, ItemInNameSpace>> nameSpace;
 
+        // types of the program
         std::vector<std::map<std::string, Type *>> typeSpace;
 
+        // space of the pointers
         std::map<Type *, PointerType *> pointers;
 
+        // status of the inside loops and switches in the program
         std::stack<bool> pr_loop_status;
         std::stack<bool> pr_switch_status;
 
+        // vector for not finished types.
+        // Such types, which cannot have its field yet, because it havent checked it yet
         std::vector<std::unique_ptr<Type>> notYetFinishedTypes;
 
+        // not finished fields of the strutures
         std::vector<std::pair<ASTType *, Type **>> notYetFinishedFields;
 
+        // links from the non yet finished types to where it is used
         std::map<Type *, std::vector<Type **>> linksToType;
-
-//
-//        std::vector<ItemInNameSpace> name_space;
-//
-//        std::vector<ItemInTypeSpace> type_space;
-//
-//        std::map<Type *, PointerType *> pointers;
-//
-//        bool in_loop = false;
-//        bool in_switch = false;
-//        int level = 0;
-//        std::vector<Type *> return_type;
-//
-
-//
-//        void checkIfNameExist(std::string);
-//
-//        void checkIfTypeExist(std::string);
-//
-//        //Go into loop/switch
-//        void goDeeper(bool, bool);
-//
-//        void goUp();
-//
-//        Type *getTypeByTypeName(std::string);
-//
-//        Type *getTypeByVarName(std::string);
-//
-//        Type *addType(std::string, std::unique_ptr<Type> &&);
-//
-//        void addIntoNameSpace(std::string, Type *);
-//
-//        Type *getPointer(Type *);
-//
-
-//
-//        void addForLater(std::string, ASTType *, UnNamedStruct *);
-//
-//        void fillLaterStack();
-//
-
-//
-//    private:
-//
-//        struct fullFillLater {
-//            std::string name;
-//
-//            ASTType *type;
-//
-//            UnNamedStruct *struc;
-//
-//        };
-//
-//        std::vector<fullFillLater> unfinishedDecl;
-//
-//
-//        int count_for_tmp_types = 0;
-
 
     };
 
-
+/**
+ * Root node of all AST
+ * Represents any node in the tree
+ */
     class ASTNode {
     public:
         ASTNode() = default;
 
         virtual ~ASTNode() = default;
 
+        // needs for the debugger and for break pointer
         void addLineNumber(int line_num);
 
+        // does node is a l-value and have address
         virtual bool hasAddress();
 
+        // does node is a constant
         virtual bool isConst();
 
+        // checks the type of the node and its children
         virtual Type *checker(Context &) = 0;
 
+        // type, which node returns
         Type *typeOfNode = nullptr;
 
+        // generate the corespond IR lines to this node
         virtual IR::Value * generateIR(IR::Context &) = 0;
 
     private:
@@ -201,6 +201,7 @@ namespace AST {
     class ASTType : public ASTNode {
     public:
 
+        // gets the set of the names, which must be decl before this type
         virtual std::set<std::string> getDependencies() = 0;
 
         IR::Value * generateIR(IR::Context &) override;
@@ -208,6 +209,7 @@ namespace AST {
 
     protected:
     };
+
 
     class ASTTypePointer : public ASTType {
     public:
@@ -243,6 +245,9 @@ namespace AST {
         std::vector<std::pair<std::vector<std::string>, std::unique_ptr<ASTType >>> fileds;
     };
 
+    /**
+     * Any type, which is refered by the name
+     */
     class ASTTypeNamed : public ASTType {
     public:
         ASTTypeNamed(std::string new_name) : name(new_name) {};
@@ -255,6 +260,10 @@ namespace AST {
         std::string name;
     };
 
+    /**
+     * Class of the node, which can be a statement in the programm
+     * (can be by itself and can be in a function body)
+     */
     class Statement : public ASTNode {
     public:
 
@@ -269,17 +278,16 @@ namespace AST {
     class ASTExpression : public Statement {
     public:
 
+        // gets the set of the names, which must be decl before this variable
         virtual std::set<std::string> getVarNames() = 0;
 
     private:
     };
 
-//    class ASTNullExpr : public ASTExpression {
-//    public:
-//
-//    private:
-//    };
-
+    /**
+     * Binary operations
+     * accepts 2 children and an operator of the operation
+     */
     class ASTBinaryOperator : public ASTExpression {
     public:
 
@@ -300,6 +308,10 @@ namespace AST {
         IR::IRArithOp::Operator op;
     };
 
+    /**
+     * Unary operation
+     * Has a one child and an operator of the operation
+     */
     class ASTUnaryOperator : public ASTExpression {
     public:
         enum Operator {
@@ -324,6 +336,11 @@ namespace AST {
         std::unique_ptr<ASTExpression> value;
     };
 
+    /**
+     * Function call
+     * Has a left side -- some how a caller of the function (can be a name of the function, or method call)
+     * on the right side -- vector of arguemtns
+     */
     class ASTFunctionCall : public ASTExpression {
     public:
 
@@ -347,11 +364,18 @@ namespace AST {
 
         // if function is going to have more than 1 return type -- it is going to return it as structure, and return
         // is going to be made by argument
+        // name for such return argument
         std::string name_for_return_arg;
 
+        // type of the return argument
         StructType* type_for_return_arg;
     };
 
+
+    /**
+     * Caller of the field of the structure
+     * have an address of the structure of the left side and a member name of the right
+     */
     class ASTMemberAccess : public ASTExpression {
     public:
 
@@ -443,8 +467,12 @@ namespace AST {
 
 
     private:
+        // type of the structure
         std::unique_ptr<ASTType> type;
+
+        // set of the values for the structure fields
         std::vector<std::pair<std::string, std::unique_ptr<ASTExpression>>> values;
+
     };
 
     class ASTVar : public ASTExpression {
@@ -471,17 +499,34 @@ namespace AST {
         bool is_const = false;
     };
 
+    /**
+     * Class of any declaration
+     * Has a name of declared item, and type or/and value of it
+     * Might have more than one declaration inside of itself
+     */
     class ASTDeclaration;
 
+    /**
+     * Item for the dispached declaration.
+     * Represent the same as declaration, but it is garanteed, that is has only one declaration
+     */
     struct dispatchedDecl {
+        //name of declared
         std::string name;
+
+        //link from which this declaration is dispached
         ASTDeclaration *decl;
+
+        // set of the names, on which this declaration is depended
         std::set<std::string> depends;
 
+        // expression of the declaration. Might be empty
         ASTExpression *expr;
 
+        // type of the declaration. Might be empty
         ASTType *type;
 
+        // does this variable const or not
         bool const_var;
 
         dispatchedDecl(std::string new_name = "", ASTDeclaration *new_decl = nullptr,
@@ -514,11 +559,19 @@ namespace AST {
         std::vector<std::unique_ptr<ASTExpression>> value;
         std::unique_ptr<ASTType> type;
 
+        // In case, that there is a multiple variables on the left side and single function
+        // on the right side, with multiple returns -- make a new declaration, where a tmp structure
+        // passed to the function and then values is going to be a members of it
         std::vector<std::unique_ptr<ASTDeclaration>> dispatchedDeclarations;
 
     };
 
 
+    /**
+     * Represents the declaration of the named type.
+     * Always name.size() == 1 and have a type. type.size() == 1
+     * value.size() == 0
+     */
     class ASTTypeDeclaration : public ASTDeclaration {
     public:
         using ASTDeclaration::ASTDeclaration;
@@ -532,6 +585,10 @@ namespace AST {
     private:
     };
 
+    /**
+     * Declaration of the variable
+     * type should exists, or values should be or both
+     */
     class ASTVarDeclaration : public ASTDeclaration {
     public:
         using ASTDeclaration::ASTDeclaration;
@@ -547,6 +604,12 @@ namespace AST {
 
     };
 
+
+/**
+ * Declaration of the constant variable
+ * value.size() == name.size()
+ * type might not be declared
+ */
     class ASTConstDeclaration : public ASTDeclaration {
     public:
         using ASTDeclaration::ASTDeclaration;
@@ -613,6 +676,8 @@ namespace AST {
         IR::Value * generateIR(IR::Context &) override;
 
     private:
+        // might have a multiple returns
+        // in that case, it will be converted to a structure later
         std::vector<std::unique_ptr<AST::ASTExpression>> return_value;
 
      };
@@ -703,15 +768,20 @@ namespace AST {
         bool dispatcher = false;
 
     private:
-
-        std::unique_ptr<ASTVarDeclaration> function_dispatch;
-
         std::vector<std::unique_ptr<AST::ASTExpression>> variable, value;
 
         TypeOfAssign type;
 
+        // In case, that there is a multiple variables on the left side and single function
+        // on the right side, with multiple returns -- make a new declaration, where a tmp structure
+        // passed to the function and then values is going to be a members of it
+        std::unique_ptr<ASTVarDeclaration> function_dispatch;
+
     };
 
+    /**
+     * Scan_char. Takes as an arguments a pointer to a integer and puts scans a char into it from a stream
+     */
     class ASTScan : public Statement {
     public:
         ASTScan() = default;
@@ -725,7 +795,9 @@ namespace AST {
         std::unique_ptr<AST::ASTExpression> expression;
 
     };
-
+/**
+ * Prints a value to the terminal
+ */
     class ASTPrint : public Statement {
     public:
         ASTPrint() = default;
@@ -771,15 +843,21 @@ namespace AST {
         std::unique_ptr<AST::Statement> body;
 
         // variables for inner state and use.
-
+        // name for the arguments, which plays the role of the returns
         std::string name_for_return;
 
+        // type of the return arguments
         Type* type_for_return_arg;
 
+        // list of has been arguments modified.
+        // all structures, that are passed by the values is changes to accepts it by the reference
+        // caller will create a copy and will pass a pointer to in
         std::vector<bool> was_arg_modified;
 
+        // type of the method, if function is a method
         std::unique_ptr<ASTType> type_of_method;
 
+        // name of the reference to the inner values of the class, while it is a method
         std::string inner_name;
 
     };

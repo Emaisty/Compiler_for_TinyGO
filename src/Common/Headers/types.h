@@ -6,13 +6,20 @@
 #include <string>
 
 
+/**
+ * Abstract class of the inner class system
+ */
 class Type {
 public:
 
     // checks, could convert other to "this" Type
+    // uses in a typechecker, confirming that it is possible to use the operations
+    // above the both types
     virtual bool canConvertToThisType(const Type *other) const = 0;
 
-    //requires to not duplicate structures
+    // requires to not duplicate structures.
+    // uses by the AST::Context, when a new type is coming.
+    // it compares type, to be exact the same
     virtual bool compareSignatures(const Type *other) const;
 
     virtual std::string toString() = 0;
@@ -67,16 +74,25 @@ public:
 
     bool compareSignatures(const Type *other) const override;
 
+    // adds a new field to the type
     void addNewField(std::string, Type *) ;
 
+    // get the field by the string
     Type *getField(std::string) const;
 
+    // returns the position of the field in the vector of all fields
+    // uses in IR for the 'get member' instruction
     int getFieldOrder(std::string) const;
 
+    // return all fields
     std::vector<std::pair<std::string, Type *>> getFields();
 
+    // returns link to the type
+    // it uses by the type checker, when type is not implemented yet
+    // and will be fulfilled later
     Type** getDoubleLinkToField(std::string);
 
+    // checks if name already exists
     bool nameAlreadyExists(std::string);
 
     std::string toString() override;
@@ -114,20 +130,28 @@ public:
 
     bool compareArgs(const std::vector<Type *> &);
 
+    // get the arguments of the function
     std::vector<Type* > getArgs();
 
     Type *getReturn();
 
     void setReturn(Type *);
 
+    // sets the name of the structure, by which it is going
+    // to be referenced inside
     void setInnerName(std::string);
 
+    // sets if the structure passed by pointer
     void setIsPointer(bool);
 
     std::string innerName();
 
+    // if function returns structure or multiple variable
+    // -- it refactors to accept the return as the argument
+    // this method sets the name for it
     void setReturnArg(std::string);
 
+    // sets the return arguments type
     void setReturnArgType(StructType*);
 
     std::string getReturnArg();
@@ -172,7 +196,11 @@ private:
 //};
 
 
-//// this class created only for times, when func returns more than 1 type at the same time
+/**
+ * This classed used only by the compiler type system itself
+ * Represents the sequence of the types, when function returns
+ * multiple of them at the same time
+*/
 class SeqType : public Type {
 public:
 

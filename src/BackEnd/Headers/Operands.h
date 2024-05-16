@@ -5,6 +5,10 @@
 #include <memory>
 
 namespace T86 {
+
+    /**
+     * Operand of the target code
+     */
     class Operand {
     public:
         virtual std::string toString() = 0;

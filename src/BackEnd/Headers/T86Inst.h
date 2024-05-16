@@ -173,6 +173,9 @@ namespace T86 {
 
     };
 
+    /**
+     * Info space of the instruction selection
+     */
     class Context {
     public:
         long long offset_of_function = 0;
@@ -181,6 +184,7 @@ namespace T86 {
 
         long long allocated_space_for_arguments = 0;
 
+        // prepare for a new function
         void startFunction();
 
         long long getCurrentPlaceOnStack(long long);
@@ -193,14 +197,19 @@ namespace T86 {
 
         std::size_t getNumberOfInstructions();
 
+        // add place, where function is called
         void addFunctionCall(std::string, IntImmediate *);
 
+        // add place where functions starts
         void addFunctionPlace(std::string);
 
+        // add place where label is called
         void addJumpToLabel(long long, IntImmediate *);
 
+        // add place where label starts
         void addLabelPlace(long long);
 
+        // fulfill all function and label callers with values
         void finishCallsAndJmps();
         
     private:
