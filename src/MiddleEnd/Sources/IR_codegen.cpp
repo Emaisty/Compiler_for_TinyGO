@@ -307,7 +307,11 @@ void IR::IRMemCopy::generateT86(T86::Context &ctx) {
 }
 
 void IR::IRScan::generateT86(T86::Context &ctx) {
-    // TODO
+    ctx.addInstruction(T86::Instruction(T86::Instruction::GETCHAR,
+                                        std::make_unique<T86::Register>(inner_number - ctx.offset_of_function)));
+    ctx.addInstruction(T86::Instruction(T86::Instruction::MOV,
+                                        std::make_unique<T86::Memory>(link->getOperand(ctx)),
+                                        std::make_unique<T86::Register>(inner_number - ctx.offset_of_function)));
 }
 
 void IR::IRPrint::generateT86(T86::Context &ctx) {

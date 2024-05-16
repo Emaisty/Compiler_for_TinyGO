@@ -313,7 +313,9 @@ IR::Value *AST::ASTVarDeclaration::generateIR(IR::Context &ctx) {
             type_of_alloca = type->typeOfNode;
         else {
             if (auto seq = dynamic_cast<SeqType*>(value[i]->typeOfNode))
-            type_of_alloca = seq->corespStruct;
+                type_of_alloca = seq->corespStruct;
+            else
+                type_of_alloca = value[i]->typeOfNode;
         }
         res->addType(type_of_alloca);
         if (value.empty())
@@ -326,8 +328,10 @@ IR::Value *AST::ASTVarDeclaration::generateIR(IR::Context &ctx) {
             var.emplace_back(std::make_unique<AST::ASTVar>(name[i]));
             std::vector<std::unique_ptr<AST::ASTExpression>> val;
             val.emplace_back(std::move(value[i]));
-            std::make_unique<AST::ASTAssign>(std::move(var),std::move(val),AST::ASTAssign::ASSIGN)
-                    ->generateIR(ctx);
+            auto assign = std::make_unique<AST::ASTAssign>(std::move(var),std::move(val),
+                                                           AST::ASTAssign::ASSIGN);
+            assign->dispatcher = dispatcher;
+            assign->generateIR(ctx);
 
         }
     }
@@ -549,7 +553,7 @@ IR::Value *AST::ASTAssign::generateIR(IR::Context &ctx) {
 
 
                 auto value_pointer = value[i]->generateIR(ctx);
-                if (function_dispatch) {
+                if (!dispatcher) {
                     auto res = std::make_unique<IR::IRStore>(ctx.counter);
                     res->addStoreWhat(value_pointer);
                     ctx.l_value = true;

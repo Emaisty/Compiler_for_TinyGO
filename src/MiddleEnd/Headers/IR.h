@@ -364,8 +364,8 @@ namespace IR {
 //        std::unique_ptr<T86::Operand> getOperand(T86::Context &) override;
 
     private:
-        Value *result;
-        Value *brT, *brNT;
+        Value *result = nullptr;
+        Value *brT = nullptr, *brNT = nullptr;
     };
 
     class IRRet : public Instruction {

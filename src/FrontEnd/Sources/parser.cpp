@@ -662,7 +662,7 @@ std::unique_ptr<AST::Statement> Parser::parseSwitch() {
 std::unique_ptr<AST::Statement> Parser::parseScan() {
     auto res = std::make_unique<AST::ASTScan>();
 
-    matchAndGoNext(tok_scan);
+    matchAndGoNext(tok_scan_char);
     matchAndGoNext(tok_opbr);
 
     res->addExpression(parseExpression());
@@ -717,7 +717,7 @@ std::vector<std::unique_ptr<AST::Statement>> Parser::parseStatement() {
         case tok_opfigbr:
             res.emplace_back(parseBlock());
             break;
-        case tok_scan:
+        case tok_scan_char:
             res.emplace_back(parseScan());
             break;
         case tok_print:

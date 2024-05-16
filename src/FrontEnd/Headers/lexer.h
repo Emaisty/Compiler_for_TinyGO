@@ -96,7 +96,7 @@ enum Token {
 
 
 
-    tok_scan,
+    tok_scan_char,
     tok_print
 };
 
@@ -165,7 +165,7 @@ const inline std::map<Token,std::string> tokens_to_string = {
         {tok_excl,"!"},
         {tok_true,"true"},
         {tok_false,"false"},
-        {tok_scan,"scan"},
+        {tok_scan_char,"scan_char"},
         {tok_print,"print"},
 };
 
@@ -210,7 +210,10 @@ public:
 
 private:
     std::ifstream file;
+    std::ifstream inner_file;
     char open = 0;
+    bool close = false;
+    unsigned long long pos_inner_file = 0;
 
     int cur_symb = -1;
 
@@ -221,6 +224,16 @@ private:
     int line_number = 1;
 
     int if_new_line_appear = 0;
+
+    std::string inner_func = "\n\nfunc scan(a *int) {\n"
+                      "    var tmp *int\n"
+                      "    scan_char(tmp)\n"
+                      "    for ; *tmp >= 48 && *tmp <= 56 ; {\n"
+                      "        *a *= 10\n"
+                      "        *a += (*tmp - 48)\n"
+                      "        scan_char(tmp)\n"
+                      "    }\n"
+                      "}";
 };
 
 #endif //COMPILER_LEXER_H

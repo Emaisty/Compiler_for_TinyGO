@@ -503,8 +503,11 @@ namespace AST {
 
         ASTDeclaration(std::vector<std::string> &&new_name, std::unique_ptr<ASTType> &&);
 
-
         virtual std::vector<dispatchedDecl> globalPreInit() = 0;
+
+        // It used, then declaration created by the program itself and servers to accept structure type from a function
+        // and after that assign it to each individuals
+        bool dispatcher = false;
 
     protected:
         std::vector<std::string> name;
@@ -512,6 +515,7 @@ namespace AST {
         std::unique_ptr<ASTType> type;
 
         std::vector<std::unique_ptr<ASTDeclaration>> dispatchedDeclarations;
+
     };
 
 
@@ -694,6 +698,9 @@ namespace AST {
         Type *checker(Context &) override;
 
         IR::Value * generateIR(IR::Context &) override;
+
+        // It used then assign it a part of a dispatch variable and it does not need to be assigned.
+        bool dispatcher = false;
 
     private:
 

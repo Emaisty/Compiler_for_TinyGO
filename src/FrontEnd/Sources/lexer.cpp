@@ -28,7 +28,7 @@ const struct {
         {"bool",     tok_bool},
         {"true",     tok_true},
         {"false",    tok_false},
-        {"scan",     tok_scan},
+        {"scan_char",     tok_scan_char},
         {"print",    tok_print},
 };
 
@@ -39,22 +39,29 @@ void Lexer::InitInput(std::string name) {
             open = true;
         else
             throw std::invalid_argument("ERROR. Cannot open a given file.");
-
     cur_symb = inputSymbol();
 }
 
 char Lexer::inputSymbol() {
     char c;
-    if (!file.eof()) {
+    if (!file.eof() && !close) {
         if (open) {
             file >> std::noskipws >> c;
         } else {
             std::cin >> std::noskipws >> c;
         }
+        if (c == EOF || c == 0) {
+            close;
+            return ' ';
+        }
         return c;
-    } else
-        return 0;
+    } else {
+        if (pos_inner_file < inner_func.size())
+            return inner_func[pos_inner_file++];
+        else
+            return EOF;
 
+    }
 }
 
 InputCharType Lexer::type_of_char() {

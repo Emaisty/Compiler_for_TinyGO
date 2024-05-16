@@ -564,6 +564,7 @@ Type *AST::ASTVarDeclaration::checker(Context &ctx) {
 
 
         function_dispatch = std::make_unique<ASTVarDeclaration>(name_list, std::move(tmp));
+        function_dispatch->dispatcher = true;
 
         ctx.addIntoNameSpace(name_for_struct, seq->corespStruct);
         value.clear();
@@ -769,6 +770,7 @@ Type *AST::ASTAssign::checker(Context &ctx) {
 
 
         function_dispatch = std::make_unique<ASTVarDeclaration>(name_list, std::move(tmp));
+        function_dispatch->dispatcher = true;
 
         ctx.addIntoNameSpace(name, seq->corespStruct);
         value.clear();
